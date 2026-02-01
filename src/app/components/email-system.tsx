@@ -17,6 +17,13 @@ import {
   Settings2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 
 interface Template {
   id: string;
@@ -77,15 +84,16 @@ export function EmailSystem() {
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">选择模板</label>
-                    <select 
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm font-bold"
-                      onChange={(e) => setSelectedTemplate(mockTemplates.find(t => t.id === e.target.value) || null)}
-                    >
-                      <option value="">-- 请选择邮件模板 --</option>
-                      {mockTemplates.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
-                    </select>
+                    <Select onValueChange={(val) => setSelectedTemplate(mockTemplates.find(t => t.id === val) || null)}>
+                      <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20">
+                        <SelectValue placeholder="-- 请选择邮件模板 --" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {mockTemplates.map(t => (
+                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
@@ -159,13 +167,18 @@ export function EmailSystem() {
                   </div>
                   <div className="space-y-3">
                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">按部门</p>
-                    <select className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none">
-                      <option>全部部门</option>
-                      <option>前端部</option>
-                      <option>UI部</option>
-                      <option>办公室</option>
-                      <option>运维</option>
-                    </select>
+                    <Select>
+                      <SelectTrigger className="w-full h-10 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-blue-500/20">
+                        <SelectValue placeholder="全部部门" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">全部部门</SelectItem>
+                        <SelectItem value="frontend">前端部</SelectItem>
+                        <SelectItem value="ui">UI部</SelectItem>
+                        <SelectItem value="office">办公室</SelectItem>
+                        <SelectItem value="ops">运维</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
                     <div className="flex items-center justify-between mb-2">

@@ -98,6 +98,8 @@ dist
 # Sveltekit cache directory
 .svelte-kit/
 
-# Database
-sqlite.db
-*.db
+# AI Agents & Skills
+.agents/
+.qoder/
+.trae/
+skills/

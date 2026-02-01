@@ -15,9 +15,17 @@ import {
   Globe,
   Webhook,
   Zap,
-  Eye
+  Eye,
+  ChevronDown
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 
 interface SettingsPageProps {
   role: 'admin' | 'teacher' | 'hr';
@@ -163,21 +171,26 @@ export function SettingsPage({ role }: SettingsPageProps) {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Model Provider</label>
-                      <select className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm text-slate-900 dark:text-white appearance-none cursor-pointer">
-                        <option value="openai" className="bg-white dark:bg-slate-900">OpenAI</option>
-                        <option value="anthropic" className="bg-white dark:bg-slate-900">Anthropic (Claude)</option>
-                        <option value="google" className="bg-white dark:bg-slate-900">Google (Gemini)</option>
-                        <option value="deepseek" className="bg-white dark:bg-slate-900">DeepSeek</option>
-                        <option value="aliyun" className="bg-white dark:bg-slate-900">Aliyun (Qwen)</option>
-                        <option value="doubao" className="bg-white dark:bg-slate-900">Doubao (ByteDance)</option>
-                        <option value="moonshot" className="bg-white dark:bg-slate-900">Moonshot (Kimi)</option>
-                        <option value="zhipu" className="bg-white dark:bg-slate-900">Zhipu AI (GLM)</option>
-                        <option value="minimax" className="bg-white dark:bg-slate-900">Minimax</option>
-                        <option value="baichuan" className="bg-white dark:bg-slate-900">Baichuan</option>
-                        <option value="openrouter" className="bg-white dark:bg-slate-900">OpenRouter</option>
-                        <option value="groq" className="bg-white dark:bg-slate-900">Groq</option>
-                        <option value="custom" className="bg-white dark:bg-slate-900">Custom / Local (Ollama)</option>
-                      </select>
+                      <Select defaultValue="openai">
+                        <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20">
+                          <SelectValue placeholder="Select provider" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="openai">OpenAI</SelectItem>
+                          <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+                          <SelectItem value="google">Google (Gemini)</SelectItem>
+                          <SelectItem value="deepseek">DeepSeek</SelectItem>
+                          <SelectItem value="aliyun">Aliyun (Qwen)</SelectItem>
+                          <SelectItem value="doubao">Doubao (ByteDance)</SelectItem>
+                          <SelectItem value="moonshot">Moonshot (Kimi)</SelectItem>
+                          <SelectItem value="zhipu">Zhipu AI (GLM)</SelectItem>
+                          <SelectItem value="minimax">Minimax</SelectItem>
+                          <SelectItem value="baichuan">Baichuan</SelectItem>
+                          <SelectItem value="openrouter">OpenRouter</SelectItem>
+                          <SelectItem value="groq">Groq</SelectItem>
+                          <SelectItem value="custom">Custom / Local (Ollama)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base URL (Optional)</label>
