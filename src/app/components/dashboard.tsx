@@ -77,7 +77,7 @@ export function Dashboard() {
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-lg font-black tracking-tight">最近每天投递数量</h3>
+              <h3 className="text-lg font-black tracking-tight">最近投递</h3>
               <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Daily Resume Submissions</p>
             </div>
             <div className="flex gap-2">
