@@ -163,14 +163,20 @@ export function SettingsPage({ role }: SettingsPageProps) {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Model Provider</label>
-                      <select className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm">
-                        <option value="openai">OpenAI</option>
-                        <option value="anthropic">Anthropic (Claude)</option>
-                        <option value="google">Google (Gemini)</option>
-                        <option value="aliyun">Aliyun (Qwen)</option>
-                        <option value="doubao">Doubao (ByteDance)</option>
-                        <option value="deepseek">DeepSeek</option>
-                        <option value="custom">Custom / Local (Ollama)</option>
+                      <select className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm text-slate-900 dark:text-white appearance-none cursor-pointer">
+                        <option value="openai" className="bg-white dark:bg-slate-900">OpenAI</option>
+                        <option value="anthropic" className="bg-white dark:bg-slate-900">Anthropic (Claude)</option>
+                        <option value="google" className="bg-white dark:bg-slate-900">Google (Gemini)</option>
+                        <option value="deepseek" className="bg-white dark:bg-slate-900">DeepSeek</option>
+                        <option value="aliyun" className="bg-white dark:bg-slate-900">Aliyun (Qwen)</option>
+                        <option value="doubao" className="bg-white dark:bg-slate-900">Doubao (ByteDance)</option>
+                        <option value="moonshot" className="bg-white dark:bg-slate-900">Moonshot (Kimi)</option>
+                        <option value="zhipu" className="bg-white dark:bg-slate-900">Zhipu AI (GLM)</option>
+                        <option value="minimax" className="bg-white dark:bg-slate-900">Minimax</option>
+                        <option value="baichuan" className="bg-white dark:bg-slate-900">Baichuan</option>
+                        <option value="openrouter" className="bg-white dark:bg-slate-900">OpenRouter</option>
+                        <option value="groq" className="bg-white dark:bg-slate-900">Groq</option>
+                        <option value="custom" className="bg-white dark:bg-slate-900">Custom / Local (Ollama)</option>
                       </select>
                     </div>
                     <div className="space-y-2">

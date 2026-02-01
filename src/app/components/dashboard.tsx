@@ -41,6 +41,20 @@ const departmentData = [
 
 const COLORS = ['#2563eb', '#8b5cf6', '#ec4899', '#f97316'];
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xl">
+        <p className="text-sm font-black text-slate-900 dark:text-white mb-1">{label || payload[0].name}</p>
+        <p className="text-xs font-bold text-blue-600 dark:text-blue-400">
+          数量: {payload[0].value}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export function Dashboard() {
   const stats = [
     { label: '收件箱简历', value: '142', change: '+24', icon: FileText, color: 'blue', trend: 'up' },
@@ -103,15 +117,7 @@ export function Dashboard() {
                 />
                 <Tooltip 
                   cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }}
-                  contentStyle={{ 
-                    borderRadius: '16px', 
-                    border: 'none', 
-                    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', 
-                    fontWeight: 700,
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    color: '#0f172a'
-                  }}
-                  itemStyle={{ color: '#2563eb' }}
+                  content={<CustomTooltip />}
                 />
                 <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} barSize={40} />
               </BarChart>
@@ -138,7 +144,7 @@ export function Dashboard() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
