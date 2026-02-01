@@ -7,10 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "lint": "next lint"
   },
   "dependencies": {
     "@popperjs/core": "2.11.8",
@@ -46,7 +43,6 @@
     "clsx": "^2.1.1",
     "cmdk": "1.1.1",
     "date-fns": "3.6.0",
-    "drizzle-orm": "^0.39.1",
     "embla-carousel-react": "8.6.0",
     "input-otp": "1.4.2",
     "lucide-react": "0.487.0",
@@ -75,7 +71,6 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "autoprefixer": "latest",
-    "drizzle-kit": "latest",
     "postcss": "latest",
     "tailwindcss": "latest",
     "tailwindcss-animate": "latest",

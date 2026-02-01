@@ -15,9 +15,17 @@ import {
   Globe,
   Webhook,
   Zap,
-  Eye
+  Eye,
+  ChevronDown
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 
 interface SettingsPageProps {
   role: 'admin' | 'teacher' | 'hr';
@@ -163,15 +171,26 @@ export function SettingsPage({ role }: SettingsPageProps) {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Model Provider</label>
-                      <select className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm">
-                        <option value="openai">OpenAI</option>
-                        <option value="anthropic">Anthropic (Claude)</option>
-                        <option value="google">Google (Gemini)</option>
-                        <option value="aliyun">Aliyun (Qwen)</option>
-                        <option value="doubao">Doubao (ByteDance)</option>
-                        <option value="deepseek">DeepSeek</option>
-                        <option value="custom">Custom / Local (Ollama)</option>
-                      </select>
+                      <Select defaultValue="openai">
+                        <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20">
+                          <SelectValue placeholder="Select provider" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="openai">OpenAI</SelectItem>
+                          <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+                          <SelectItem value="google">Google (Gemini)</SelectItem>
+                          <SelectItem value="deepseek">DeepSeek</SelectItem>
+                          <SelectItem value="aliyun">Aliyun (Qwen)</SelectItem>
+                          <SelectItem value="doubao">Doubao (ByteDance)</SelectItem>
+                          <SelectItem value="moonshot">Moonshot (Kimi)</SelectItem>
+                          <SelectItem value="zhipu">Zhipu AI (GLM)</SelectItem>
+                          <SelectItem value="minimax">Minimax</SelectItem>
+                          <SelectItem value="baichuan">Baichuan</SelectItem>
+                          <SelectItem value="openrouter">OpenRouter</SelectItem>
+                          <SelectItem value="groq">Groq</SelectItem>
+                          <SelectItem value="custom">Custom / Local (Ollama)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base URL (Optional)</label>

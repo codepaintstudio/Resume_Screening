@@ -22,6 +22,13 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 
 type Stage = 'pending' | 'interviewing' | 'passed' | 'rejected';
 
@@ -195,21 +202,24 @@ export function InterviewKanban() {
                   )}
 
                   <div className="relative">
-                      <select 
+                      <Select 
                         value={selectedTask.stage}
-                        onChange={(e) => { 
-                          const newStage = e.target.value as Stage;
+                        onValueChange={(val) => { 
+                          const newStage = val as Stage;
                           moveTask(selectedTask.id, newStage);
                           setSelectedTask(prev => prev ? { ...prev, stage: newStage } : null);
                         }}
-                        className="appearance-none pl-4 pr-8 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
                       >
-                        <option value="pending">待面试</option>
-                        <option value="interviewing">面试中</option>
-                        <option value="passed">面试通过</option>
-                        <option value="rejected">未通过</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+                        <SelectTrigger className="w-[140px] h-9 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">待面试</SelectItem>
+                          <SelectItem value="interviewing">面试中</SelectItem>
+                          <SelectItem value="passed">面试通过</SelectItem>
+                          <SelectItem value="rejected">未通过</SelectItem>
+                        </SelectContent>
+                      </Select>
                   </div>
                 </div>
               </div>

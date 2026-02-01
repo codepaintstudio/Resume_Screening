@@ -24,6 +24,13 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 import { Student } from '@/types';
 import { mockStudents as initialMockStudents } from '@/data/mock';
 
@@ -34,6 +41,35 @@ export function ResumeBank() {
   const [filterDept, setFilterDept] = useState('全部部门');
   const [sortBy, setSortBy] = useState<'ai' | 'gpa' | 'time'>('ai');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredStudents = React.useMemo(() => {
+    return students
+      .filter(student => {
+        // Filter by search query
+        const matchesSearch = 
+          student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          student.studentId.includes(searchQuery) ||
+          student.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+        
+        // Filter by department
+        const matchesDept = filterDept === '全部部门' || student.department === filterDept;
+
+        return matchesSearch && matchesDept;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case 'ai':
+            return b.aiScore - a.aiScore;
+          case 'gpa':
+            return parseFloat(b.gpa) - parseFloat(a.gpa);
+          case 'time':
+            // Assuming higher ID is newer for mock data
+            return parseInt(b.id) - parseInt(a.id);
+          default:
+            return 0;
+        }
+      });
+  }, [students, searchQuery, filterDept, sortBy]);
 
   React.useEffect(() => {
     const fetchCandidates = async () => {
@@ -104,7 +140,14 @@ export function ResumeBank() {
             ))}
           </div>
 
-          <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider hover:border-blue-500 transition-all">
+          <button 
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider hover:border-blue-500 transition-all"
+            onClick={() => {
+              const depts = ['全部部门', '前端部', 'UI部', '运维', '办公室'];
+              const currentIdx = depts.indexOf(filterDept);
+              setFilterDept(depts[(currentIdx + 1) % depts.length]);
+            }}
+          >
             <Filter className="w-4 h-4" />
             {filterDept}
           </button>
@@ -136,7 +179,7 @@ export function ResumeBank() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-              {students.map((student) => (
+              {filteredStudents.map((student) => (
                 <tr 
                   key={student.id} 
                   className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer group"
@@ -240,17 +283,20 @@ export function ResumeBank() {
                   
                   {/* Status Override / Correction */}
                   <div className="relative">
-                      <select 
+                      <Select 
                         value={selectedStudent.status}
-                        onChange={(e) => handleStatusChange(selectedStudent.id, e.target.value)}
-                        className="appearance-none pl-4 pr-8 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                        onValueChange={(val) => handleStatusChange(selectedStudent.id, val)}
                       >
-                        <option value="pending">待处理</option>
-                        <option value="interviewing">面试中</option>
-                        <option value="passed">已通过</option>
-                        <option value="rejected">已淘汰</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+                        <SelectTrigger className="w-[140px] h-9 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">待处理</SelectItem>
+                          <SelectItem value="interviewing">面试中</SelectItem>
+                          <SelectItem value="passed">已通过</SelectItem>
+                          <SelectItem value="rejected">已淘汰</SelectItem>
+                        </SelectContent>
+                      </Select>
                   </div>
 
                   <button className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-slate-400"><Download className="w-4 h-4" /></button>
