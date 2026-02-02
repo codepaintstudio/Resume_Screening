@@ -4,17 +4,29 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
-import { useAppStore } from '@/store';
+import { usePathname } from 'next/navigation';
 import { navItems } from '@/config/nav';
+import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
 
 export function AppHeader() {
-  const { currentPage, theme, setTheme } = useAppStore();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Remove leading slash for matching
+  const currentPath = pathname?.split('/')[1] || 'dashboard';
+  const currentLabel = navItems.find(item => item.id === currentPath)?.label || '工作台';
 
   return (
     <header className="h-16 flex items-center justify-between px-6 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 z-10">
       <div className="flex items-center gap-4">
         <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-          {navItems.find(item => item.id === currentPage)?.label}
+          {currentLabel}
         </h1>
       </div>
 
@@ -29,11 +41,11 @@ export function AppHeader() {
         </div>
         
         <button 
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500"
           title="切换主题"
         >
-          {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+          {mounted && theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
 
         <button className="p-2 relative hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500">
