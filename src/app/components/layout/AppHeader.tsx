@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { navItems } from '@/config/nav';
+import { NotificationsPopover } from './NotificationsPopover';
 
 export function AppHeader() {
   const { currentPage, theme, setTheme } = useAppStore();
@@ -36,10 +37,7 @@ export function AppHeader() {
           {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
         </button>
 
-        <button className="p-2 relative hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900"></span>
-        </button>
+        <NotificationsPopover />
 
         <div className="h-6 w-px bg-slate-100 dark:bg-slate-800 mx-1"></div>
 
