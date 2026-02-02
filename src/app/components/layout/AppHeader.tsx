@@ -7,7 +7,8 @@ import {
 import { usePathname } from 'next/navigation';
 import { navItems } from '@/config/nav';
 import { useTheme } from 'next-themes';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 export function AppHeader() {
   const { theme, setTheme } = useTheme();
@@ -17,6 +18,111 @@ export function AppHeader() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const toggleTheme = (event: React.MouseEvent) => {
+    const isDark = theme === 'dark';
+    const nextTheme = isDark ? 'light' : 'dark';
+
+    // @ts-ignore
+    if (!document.startViewTransition) {
+      setTheme(nextTheme);
+      return;
+    }
+
+    const x = event.clientX;
+    const y = event.clientY;
+    const endRadius = Math.hypot(
+      Math.max(x, innerWidth - x),
+      Math.max(y, innerHeight - y)
+    );
+
+    const isSwitchingToDark = nextTheme === 'dark';
+    // Add stable class to control z-index independently of theme toggle
+    const transitionClass = isSwitchingToDark ? 'animating-to-dark' : 'animating-to-light';
+    document.documentElement.classList.add(transitionClass);
+
+    // @ts-ignore
+    const transition = document.startViewTransition(() => {
+      // Disable global CSS transitions to ensure the "New Snapshot" captures the final state immediately
+      document.documentElement.classList.add('no-transition');
+      
+      flushSync(() => {
+        setTheme(nextTheme);
+      });
+      // Force DOM update and ensure no flicker by validating class presence immediately
+      if (nextTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    });
+
+    transition.finished.finally(() => {
+      // Re-enable global CSS transitions and remove transition helper class
+      document.documentElement.classList.remove('no-transition');
+      document.documentElement.classList.remove(transitionClass);
+    });
+
+    transition.ready.then(() => {
+      const isSwitchingToDark = nextTheme === 'dark';
+      
+      // Animation Configuration
+      // Case 1: Light -> Dark (Standard Expand)
+      // New View (Dark) expands from circle(0) to circle(100)
+      if (isSwitchingToDark) {
+        const clipPath = [
+          `circle(0px at ${x}px ${y}px)`,
+          `circle(${endRadius}px at ${x}px ${y}px)`,
+        ];
+        
+        document.documentElement.animate(
+          { clipPath },
+          {
+            duration: 500,
+            easing: 'ease-in-out',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+      } 
+      // Case 2: Dark -> Light (Inverted Shrink / Donut Closing)
+      // New View (White) is on TOP.
+      // We want to visually see the Black circle shrinking.
+      // This means the White layer has a HOLE that shrinks.
+      else {
+        // Construct SVG Paths for "Rect with Hole"
+        // Outer Rect (Clockwise)
+        // Inner Circle (Counter-Clockwise) -> Creates Hole
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        
+        // Outer Rectangle Path (Cover whole screen)
+        // M 0 0 L w 0 L w h L 0 h Z
+        const outerRect = `M 0 0 L ${w} 0 L ${w} ${h} L 0 ${h} Z`;
+        
+        // Inner Circle Path (Hole) - Counter-Clockwise (Sweep Flag 0)
+        // M cx cy-r A r r 0 1 0 cx cy+r A r r 0 1 0 cx cy-r
+        const createHole = (r: number) => {
+          // Avoid r=0 issues in SVG path (can cause artifacts), use 0.1
+          const radius = Math.max(0.1, r);
+          return `M ${x} ${y - radius} A ${radius} ${radius} 0 1 0 ${x} ${y + radius} A ${radius} ${radius} 0 1 0 ${x} ${y - radius}`;
+        };
+
+        const startPath = `path('${outerRect} ${createHole(endRadius)}')`; // Big Hole (Visible Black)
+        const endPath = `path('${outerRect} ${createHole(0)}')`; // No Hole (Full White)
+        
+        document.documentElement.animate(
+          {
+            clipPath: [startPath, endPath],
+          },
+          {
+            duration: 500,
+            easing: 'ease-in-out',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+      }
+    });
+  };
 
   // Remove leading slash for matching
   const currentPath = pathname?.split('/')[1] || 'dashboard';
@@ -41,7 +147,7 @@ export function AppHeader() {
         </div>
         
         <button 
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          onClick={toggleTheme}
           className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500"
           title="切换主题"
         >
