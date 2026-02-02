@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, 
   Search,
+  MousePointer,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Stage, InterviewTask } from '@/types';
@@ -24,6 +25,37 @@ const stages: { id: Stage, label: string, color: string }[] = [
 export function InterviewKanban() {
   const [tasks, setTasks] = useState(initialTasks);
   const [selectedTask, setSelectedTask] = useState<InterviewTask | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollTip, setShowScrollTip] = useState(false);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        // User request: Scroll Down (positive) -> Right (positive scrollLeft change)
+        // Scroll Up (negative) -> Left (negative scrollLeft change)
+        container.scrollLeft += e.deltaY;
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  useEffect(() => {
+    const hasSeenTip = localStorage.getItem('hasSeenKanbanScrollTip');
+    if (!hasSeenTip) {
+      setShowScrollTip(true);
+      const timer = setTimeout(() => {
+        setShowScrollTip(false);
+        localStorage.setItem('hasSeenKanbanScrollTip', 'true');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const moveTask = (taskId: string, newStage: Stage) => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, stage: newStage } : t));
@@ -53,7 +85,21 @@ export function InterviewKanban() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-x-auto pb-4">
+      {showScrollTip && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-none">
+          <div className="bg-slate-900/90 text-white px-4 py-2 rounded-full shadow-xl flex items-center gap-2 text-xs font-medium backdrop-blur-sm border border-white/10">
+            <span className="bg-white/20 p-1 rounded-full">
+              <MousePointer className="w-3 h-3" />
+            </span>
+            使用鼠标滚轮下滑向右，上滑向左
+          </div>
+        </div>
+      )}
+
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-x-auto pb-4 no-scrollbar"
+      >
         <div className="flex gap-6 h-full min-w-max">
           {stages.map((stage) => (
             <KanbanColumn 
@@ -64,6 +110,13 @@ export function InterviewKanban() {
             />
           ))}
         </div>
+      </div>
+      
+      <div className="flex items-center justify-center gap-2 pb-2 text-slate-400">
+        <MousePointer className="w-3 h-3" />
+        <span className="text-[10px] font-medium uppercase tracking-widest">
+          Tips: 鼠标滚轮下滑向右，上滑向左
+        </span>
       </div>
 
       <InterviewDetailDrawer 
