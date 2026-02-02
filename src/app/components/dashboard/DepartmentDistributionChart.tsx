@@ -1,0 +1,69 @@
+import React from 'react';
+import { 
+  PieChart, 
+  Pie
+} from 'recharts';
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/app/components/ui/chart';
+
+const departmentData = [
+  { name: '前端部', value: 45, fill: '#2563eb' },
+  { name: 'UI部', value: 30, fill: '#8b5cf6' },
+  { name: '办公室', value: 20, fill: '#ec4899' },
+  { name: '运维', value: 15, fill: '#f97316' },
+];
+
+const chartConfig = {
+  "前端部": {
+    label: "前端部",
+    color: "#2563eb",
+  },
+  "UI部": {
+    label: "UI部",
+    color: "#8b5cf6",
+  },
+  "办公室": {
+    label: "办公室",
+    color: "#ec4899",
+  },
+  "运维": {
+    label: "运维",
+    color: "#f97316",
+  },
+} satisfies ChartConfig;
+
+export function DepartmentDistributionChart() {
+  return (
+    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+      <h3 className="text-lg font-black tracking-tight mb-6">简历占比</h3>
+      <div className="relative">
+        <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[250px]">
+          <PieChart>
+            <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+            <Pie
+              data={departmentData}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={60}
+              outerRadius={90}
+              paddingAngle={4}
+              cornerRadius={6}
+            />
+          </PieChart>
+        </ChartContainer>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <span className="text-2xl font-black text-slate-900 dark:text-white">110</span>
+          <span className="text-[10px] text-slate-400 font-bold uppercase">Total</span>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {departmentData.map((item, idx) => (
+          <div key={idx} className="flex items-center gap-2 text-xs p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }}></div>
+            <span className="text-slate-500 font-bold flex-1">{item.name}</span>
+            <span className="font-black">{item.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
