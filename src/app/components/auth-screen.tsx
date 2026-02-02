@@ -43,7 +43,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
               <span className="font-black text-xl">M</span>
             </div>
-            <span className="text-2xl font-black tracking-tight uppercase">MaHui Studio</span>
+            <span className="text-2xl font-black tracking-tight uppercase">CodePrint Studio</span>
           </div>
           
           <div className="space-y-6 max-w-lg">
