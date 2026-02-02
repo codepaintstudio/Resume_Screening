@@ -170,4 +170,78 @@
     font-size: 1rem;
     line-height: 1.5;
   }
+
+  /* Global transition for smooth theme switching */
+  *, *::before, *::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 300ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Utility to disable transitions during View Transition snapshot capture */
+.no-transition,
+.no-transition *,
+.no-transition *::before,
+.no-transition *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* View Transition API - Minimal Setup for Circular Reveal */
+::view-transition-group(root) {
+  animation-duration: 0s; /* Disable default cross-fade transform */
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none; /* Disable default opacity fade */
+  mix-blend-mode: normal; /* Ensure no blending artifacts */
+  opacity: 1; /* Force visibility */
+}
+
+/* 
+  View Transition: "New View Always Top"
+  - Light -> Dark: New View (Dark) expands circle.
+  - Dark -> Light: New View (White) expands "Inverted Circle" (Hole Shrinks).
+  
+  This ensures:
+  1. "White covers Black" (New View covers Old View).
+  2. Visual "Shrinking" effect for Dark -> Light.
+  3. No Flash (Bottom layer is solid Old View).
+*/
+
+::view-transition-group(root) {
+  animation-duration: 0s;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Old View is always at the bottom */
+::view-transition-old(root) {
+  z-index: 1;
+  opacity: 1;
+}
+
+/* New View is always on top */
+::view-transition-new(root) {
+  z-index: 9999;
+  opacity: 1;
+}
+
+/* Global helper to block transitions during snapshot */
+.no-transition,
+.no-transition *,
+.no-transition *::before,
+.no-transition *::after {
+  transition: none !important;
+  animation: none !important;
 }
