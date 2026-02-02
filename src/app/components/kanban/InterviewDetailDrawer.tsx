@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   XCircle, 
@@ -8,7 +8,8 @@ import {
   BrainCircuit, 
   MessageSquare, 
   AtSign, 
-  FileText 
+  FileText,
+  MousePointer2
 } from 'lucide-react';
 import {
   Select,
@@ -32,6 +33,30 @@ export function InterviewDetailDrawer({
   onMoveTask,
   onUpdateTaskStage
 }: InterviewDetailDrawerProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showScrollTip, setShowScrollTip] = useState(false);
+
+  useEffect(() => {
+    if (task) {
+      // Use a versioned key to ensure the tip shows up for the user after updates
+      const hasSeenTip = localStorage.getItem('hasSeenScrollTip_v2');
+      if (!hasSeenTip) {
+        setShowScrollTip(true);
+        const timer = setTimeout(() => {
+          setShowScrollTip(false);
+          localStorage.setItem('hasSeenScrollTip_v2', 'true');
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [task]);
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop += e.deltaY;
+    }
+  };
+
   return (
     <AnimatePresence>
       {task && (
@@ -115,7 +140,26 @@ export function InterviewDetailDrawer({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div 
+              ref={scrollRef}
+              className="flex-1 overflow-y-auto no-scrollbar relative"
+              onWheel={handleWheel}
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              <AnimatePresence>
+                {showScrollTip && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-5 right-4 z-10 bg-slate-900/80 text-white px-4 py-2 rounded-xl backdrop-blur-md flex items-center gap-3 shadow-lg pointer-events-none"
+                  >
+                    <MousePointer2 className="w-4 h-4 animate-bounce" />
+                    <span className="text-xs font-bold">使用鼠标滚轮上下滑动查看更多内容</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div className="p-8">
                 {/* Student Header */}
                 <div className="mb-8 flex justify-between items-start">
