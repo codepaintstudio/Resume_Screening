@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { navItems } from '@/config/nav';
-import { NotificationsPopover } from './NotificationsPopover';
+import { NotificationsPopover } from '../AppHeader/NotificationsPopover';
 
 export function AppHeader() {
   const { currentPage, theme, setTheme } = useAppStore();
