@@ -4,6 +4,8 @@ import {
   LogOut,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAppStore } from '@/store';
 import { navItems } from '@/config/nav';
 import { cn } from '@/lib/utils';
@@ -12,10 +14,15 @@ export function AppSidebar() {
   const { 
     isSidebarOpen, 
     toggleSidebar, 
-    currentPage, 
-    setCurrentPage, 
     setIsLoggedIn 
   } = useAppStore();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    router.push('/login');
+  };
 
   return (
     <motion.aside 
@@ -47,11 +54,11 @@ export function AppSidebar() {
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentPage === item.id;
+            const isActive = pathname.startsWith(`/${item.id}`);
             return (
-              <button
+              <Link
                 key={item.id}
-                onClick={() => setCurrentPage(item.id as any)}
+                href={`/${item.id}`}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative group",
                   isActive 
@@ -77,7 +84,7 @@ export function AppSidebar() {
                     {item.label}
                   </div>
                 )}
-              </button>
+              </Link>
             );
           })}
         </nav>
@@ -92,7 +99,7 @@ export function AppSidebar() {
           </button>
           
           <button 
-            onClick={() => setIsLoggedIn(false)}
+            onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-all group"
           >
             <LogOut className="w-5 h-5" />
