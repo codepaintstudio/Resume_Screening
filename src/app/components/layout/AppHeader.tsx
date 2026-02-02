@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { navItems } from '@/config/nav';
-import { NotificationsPopover } from './NotificationsPopover';
+import { NotificationsPopover } from '../AppHeader/NotificationsPopover';
 import { useTheme } from 'next-themes';
 import React, { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';

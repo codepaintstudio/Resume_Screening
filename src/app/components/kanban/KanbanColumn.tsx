@@ -10,7 +10,7 @@ interface KanbanColumnProps {
 
 export function KanbanColumn({ stage, tasks, onTaskClick }: KanbanColumnProps) {
   return (
-    <div className="w-80 flex flex-col bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50">
+    <div className="w-96 flex flex-col bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50">
       <div className="flex items-center justify-between mb-4 px-2">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${stage.color}`}></div>
@@ -21,7 +21,7 @@ export function KanbanColumn({ stage, tasks, onTaskClick }: KanbanColumnProps) {
         </div>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+      <div className="flex-1 space-y-3 overflow-y-auto pr-1 pb-2 no-scrollbar">
         {tasks.map((task) => (
           <KanbanCard key={task.id} task={task} onClick={onTaskClick} />
         ))}
