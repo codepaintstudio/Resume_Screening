@@ -13,7 +13,7 @@ export function KanbanCard({ task, onClick }: KanbanCardProps) {
     <motion.div
       layoutId={task.id}
       onClick={() => onClick(task)}
-      className="relative hover:z-10 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-blue-400 transition-all group cursor-pointer"
+      className="relative hover: bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-blue-400 transition-all group cursor-pointer"
     >
       <div className="flex justify-between items-start mb-3">
         <div>
