@@ -34,20 +34,20 @@ export function FilterToolbar({
   onOpenScreening
 }: FilterToolbarProps) {
   return (
-    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative">
+    <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
+      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+        <div className="relative w-full sm:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input 
             type="text" 
             placeholder="搜索候选人..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-sm w-64 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none font-bold"
+            className="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-sm w-full sm:w-64 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none font-bold"
           />
         </div>
         
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar">
           {SORT_OPTIONS.map(s => (
             <button
               key={s.id}
@@ -75,7 +75,7 @@ export function FilterToolbar({
         </div>
 
         <Select value={filterDept} onValueChange={setFilterDept}>
-          <SelectTrigger className="w-[140px] h-[34px] bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider hover:border-blue-500 transition-all focus:ring-2 focus:ring-blue-500/20">
+          <SelectTrigger className="w-full sm:w-[140px] h-[34px] bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider hover:border-blue-500 transition-all focus:ring-2 focus:ring-blue-500/20">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4" />
               <SelectValue placeholder="部门筛选" />
@@ -90,9 +90,9 @@ export function FilterToolbar({
           </SelectContent>
         </Select>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 w-full sm:w-auto">
         <button 
-          className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-wider hover:opacity-90 shadow-lg shadow-black/10 transition-all"
+          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-wider hover:opacity-90 shadow-lg shadow-black/10 transition-all"
           onClick={onOpenScreening}
         >
           <BrainCircuit className="w-4 h-4" />

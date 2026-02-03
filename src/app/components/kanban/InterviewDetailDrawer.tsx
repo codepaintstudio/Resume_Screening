@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/app/components/ui/select";
 import { InterviewTask, Stage } from '@/types';
+import { ErrorBoundary } from '../ErrorBoundary';
 
 interface InterviewDetailDrawerProps {
   task: InterviewTask | null;
@@ -75,7 +76,7 @@ export function InterviewDetailDrawer({
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed top-0 right-0 h-full w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl z-50 overflow-hidden flex flex-col border-l border-slate-100 dark:border-slate-800"
           >
-            <div className="flex items-center justify-between p-6 border-b border-slate-50 dark:border-slate-800">
+            <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-50 dark:border-slate-800">
               <div className="flex items-center gap-4">
                 <button onClick={onClose} className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
                   <XCircle className="w-5 h-5 text-slate-400" />
@@ -83,6 +84,7 @@ export function InterviewDetailDrawer({
                 <h3 className="text-lg font-black tracking-tight uppercase">面试详情 & 简历</h3>
               </div>
               <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2">
                 {task.stage === 'pending' && (
                   <button 
                     onClick={() => { 
@@ -116,6 +118,7 @@ export function InterviewDetailDrawer({
                     </button>
                   </>
                 )}
+                </div>
 
                 <div className="relative">
                     <Select 
@@ -140,6 +143,7 @@ export function InterviewDetailDrawer({
               </div>
             </div>
 
+            <ErrorBoundary>
             <div 
               ref={scrollRef}
               className="flex-1 overflow-y-auto no-scrollbar relative"
@@ -160,7 +164,7 @@ export function InterviewDetailDrawer({
                 )}
               </AnimatePresence>
 
-              <div className="p-8">
+              <div className="p-4 md:p-8">
                 {/* Student Header */}
                 <div className="mb-8 flex justify-between items-start">
                   <div>
@@ -175,7 +179,7 @@ export function InterviewDetailDrawer({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
                   <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800">
                     <p className="text-[10px] text-blue-600 uppercase font-black tracking-widest mb-1">面试时间</p>
                     <div className="flex items-center gap-2 font-black text-sm text-blue-900 dark:text-blue-300">
@@ -193,7 +197,7 @@ export function InterviewDetailDrawer({
                 </div>
 
                 {/* Actions for original file & AI details */}
-                <div className="flex gap-3 mb-10">
+                <div className="flex flex-col sm:flex-row gap-3 mb-10">
                   <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90">
                     <FileSearch className="w-4 h-4" />
                     查看原简历文件
@@ -244,6 +248,7 @@ export function InterviewDetailDrawer({
                 </section>
               </div>
             </div>
+            </ErrorBoundary>
           </motion.div>
         </>
       )}

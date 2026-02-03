@@ -16,7 +16,7 @@ export function StudentTable({ students, onSelectStudent }: StudentTableProps) {
           <thead>
             <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
               {TABLE_HEADERS.map((header, index) => (
-                <th key={index} className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${header.className}`}>
+                <th key={index} className={`px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${header.className}`}>
                   {header.label}
                 </th>
               ))}
@@ -32,7 +32,7 @@ export function StudentTable({ students, onSelectStudent }: StudentTableProps) {
                   className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer group"
                   onClick={() => onSelectStudent(student)}
                 >
-                  <td className="px-6 py-4">
+                  <td className="px-4 md:px-6 py-4">
                     <div>
                       <div className="font-black text-slate-900 dark:text-white">{student.name}</div>
                       <div className="flex gap-1 mt-1">
@@ -44,29 +44,29 @@ export function StudentTable({ students, onSelectStudent }: StudentTableProps) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-4 md:px-6 py-4 text-center">
                     <div className="inline-block px-3 py-1 bg-slate-900 text-white rounded-lg font-black text-sm">
                       {student.aiScore}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm">
+                  <td className="px-4 md:px-6 py-4 text-sm">
                     <div className="font-bold text-slate-900 dark:text-white">{student.studentId}</div>
                     <div className="text-slate-400 text-[10px] font-bold uppercase mt-0.5">{student.department}</div>
                   </td>
-                  <td className="px-6 py-4 text-sm font-bold text-slate-600 dark:text-slate-400">
+                  <td className="px-4 md:px-6 py-4 text-sm font-bold text-slate-600 dark:text-slate-400">
                     {student.submissionDate || '-'}
                   </td>
-                  <td className="px-6 py-4 text-center font-black text-slate-600 dark:text-slate-400">
+                  <td className="px-4 md:px-6 py-4 text-center font-black text-slate-600 dark:text-slate-400">
                     {student.gpa}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 md:px-6 py-4">
                     <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${STATUS_MAP[student.status].color}`}>
                       {STATUS_MAP[student.status].label}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-4 md:px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-2 bg-white dark:bg-slate-800 rounded-lg text-slate-300 hover:text-blue-600 shadow-sm border border-slate-100 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-all">
+                      <button className="p-2 bg-white dark:bg-slate-800 rounded-lg text-slate-300 hover:text-blue-600 shadow-sm border border-slate-100 dark:border-slate-700 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all">
                         <Mail className="w-4 h-4" />
                       </button>
                       <button className="p-2 bg-white dark:bg-slate-800 rounded-lg text-slate-300 hover:text-slate-600 shadow-sm border border-slate-100 dark:border-slate-700">

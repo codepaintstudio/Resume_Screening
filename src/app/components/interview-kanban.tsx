@@ -100,7 +100,7 @@ export function InterviewKanban() {
         ref={scrollContainerRef}
         className="flex-1 overflow-x-auto pb-4 no-scrollbar"
       >
-        <div className="flex gap-6 h-full min-w-max">
+        <div className="flex gap-6 h-full min-w-full lg:min-w-0">
           {stages.map((stage) => (
             <KanbanColumn 
                 key={stage.id} 

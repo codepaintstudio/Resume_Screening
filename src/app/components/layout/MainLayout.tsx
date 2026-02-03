@@ -19,11 +19,13 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-[#f8fafc] dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans">
-      <AppSidebar />
+      <div className="hidden md:block h-full">
+        <AppSidebar />
+      </div>
       <div className="flex-1 flex flex-col min-w-0 relative">
         <AppHeader />
-        <main className="flex-1 overflow-auto p-6 scroll-smooth">
-          <div className="max-w-7xl mx-auto space-y-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6 scroll-smooth">
+          <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
             {children}
           </div>
         </main>

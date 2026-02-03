@@ -3,7 +3,15 @@ import {
   Bell, 
   Sun,
   Moon,
+  Menu,
 } from 'lucide-react';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/app/components/ui/sheet";
 import { usePathname } from 'next/navigation';
 import { navItems } from '@/config/nav';
 import { NotificationsPopover } from '../AppHeader/NotificationsPopover';
@@ -130,8 +138,46 @@ export function AppHeader() {
   const currentLabel = navItems.find(item => item.id === currentPath)?.label || '工作台';
 
   return (
-    <header className="h-16 flex items-center justify-between px-6 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 z-10">
+    <header className="h-16 flex items-center justify-between px-4 md:px-6 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 z-10">
       <div className="flex items-center gap-4">
+        <Sheet>
+          <SheetTrigger asChild>
+            <button className="md:hidden p-2 -ml-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
+              <Menu className="w-5 h-5 text-slate-500" />
+            </button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[240px] p-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div className="flex items-center h-16 px-6 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3 whitespace-nowrap">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold text-lg">M</span>
+                </div>
+                <span className="font-bold text-lg tracking-tight">码绘工作室</span>
+              </div>
+            </div>
+            <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname.startsWith(`/${item.id}`);
+                return (
+                  <Link
+                    key={item.id}
+                    href={`/${item.id}`}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative group",
+                      isActive 
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold' 
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+                    )}
+                  >
+                    <Icon className={cn("w-5 h-5 flex-shrink-0", isActive ? 'scale-110' : '')} />
+                    <span className="whitespace-nowrap">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </SheetContent>
+        </Sheet>
         <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">
           {currentLabel}
         </h1>
