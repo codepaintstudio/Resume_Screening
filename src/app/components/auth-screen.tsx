@@ -93,7 +93,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
            <img 
              src="/login-illustration.png"
              alt="System Dashboard"
-             className="w-full object-cover rounded-t-xl shadow-2xl shadow-blue-900/20"
+             className="w-full object-cover"
            />
         </div>
 
