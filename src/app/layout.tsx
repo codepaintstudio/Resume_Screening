@@ -10,6 +10,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "码绘工作室 - 人才管理系统",
   description: "内部专用的招新管理平台",
+  icons: {
+    icon: '/logo.png',
+  },
 };
 
 export default function RootLayout({

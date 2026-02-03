@@ -40,8 +40,8 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
         
         <div className="relative z-10">
           <div className="flex items-center gap-3 text-white mb-16">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <span className="font-black text-xl">M</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
+              <img src="/logo-dark.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <span className="text-2xl font-black tracking-tight uppercase">CodePrint Studio</span>
           </div>
