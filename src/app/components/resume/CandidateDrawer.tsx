@@ -64,7 +64,7 @@ function YearMonthPicker({ value, onChange }: { value: string, onChange: (val: s
         <SelectTrigger className="h-8 w-[80px] text-xs font-bold bg-white dark:bg-slate-900 border-slate-200">
           <SelectValue placeholder="Year" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="z-[1002]">
           {years.map((y) => (
             <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
           ))}
@@ -72,10 +72,10 @@ function YearMonthPicker({ value, onChange }: { value: string, onChange: (val: s
       </Select>
       <span className="text-slate-400 font-bold">.</span>
       <Select value={month.toString().padStart(2, '0')} onValueChange={handleMonthChange}>
-        <SelectTrigger className="h-8 w-[60px] text-xs font-bold bg-white dark:bg-slate-900 border-slate-200">
+        <SelectTrigger className="h-8 w-[70px] text-xs font-bold bg-white dark:bg-slate-900 border-slate-200">
           <SelectValue placeholder="Month" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="z-[1002]">
           {months.map((m) => (
             <SelectItem key={m} value={m.toString().padStart(2, '0')}>{m.toString().padStart(2, '0')}</SelectItem>
           ))}
@@ -149,14 +149,8 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
       description: ''
     };
     
-    // Prepend and sort
+    // Prepend without sorting
     const newExps = [newExp, ...(formData.experiences || [])];
-    newExps.sort((a, b) => {
-      const dateA = a.endDate || a.startDate || '0';
-      const dateB = b.endDate || b.startDate || '0';
-      return dateB.localeCompare(dateA);
-    });
-    
     setFormData({ ...formData, experiences: newExps });
   };
 
@@ -169,15 +163,6 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
   const updateExperience = (index: number, field: keyof Experience, value: string) => {
     const newExps = [...(formData.experiences || [])];
     newExps[index] = { ...newExps[index], [field]: value };
-    
-    // Auto sort if dates change
-    if (field === 'startDate' || field === 'endDate') {
-       newExps.sort((a, b) => {
-         const dateA = a.endDate || a.startDate || '0';
-         const dateB = b.endDate || b.startDate || '0';
-         return dateB.localeCompare(dateA);
-       });
-    }
     
     setFormData({ ...formData, experiences: newExps });
   };
@@ -283,7 +268,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                           安排面试
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-4" align="end">
+                      <PopoverContent className="w-auto p-4 z-[1002]" align="end">
                         <div className="space-y-4">
                           <h4 className="font-bold text-sm">设置面试时间</h4>
                           <Calendar
@@ -342,7 +327,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                         <SelectTrigger className="w-[140px] h-9 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[1002]">
                           <SelectItem value="pending">待处理</SelectItem>
                           <SelectItem value="pending_interview">待面试</SelectItem>
                           <SelectItem value="interviewing">面试中</SelectItem>
@@ -477,7 +462,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                         <TooltipTrigger>
                           <HelpCircle className="w-4 h-4 text-slate-300 hover:text-slate-400 transition-colors" />
                         </TooltipTrigger>
-                        <TooltipContent>
+                        <TooltipContent className="z-[1002]">
                           <div className="space-y-2 p-1">
                             <p className="font-bold text-xs mb-2">熟练度说明</p>
                             <div className="flex items-center gap-2 text-xs"><div className="w-2 h-2 rounded-full bg-slate-400"></div>了解 (Understanding)</div>
@@ -517,7 +502,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                             <SelectTrigger className="h-6 w-[80px] text-[10px] border-none bg-transparent focus:ring-0 px-1">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="z-[1002]">
                               <SelectItem value="understanding">了解</SelectItem>
                               <SelectItem value="familiar">熟悉</SelectItem>
                               <SelectItem value="proficient">掌握</SelectItem>
