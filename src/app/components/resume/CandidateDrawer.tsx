@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Select,
@@ -85,10 +86,15 @@ function YearMonthPicker({ value, onChange }: { value: string, onChange: (val: s
 }
 
 export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, type = 'resume' }: CandidateDrawerProps) {
+  const [mounted, setMounted] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<any>({});
   const [interviewDate, setInterviewDate] = useState<Date | undefined>(undefined);
   const [interviewTime, setInterviewTime] = useState<string>("14:00");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const currentStatus = (student as any)?.stage || student?.status;
 
@@ -223,7 +229,9 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
     }
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {student && (
         <>
@@ -232,14 +240,14 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[999]"
           />
           <motion.div 
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 h-full w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl z-50 overflow-hidden flex flex-col border-l border-slate-100 dark:border-slate-800"
+            className="fixed top-0 right-0 h-[100dvh] w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl z-[1000] overflow-hidden flex flex-col border-l border-slate-100 dark:border-slate-800"
           >
             <div className="flex items-center justify-between p-6 border-b border-slate-50 dark:border-slate-800">
               <div className="flex items-center gap-4">
@@ -651,6 +659,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
