@@ -7,7 +7,7 @@ import {
 import { toast } from 'sonner';
 import { Stage, InterviewTask } from '@/types';
 import { KanbanColumn } from './kanban/KanbanColumn';
-import { InterviewDetailDrawer } from './kanban/InterviewDetailDrawer';
+import { CandidateDrawer } from './resume/CandidateDrawer';
 
 const initialTasks: InterviewTask[] = [
   { id: '1', name: '王晓燕', major: '数字媒体艺术', department: 'UI部', time: '14:00 今天', interviewer: '张静', location: '飞书会议', priority: 'high', stage: 'interviewing', studentId: '2021001', gpa: '3.8', aiScore: 92, tags: ['Figma', '插画'] },
@@ -119,11 +119,21 @@ export function InterviewKanban() {
         </span>
       </div>
 
-      <InterviewDetailDrawer 
-        task={selectedTask}
+      <CandidateDrawer 
+        student={selectedTask}
         onClose={() => setSelectedTask(null)}
-        onMoveTask={moveTask}
-        onUpdateTaskStage={handleUpdateTaskStage}
+        onStatusChange={(id, newStatus) => {
+            // Adapt the status change for InterviewTask
+            moveTask(id as string, newStatus);
+            handleUpdateTaskStage(selectedTask!, newStatus);
+        }}
+        onUpdate={(updatedData) => {
+            // Update the selected task locally
+            setSelectedTask(prev => prev ? { ...prev, ...updatedData } : null);
+            // Update the task in the list
+            setTasks(prev => prev.map(t => t.id === updatedData.id ? { ...t, ...updatedData } : t));
+        }}
+        type="interview"
       />
     </div>
   );

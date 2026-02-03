@@ -1,3 +1,11 @@
+export interface Experience {
+  id: string;
+  startDate: string;
+  endDate: string;
+  title: string;
+  description: string;
+}
+
 export interface Student {
   id: string | number;
   name: string;
@@ -7,14 +15,15 @@ export interface Student {
   class: string;
   gpa: string;
   graduationYear: string;
-  status: 'pending' | 'interviewing' | 'passed' | 'rejected';
+  status: 'pending' | 'pending_interview' | 'interviewing' | 'passed' | 'rejected';
   tags: string[] | string; // DB might return string, frontend needs array
   aiScore: number;
   submissionDate: string;
   createdAt?: string | Date;
+  experiences?: Experience[];
 }
 
-export type Stage = 'pending' | 'interviewing' | 'passed' | 'rejected';
+export type Stage = 'pending' | 'pending_interview' | 'interviewing' | 'passed' | 'rejected';
 
 export interface InterviewTask {
   id: string;
@@ -30,4 +39,9 @@ export interface InterviewTask {
   gpa: string;
   aiScore: number;
   tags: string[];
+  email?: string;
+  phone?: string;
+  class?: string;
+  skills?: { name: string; level: 'understanding' | 'familiar' | 'proficient' | 'skilled' | 'master' }[];
+  experiences?: Experience[];
 }
