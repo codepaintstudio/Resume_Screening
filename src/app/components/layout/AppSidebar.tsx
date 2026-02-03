@@ -29,7 +29,7 @@ export function AppSidebar() {
         initial={false}
         animate={{ width: isSidebarOpen ? 240 : 80 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="relative z-20 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800"
+        className="relative z-20 h-full flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800"
       >
         <div className="flex items-center h-16 px-6 border-b border-slate-100 dark:border-slate-800 overflow-hidden">
           <div className="flex items-center gap-3 whitespace-nowrap">
