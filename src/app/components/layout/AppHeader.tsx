@@ -86,9 +86,6 @@ export function AppHeader() {
     transition.ready.then(() => {
       const isSwitchingToDark = nextTheme === 'dark';
       
-      // Animation Configuration
-      // Case 1: Light -> Dark (Standard Expand)
-      // New View (Dark) expands from circle(0) to circle(100)
       if (isSwitchingToDark) {
         const clipPath = [
           `circle(0px at ${x}px ${y}px)`,
@@ -104,10 +101,6 @@ export function AppHeader() {
           }
         );
       } 
-      // Case 2: Dark -> Light (Inverted Shrink / Donut Closing)
-      // New View (White) is on TOP.
-      // We want to visually see the Black circle shrinking.
-      // This means the White layer has a HOLE that shrinks.
       else {
         // Construct SVG Paths for "Rect with Hole"
         // Outer Rect (Clockwise)

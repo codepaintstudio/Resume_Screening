@@ -33,8 +33,9 @@ export function AppSidebar() {
       >
         <div className="flex items-center h-16 px-6 border-b border-slate-100 dark:border-slate-800 overflow-hidden">
           <div className="flex items-center gap-3 whitespace-nowrap">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-lg">M</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-cover dark:hidden" />
+              <img src="/logo-dark.png" alt="Logo" className="w-full h-full object-cover hidden dark:block" />
             </div>
             <AnimatePresence mode="wait">
               {isSidebarOpen && (
