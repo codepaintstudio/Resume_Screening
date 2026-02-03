@@ -15,6 +15,7 @@ import {
 import { usePathname } from 'next/navigation';
 import { navItems } from '@/config/nav';
 import { NotificationsPopover } from '../AppHeader/NotificationsPopover';
+import { MemberResume } from '../AppHeader/MemberResume';
 import { useTheme } from 'next-themes';
 import React, { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
@@ -22,11 +23,21 @@ import { flushSync } from 'react-dom';
 export function AppHeader() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showResume, setShowResume] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.nativeEvent.isComposing) return;
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      e.preventDefault();
+      setShowResume(true);
+    }
+  };
 
   const toggleTheme = (event: React.MouseEvent) => {
     const isDark = theme === 'dark';
@@ -189,9 +200,21 @@ export function AppHeader() {
           <input 
             type="text" 
             placeholder="搜索成员、简历..." 
-            className="pl-10 pr-4 py-1.5 bg-slate-50 dark:bg-slate-800 border-none rounded-full text-sm w-48 focus:w-64 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            className={cn(
+              "pl-10 pr-4 py-1.5 bg-slate-50 dark:bg-slate-800 border-none rounded-full text-sm transition-all outline-none focus:ring-2 focus:ring-blue-500/20",
+              searchQuery ? "w-64" : "w-48 focus:w-64"
+            )}
           />
         </div>
+
+        <MemberResume 
+          url="mock-resume" 
+          open={showResume} 
+          onOpenChange={setShowResume} 
+        />
         
         <button 
           onClick={toggleTheme}
