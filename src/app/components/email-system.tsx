@@ -18,6 +18,14 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/app/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -42,9 +50,37 @@ const mockTemplates: Template[] = [
 export function EmailSystem() {
   const [activeTab, setActiveTab] = useState<'send' | 'templates' | 'history' | 'config'>('send');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [templates, setTemplates] = useState<Template[]>(mockTemplates);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newTemplate, setNewTemplate] = useState<Partial<Template>>({
+    category: '面试',
+    name: '',
+    subject: '',
+    content: ''
+  });
 
   const handleSend = () => {
     toast.success('群发任务已启动，飞书机器人将同步通知');
+  };
+
+  const handleCreateTemplate = () => {
+    if (!newTemplate.name || !newTemplate.subject || !newTemplate.content) {
+      toast.error('请填写完整模板信息');
+      return;
+    }
+
+    const template: Template = {
+      id: Date.now().toString(),
+      name: newTemplate.name!,
+      subject: newTemplate.subject!,
+      content: newTemplate.content!,
+      category: newTemplate.category || '通用',
+    };
+
+    setTemplates([...templates, template]);
+    setIsCreateOpen(false);
+    setNewTemplate({ category: '面试', name: '', subject: '', content: '' });
+    toast.success('模板创建成功');
   };
 
   return (
@@ -84,12 +120,12 @@ export function EmailSystem() {
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">选择模板</label>
-                    <Select onValueChange={(val) => setSelectedTemplate(mockTemplates.find(t => t.id === val) || null)}>
+                    <Select onValueChange={(val) => setSelectedTemplate(templates.find(t => t.id === val) || null)}>
                       <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20">
                         <SelectValue placeholder="-- 请选择邮件模板 --" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockTemplates.map(t => (
+                        {templates.map(t => (
                           <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -227,7 +263,7 @@ export function EmailSystem() {
 
         {activeTab === 'templates' && (
           <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockTemplates.map(template => (
+            {templates.map(template => (
               <div key={template.id} className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-blue-400 transition-all group shadow-sm">
                 <div className="flex justify-between items-start mb-6">
                   <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[9px] font-black uppercase tracking-widest rounded">
@@ -245,12 +281,105 @@ export function EmailSystem() {
                 </div>
               </div>
             ))}
-            <button className="bg-slate-50 dark:bg-slate-900/50 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-slate-300 hover:text-blue-600 hover:border-blue-400 transition-all group">
-              <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                <Plus className="w-6 h-6" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">New Template</span>
-            </button>
+            
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <button className="bg-slate-50 dark:bg-slate-900/50 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-slate-300 hover:text-blue-600 hover:border-blue-400 transition-all group">
+                  <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <Plus className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest">New Template</span>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-xl font-black tracking-tight">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    新建邮件模板
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">模板名称</label>
+                      <input 
+                        type="text" 
+                        value={newTemplate.name}
+                        onChange={(e) => setNewTemplate({...newTemplate, name: e.target.value})}
+                        placeholder="例如：面试通过通知"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">分类</label>
+                      <Select 
+                        value={newTemplate.category} 
+                        onValueChange={(val) => setNewTemplate({...newTemplate, category: val})}
+                      >
+                        <SelectTrigger className="w-full h-[46px] bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500/20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="面试">面试</SelectItem>
+                          <SelectItem value="通过">通过</SelectItem>
+                          <SelectItem value="拒信">拒信</SelectItem>
+                          <SelectItem value="通用">通用</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">邮件主题</label>
+                    <input 
+                      type="text" 
+                      value={newTemplate.subject}
+                      onChange={(e) => setNewTemplate({...newTemplate, subject: e.target.value})}
+                      placeholder="输入邮件主题..."
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">模板内容</label>
+                      <div className="flex gap-2">
+                        {['姓名', '时间', '部门', '链接'].map(v => (
+                          <button 
+                            key={v} 
+                            onClick={() => setNewTemplate(prev => ({...prev, content: (prev.content || '') + `{{${v}}}`}))}
+                            className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[9px] rounded font-black uppercase tracking-widest border border-blue-100 dark:border-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                          >
+                            + {`{{${v}}}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <textarea 
+                      rows={8}
+                      value={newTemplate.content}
+                      onChange={(e) => setNewTemplate({...newTemplate, content: e.target.value})}
+                      placeholder="输入模板内容，支持使用上方变量..."
+                      className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm font-medium resize-none"
+                    ></textarea>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <button 
+                    onClick={() => setIsCreateOpen(false)}
+                    className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                  >
+                    取消
+                  </button>
+                  <button 
+                    onClick={handleCreateTemplate}
+                    className="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all"
+                  >
+                    保存模板
+                  </button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
 
