@@ -2,6 +2,8 @@ import { Star, GraduationCap, Clock, CheckCircle2 } from 'lucide-react';
 
 export const DEPARTMENTS = ['全部部门', '前端部', 'UI部', '运维', '办公室'] as const;
 
+export const AVAILABLE_INTERVIEWERS = ['张静', '李雷', '王武', '赵六', '孙七'];
+
 export const STATUS_MAP = {
   pending: { label: '待处理', color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
   pending_interview: { label: '待面试', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },

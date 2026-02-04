@@ -97,7 +97,7 @@ export function KanbanCard({ task, index, onClick }: KanbanCardProps) {
                     aria-hidden="true"
                   />
                   <span className="text-[10px] text-slate-400 font-bold truncate">
-                    面试官: {task.interviewer}
+                    面试官: {task.interviewers?.join(', ') || task.interviewer}
                   </span>
                 </div>
               </div>

@@ -5,10 +5,13 @@ import {
   MousePointer,
   Users,
   Calendar as CalendarIcon,
-  Clock
+  Clock,
+  X,
+  Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Stage, InterviewTask } from '@/types';
+import { AVAILABLE_INTERVIEWERS } from '@/config/constants';
 import { KanbanColumn } from './kanban/KanbanColumn';
 import { CandidateDrawer } from './resume/CandidateDrawer';
 import {
@@ -19,16 +22,31 @@ import {
   DialogFooter,
 } from "./ui/dialog";
 import { Calendar } from "./ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./ui/popover";
+import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
+import { cn } from "./ui/utils";
 import { zhCN } from 'date-fns/locale';
 import { format } from "date-fns";
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 
+const today = new Date();
+const tomorrow = new Date(today);
+tomorrow.setDate(tomorrow.getDate() + 1);
+const dateFeb5 = new Date(today.getFullYear(), 1, 5);
+
+const formatDate = (d: Date) => format(d, 'yyyy-MM-dd');
+
 const initialTasks: InterviewTask[] = [
-  { id: '1', name: '王晓燕', major: '数字媒体艺术', department: 'UI部', time: '14:00 今天', interviewer: '张静', location: '飞书会议', priority: 'high', stage: 'interviewing', studentId: '2021001', gpa: '3.8', aiScore: 92, tags: ['Figma', '插画'] },
-  { id: '2', name: '刘洋', major: '软件工程', department: '前端部', time: '10:00 明天', interviewer: '李雷', location: '工作室A区', priority: 'medium', stage: 'pending', studentId: '2021045', gpa: '3.7', aiScore: 85, tags: ['React', 'Node'] },
-  { id: '3', name: '周博', major: '人工智能', department: '运维', time: '15:30 2月5日', interviewer: '王武', location: '电话面试', priority: 'low', stage: 'passed', studentId: '2022012', gpa: '3.9', aiScore: 88, tags: ['Linux', 'Python'] },
-  { id: '4', name: '李华', major: '计算机科学', department: '前端部', time: '未安排', interviewer: '待定', location: '待定', priority: 'medium', stage: 'pending', studentId: '2021046', gpa: '3.6', aiScore: 82, tags: ['Vue', 'TS'] },
-  { id: '5', name: '张三', major: '软件工程', department: '后端部', time: '未安排', interviewer: '待定', location: '待定', priority: 'high', stage: 'pending', studentId: '2021047', gpa: '3.9', aiScore: 90, tags: ['Java', 'Spring'] },
+  { id: '1', name: '王晓燕', major: '数字媒体艺术', department: 'UI部', time: '14:00 今天', interviewers: ['张静'], date: formatDate(today), location: '飞书会议', priority: 'high', stage: 'interviewing', studentId: '2021001', gpa: '3.8', aiScore: 92, tags: ['Figma', '插画'] },
+  { id: '2', name: '刘洋', major: '软件工程', department: '前端部', time: '10:00 明天', interviewers: ['李雷', '王武'], date: formatDate(tomorrow), location: '工作室A区', priority: 'medium', stage: 'pending', studentId: '2021045', gpa: '3.7', aiScore: 85, tags: ['React', 'Node'] },
+  { id: '3', name: '周博', major: '人工智能', department: '运维', time: '15:30 2月5日', interviewers: ['王武'], date: formatDate(dateFeb5), location: '电话面试', priority: 'low', stage: 'passed', studentId: '2022012', gpa: '3.9', aiScore: 88, tags: ['Linux', 'Python'] },
+  { id: '4', name: '李华', major: '计算机科学', department: '前端部', time: '未安排', interviewers: [], location: '待定', priority: 'medium', stage: 'pending', studentId: '2021046', gpa: '3.6', aiScore: 82, tags: ['Vue', 'TS'] },
+  { id: '5', name: '张三', major: '软件工程', department: '后端部', time: '未安排', interviewers: [], location: '待定', priority: 'high', stage: 'pending', studentId: '2021047', gpa: '3.9', aiScore: 90, tags: ['Java', 'Spring'] },
 ];
 
 const stages: { id: Stage, label: string, color: string }[] = [
@@ -49,8 +67,18 @@ export function InterviewKanban() {
   const [selectedBatchCandidates, setSelectedBatchCandidates] = useState<string[]>([]);
   const [batchDate, setBatchDate] = useState<Date>();
   const [batchTime, setBatchTime] = useState('');
+  const [batchInterviewers, setBatchInterviewers] = useState<string[]>([]);
+
+  // Filter State
+  const [filterDate, setFilterDate] = useState<Date>();
   
   const pendingTasks = tasks.filter(t => t.stage === 'pending');
+
+  const filteredTasks = tasks.filter(t => {
+    if (!filterDate) return true;
+    if (!t.date) return false;
+    return t.date === formatDate(filterDate);
+  });
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -105,6 +133,17 @@ export function InterviewKanban() {
     const destStageId = destination.droppableId as Stage;
     
     // We need to operate on the filtered lists to match visual indices
+    // NOTE: Drag and drop might be tricky with filtering. 
+    // Ideally, we should disable DND when filtered, or handle it carefully.
+    // For now, let's assume filtering is visual only, but operations happen on full list.
+    // However, the index in 'result' corresponds to the rendered list (filtered).
+    // If we are filtered, the indices won't match the full list.
+    
+    if (filterDate) {
+        toast.error('请清除筛选后再进行拖拽排序');
+        return;
+    }
+
     const sourceList = currentTasks.filter(t => t.stage === sourceStageId);
     const destList = sourceStageId === destStageId ? sourceList : currentTasks.filter(t => t.stage === destStageId);
     const otherTasks = currentTasks.filter(t => t.stage !== sourceStageId && t.stage !== destStageId);
@@ -119,14 +158,10 @@ export function InterviewKanban() {
     destList.splice(destination.index, 0, movedTask);
     
     // Reconstruct the full task list
-    // Note: The order of concatenation matters for the next render's "index" stability if we rely on array order.
-    // Here we just put them back together.
     let newTasks: InterviewTask[] = [];
     
-    // To preserve the order of stages in the main array (somewhat), we can iterate stages
-    // But simply concatenating is easier and works since we filter by stage for rendering.
     if (sourceStageId === destStageId) {
-      newTasks = [...otherTasks, ...sourceList]; // sourceList is now the modified list (same as destList)
+      newTasks = [...otherTasks, ...sourceList]; 
     } else {
       newTasks = [...otherTasks, ...sourceList, ...destList];
     }
@@ -148,13 +183,24 @@ export function InterviewKanban() {
       toast.error('请设置面试时间');
       return;
     }
+    if (batchInterviewers.length === 0) {
+        toast.error('请至少选择一位面试官');
+        return;
+    }
 
     const formattedDate = format(batchDate, 'M月d日', { locale: zhCN });
+    const formattedISODate = formatDate(batchDate);
     const newTime = `${batchTime} ${formattedDate}`;
 
     setTasks(prev => prev.map(t => {
       if (selectedBatchCandidates.includes(t.id)) {
-        return { ...t, time: newTime, stage: 'interviewing' as Stage };
+        return { 
+            ...t, 
+            time: newTime, 
+            date: formattedISODate,
+            interviewers: batchInterviewers,
+            stage: 'interviewing' as Stage 
+        };
       }
       return t;
     }));
@@ -164,11 +210,18 @@ export function InterviewKanban() {
     setSelectedBatchCandidates([]);
     setBatchDate(undefined);
     setBatchTime('');
+    setBatchInterviewers([]);
   };
 
   const toggleBatchCandidate = (id: string) => {
     setSelectedBatchCandidates(prev => 
       prev.includes(id) ? prev.filter(cid => cid !== id) : [...prev, id]
+    );
+  };
+  
+  const toggleBatchInterviewer = (name: string) => {
+    setBatchInterviewers(prev => 
+      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
     );
   };
 
@@ -193,6 +246,40 @@ export function InterviewKanban() {
               className="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-sm w-64 outline-none focus:ring-2 focus:ring-blue-500/20 font-bold"
             />
           </div>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-[240px] justify-start text-left font-normal rounded-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900",
+                  !filterDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {filterDate ? format(filterDate, "PPP", { locale: zhCN }) : <span>按日期筛选</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={filterDate}
+                onSelect={setFilterDate}
+                initialFocus
+                locale={zhCN}
+              />
+            </PopoverContent>
+          </Popover>
+          {filterDate && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setFilterDate(undefined)}
+                className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                  <X className="w-4 h-4 text-slate-500" />
+              </Button>
+          )}
         </div>
         
         <button 
@@ -204,13 +291,13 @@ export function InterviewKanban() {
         </button>
 
         <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
-          <DialogContent className="sm:max-w-4xl w-full">
+          <DialogContent className="sm:max-w-5xl w-full">
             <DialogHeader>
               <DialogTitle>批量安排面试</DialogTitle>
             </DialogHeader>
             <div className="flex gap-6 py-4">
               {/* Left: Candidate List */}
-              <div className="w-1/2 border-r border-slate-100 dark:border-slate-800 pr-6">
+              <div className="w-1/3 border-r border-slate-100 dark:border-slate-800 pr-6">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white">待安排候选人 ({pendingTasks.length})</h4>
                   <button 
@@ -220,7 +307,7 @@ export function InterviewKanban() {
                     {selectedBatchCandidates.length === pendingTasks.length ? '取消全选' : '全选'}
                   </button>
                 </div>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                   {pendingTasks.length === 0 ? (
                     <div className="text-center py-8 text-slate-400 text-sm">暂无待安排候选人</div>
                   ) : (
@@ -256,8 +343,8 @@ export function InterviewKanban() {
                 </div>
               </div>
 
-              {/* Right: Date & Time */}
-              <div className="w-1/2 pl-2">
+              {/* Middle: Date & Time */}
+              <div className="w-1/3 border-r border-slate-100 dark:border-slate-800 px-6">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">设置时间</h4>
                 <div className="space-y-4">
                   <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 flex justify-center">
@@ -278,16 +365,44 @@ export function InterviewKanban() {
                       className="w-full bg-transparent text-sm font-bold border-none focus:ring-0 p-0 text-slate-700 dark:text-slate-300"
                     />
                   </div>
-                  
-                  <div className="pt-4">
+                </div>
+              </div>
+              
+              {/* Right: Interviewers */}
+              <div className="w-1/3 pl-2 flex flex-col">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">选择面试官</h4>
+                <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-2 custom-scrollbar">
+                    {AVAILABLE_INTERVIEWERS.map(interviewer => (
+                        <div 
+                            key={interviewer}
+                            onClick={() => toggleBatchInterviewer(interviewer)}
+                            className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                                batchInterviewers.includes(interviewer)
+                                    ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                                    : 'bg-white border-slate-100 dark:bg-slate-900 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-800'
+                            }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    batchInterviewers.includes(interviewer) ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'
+                                }`}>
+                                    {interviewer.slice(0, 1)}
+                                </div>
+                                <span className="text-sm font-bold text-slate-900 dark:text-white">{interviewer}</span>
+                            </div>
+                            {batchInterviewers.includes(interviewer) && <Check className="w-4 h-4 text-blue-600" />}
+                        </div>
+                    ))}
+                </div>
+                
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto">
                     <button 
                       onClick={handleBatchSchedule}
-                      disabled={selectedBatchCandidates.length === 0 || !batchDate || !batchTime}
+                      disabled={selectedBatchCandidates.length === 0 || !batchDate || !batchTime || batchInterviewers.length === 0}
                       className="w-full py-3 bg-blue-600 text-white text-sm font-black uppercase tracking-wider rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20 transition-all"
                     >
                       确认安排 ({selectedBatchCandidates.length})
                     </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -315,7 +430,7 @@ export function InterviewKanban() {
             <KanbanColumn 
                 key={stage.id} 
                 stage={stage} 
-                tasks={tasks.filter(t => t.stage === stage.id)}
+                tasks={filteredTasks.filter(t => t.stage === stage.id)}
                 onTaskClick={setSelectedTask}
             />
           ))}

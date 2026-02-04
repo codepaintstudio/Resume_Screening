@@ -26,12 +26,12 @@ import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/app/components/ui/utils";
 import { Student, InterviewTask, Experience } from '@/types';
-import { STATUS_MAP } from '@/config/constants';
+import { STATUS_MAP, AVAILABLE_INTERVIEWERS } from '@/config/constants';
 import { 
   XCircle, Download, FileSearch, 
   Briefcase, MessageSquare, Send, AtSign,
   Phone, Mail, Edit2, Save, HelpCircle,
-  BrainCircuit, Plus, X, Trash2, Calendar as CalendarIcon, Clock, ChevronDown
+  BrainCircuit, Plus, X, Trash2, Calendar as CalendarIcon, Clock, ChevronDown, Check
 } from 'lucide-react';
 import { toast } from "sonner";
 
@@ -91,10 +91,17 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
   const [formData, setFormData] = useState<any>({});
   const [interviewDate, setInterviewDate] = useState<Date | undefined>(undefined);
   const [interviewTime, setInterviewTime] = useState<string>("14:00");
+  const [selectedInterviewers, setSelectedInterviewers] = useState<string[]>([]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const toggleInterviewer = (name: string) => {
+    setSelectedInterviewers(prev => 
+      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+    );
+  };
 
   const currentStatus = (student as any)?.stage || student?.status;
 
@@ -169,16 +176,28 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
 
   const handleScheduleInterview = () => {
      if (!interviewDate) return;
+     if (selectedInterviewers.length === 0) {
+       toast.error("请至少选择一位面试官");
+       return;
+     }
+
      const formattedDate = format(interviewDate, "yyyy-MM-dd");
+     const formattedDateDisplay = format(interviewDate, "M月d日", { locale: zhCN });
      // Combine date and time
-     const dateTime = `${formattedDate} ${interviewTime}`;
+     const dateTime = `${interviewTime} ${formattedDateDisplay}`;
      
      // Update local form data to reflect the change immediately
      // Note: we are NOT changing status to 'interviewing' as per user request
      // It remains 'pending_interview' but with a scheduled time
      
      if (onUpdate && student) {
-         onUpdate({ ...student, time: dateTime, stage: 'pending_interview' });
+         onUpdate({ 
+           ...student, 
+           time: dateTime, 
+           date: formattedDate,
+           interviewers: selectedInterviewers,
+           stage: 'pending_interview' 
+         });
      }
      
      toast.success("面试安排已更新");
@@ -290,6 +309,34 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                             </div>
                             <ChevronDown className="w-3 h-3 text-slate-400 pointer-events-none" />
                           </div>
+                          
+                          <div className="space-y-2">
+                            <h4 className="font-bold text-xs text-slate-500 uppercase">选择面试官</h4>
+                            <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
+                                {AVAILABLE_INTERVIEWERS.map(interviewer => (
+                                    <div 
+                                        key={interviewer}
+                                        onClick={() => toggleInterviewer(interviewer)}
+                                        className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all text-xs ${
+                                            selectedInterviewers.includes(interviewer)
+                                                ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                                                : 'bg-white border-slate-100 dark:bg-slate-900 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-800'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                                selectedInterviewers.includes(interviewer) ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'
+                                            }`}>
+                                                {interviewer.slice(0, 1)}
+                                            </div>
+                                            <span className="font-bold text-slate-900 dark:text-white">{interviewer}</span>
+                                        </div>
+                                        {selectedInterviewers.includes(interviewer) && <Check className="w-3 h-3 text-blue-600" />}
+                                    </div>
+                                ))}
+                            </div>
+                          </div>
+
                           <button 
                             onClick={handleScheduleInterview}
                             disabled={!interviewDate}

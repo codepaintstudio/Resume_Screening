@@ -31,7 +31,9 @@ export interface InterviewTask {
   major: string;
   department: string;
   time: string;
-  interviewer: string;
+  interviewer?: string; // @deprecated use interviewers instead
+  interviewers: string[];
+  date?: string; // YYYY-MM-DD
   location: string;
   priority: 'low' | 'medium' | 'high';
   stage: Stage;

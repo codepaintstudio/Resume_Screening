@@ -12,7 +12,8 @@ import {
   Phone,
   Mail,
   HelpCircle,
-  Info
+  Info,
+  Users
 } from 'lucide-react';
 import { Input } from "@/app/components/ui/input";
 import { Badge } from "@/app/components/ui/badge";
@@ -296,6 +297,13 @@ export function InterviewDetailDrawer({
                       ) : (
                         <span>{formData.phone}</span>
                       )}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-purple-50 dark:bg-purple-900/10 rounded-2xl border border-purple-100 dark:border-purple-800 sm:col-span-2">
+                    <p className="text-[10px] text-purple-600 uppercase font-black tracking-widest mb-1">面试官</p>
+                    <div className="flex items-center gap-2 font-black text-sm text-purple-900 dark:text-purple-300">
+                      <Users className="w-4 h-4 flex-shrink-0" />
+                      <span>{task.interviewers?.join('、 ') || task.interviewer || '未安排'}</span>
                     </div>
                   </div>
                 </div>
