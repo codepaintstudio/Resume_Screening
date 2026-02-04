@@ -212,8 +212,6 @@ export function KanbanColumn({ stage, tasks, onTaskClick }: KanbanColumnProps) {
     <Droppable droppableId={stage.id}>
       {(provided, snapshot) => (
         <div
-          ref={provided.innerRef}
-          {...provided.droppableProps}
           className={`w-[85vw] sm:w-96 lg:w-auto lg:flex-1 lg:min-w-[250px] h-full flex flex-col rounded-2xl p-4 border flex-shrink-0 lg:flex-shrink transition-colors duration-200 relative group ${
             snapshot.isDraggingOver
               ? 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
@@ -275,7 +273,11 @@ export function KanbanColumn({ stage, tasks, onTaskClick }: KanbanColumnProps) {
           >
             {/* 卡片列表容器 */}
             <div
-              ref={listRef}
+              ref={(el) => {
+                provided.innerRef(el);
+                listRef.current = el;
+              }}
+              {...provided.droppableProps}
               onScroll={handleScroll}
               className="w-full h-full overflow-y-auto pr-1 pb-2 no-scrollbar scroll-smooth"
               style={{ overscrollBehavior: 'contain' }}
