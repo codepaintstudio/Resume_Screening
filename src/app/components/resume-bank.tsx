@@ -70,23 +70,8 @@ export function ResumeBank() {
   }, [students, searchQuery, filterDept, sortBy, sortOrder]);
 
   useEffect(() => {
-    const fetchCandidates = async () => {
-      try {
-        const res = await fetch('/api/candidates');
-        if (res.ok) {
-          const data = await res.json();
-          // Merge with mock data or replace
-          if (Array.isArray(data) && data.length > 0) {
-             setStudents(data);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching candidates:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCandidates();
+    // Backend API integration pending
+    setLoading(false);
   }, []);
 
   const handleStatusChange = (taskId: string | number, newStatus: keyof typeof STATUS_MAP) => {
