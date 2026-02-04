@@ -16,26 +16,106 @@ import {
   Webhook,
   Zap,
   Eye,
-  ChevronDown
+  ChevronDown,
+  Mail,
+  Copy,
+  Check,
+  ChevronsUpDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/app/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/app/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/app/components/ui/popover";
+// Select imports removed as they are replaced by Popover/Command
 
 interface SettingsPageProps {
   role: 'admin' | 'teacher' | 'hr';
 }
 
 export function SettingsPage({ role }: SettingsPageProps) {
-  const [activeSection, setActiveSection] = useState<'personal' | 'platform' | 'ai' | 'notifications'>('personal');
+  const [activeSection, setActiveSection] = useState<'personal' | 'platform' | 'ai' | 'notifications' | 'resume-import'>('personal');
+  const [apiKeys, setApiKeys] = useState<{id: string, name: string, key: string, created: string}[]>([
+    { id: '1', name: 'HR Portal Integration', key: 'sk_live_51M...', created: '2024-02-15' }
+  ]);
+  const [availableModels, setAvailableModels] = useState<string[]>(['gpt-4-turbo', 'gpt-3.5-turbo']);
+  const [llmBaseUrl, setLlmBaseUrl] = useState<string>('https://api.openai.com/v1');
+  const [llmApiKey, setLlmApiKey] = useState<string>('');
+  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [openModelSelect, setOpenModelSelect] = useState(false);
 
   const handleSave = () => {
     toast.success('配置已保存并同步至服务器');
+  };
+
+  const generateApiKey = () => {
+    const newKey = {
+      id: Date.now().toString(),
+      name: 'New API Key',
+      key: `sk_live_${Math.random().toString(36).substring(2)}`,
+      created: new Date().toISOString().split('T')[0]
+    };
+    setApiKeys([...apiKeys, newKey]);
+    toast.success('新的 API 密钥已生成');
+  };
+
+  const revokeApiKey = (id: string) => {
+    setApiKeys(apiKeys.filter(k => k.id !== id));
+    toast.success('API 密钥已撤销');
+  };
+
+  const fetchModels = () => {
+    const base = llmBaseUrl.replace(/\/+$/, '');
+    const endpoint =
+      base.includes('openai.com') ? `${base}/models` :
+      base.includes('openrouter.ai') ? `${base}/models` :
+      base.includes('groq.com') ? `${base}/models` :
+      base.includes('modelscope.cn') ? `${base}/models` :
+      `${base}/models`;
+    const headers: Record<string, string> = {};
+    if (llmApiKey) headers['Authorization'] = `Bearer ${llmApiKey}`;
+    
+    // Only show loading toast if we don't have models yet, to avoid annoyance on re-open
+    if (availableModels.length === 0) {
+      toast.loading('正在获取模型列表...');
+    }
+
+    fetch(endpoint, { headers })
+      .then(async (res) => {
+        const json = await res.json().catch(() => ({}));
+        const arr: any[] = Array.isArray((json as any).data) ? (json as any).data : Array.isArray(json) ? (json as any) : [];
+        const names = arr.map((m: any) => m.id || m.model || m.name).filter(Boolean);
+        if (names.length > 0) {
+          setAvailableModels(names);
+          // Do not auto-select the first model. Keep existing selection or empty.
+          // setSelectedModel(names[0]); 
+          
+          if (availableModels.length === 0) {
+             toast.dismiss();
+             toast.success('模型列表已更新');
+          }
+        } else {
+           if (availableModels.length === 0) {
+             toast.dismiss();
+             toast.error('未获取到模型列表');
+           }
+        }
+      })
+      .catch(() => {
+        if (availableModels.length === 0) {
+          toast.dismiss();
+          toast.error('获取失败');
+        }
+      });
   };
 
   const sections = [
@@ -43,7 +123,8 @@ export function SettingsPage({ role }: SettingsPageProps) {
     ...(role === 'admin' ? [
       { id: 'platform', label: '部门管理', icon: Layout },
       { id: 'ai', label: 'AI 模型设置', icon: Bot },
-      { id: 'notifications', label: '飞书集成', icon: Webhook }
+      { id: 'notifications', label: '飞书集成', icon: Webhook },
+      { id: 'resume-import', label: '简历获取', icon: Mail }
     ] : []),
   ];
 
@@ -170,35 +251,72 @@ export function SettingsPage({ role }: SettingsPageProps) {
                   </div>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Model Provider</label>
-                      <Select defaultValue="openai">
-                        <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20">
-                          <SelectValue placeholder="Select provider" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="openai">OpenAI</SelectItem>
-                          <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
-                          <SelectItem value="google">Google (Gemini)</SelectItem>
-                          <SelectItem value="deepseek">DeepSeek</SelectItem>
-                          <SelectItem value="aliyun">Aliyun (Qwen)</SelectItem>
-                          <SelectItem value="doubao">Doubao (ByteDance)</SelectItem>
-                          <SelectItem value="moonshot">Moonshot (Kimi)</SelectItem>
-                          <SelectItem value="zhipu">Zhipu AI (GLM)</SelectItem>
-                          <SelectItem value="minimax">Minimax</SelectItem>
-                          <SelectItem value="baichuan">Baichuan</SelectItem>
-                          <SelectItem value="openrouter">OpenRouter</SelectItem>
-                          <SelectItem value="groq">Groq</SelectItem>
-                          <SelectItem value="custom">Custom / Local (Ollama)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base URL</label>
+                      <input
+                        type="text"
+                        value={llmBaseUrl}
+                        onChange={(e) => setLlmBaseUrl(e.target.value)}
+                        placeholder="https://api.openai.com/v1"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm"
+                      />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base URL (Optional)</label>
-                      <input type="text" placeholder="https://api.openai.com/v1" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">API Key</label>
+                      <input
+                        type="password"
+                        value={llmApiKey}
+                        onChange={(e) => setLlmApiKey(e.target.value)}
+                        placeholder="sk-..."
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm"
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Model Name</label>
-                      <input type="text" defaultValue="gpt-4-turbo" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                      <Popover open={openModelSelect} onOpenChange={(open) => {
+                        setOpenModelSelect(open);
+                        if (open) fetchModels();
+                      }}>
+                        <PopoverTrigger asChild>
+                          <div className="relative">
+                             <input
+                                type="text"
+                                value={selectedModel}
+                                onChange={(e) => setSelectedModel(e.target.value)}
+                                placeholder="Select or enter model"
+                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm pr-10"
+                             />
+                             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                               <ChevronsUpDown className="w-4 h-4" />
+                             </div>
+                          </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                          <Command>
+                            <CommandList>
+                               {availableModels.length === 0 && <CommandEmpty>No models found.</CommandEmpty>}
+                               <CommandGroup>
+                                  {availableModels
+                                    .filter(model => model.toLowerCase().includes(selectedModel.toLowerCase()))
+                                    .map((model) => (
+                                    <CommandItem
+                                     key={model}
+                                     value={model}
+                                     onSelect={(currentValue) => {
+                                       setSelectedModel(currentValue);
+                                       setOpenModelSelect(false);
+                                     }}
+                                   >
+                                     <Check
+                                       className={`mr-2 h-4 w-4 ${selectedModel === model ? "opacity-100" : "opacity-0"}`}
+                                     />
+                                     {model}
+                                   </CommandItem>
+                                 ))}
+                               </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
                 </section>
@@ -226,14 +344,6 @@ export function SettingsPage({ role }: SettingsPageProps) {
                       className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" 
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Secret Key</label>
-                    <input 
-                      type="password" 
-                      placeholder="Webhook 安全校验密钥" 
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" 
-                    />
-                  </div>
                   <div className="space-y-4 pt-4">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">通知触发器</p>
                     <div className="space-y-2">
@@ -248,6 +358,115 @@ export function SettingsPage({ role }: SettingsPageProps) {
                 </div>
               </div>
             )}
+
+            {activeSection === 'resume-import' && (
+              <div className="space-y-8">
+                {/* IMAP Section */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                    <Mail className="w-5 h-5 text-blue-600" />
+                    <div>
+                      <h4 className="text-sm font-black text-blue-900 dark:text-blue-400 uppercase tracking-tight">邮箱 IMAP 导入</h4>
+                      <p className="text-[10px] text-blue-600 dark:text-blue-500 font-bold uppercase mt-0.5">自动从指定邮箱抓取并解析简历邮件</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">IMAP Server</label>
+                      <input type="text" placeholder="imap.exmail.qq.com" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Port</label>
+                      <input type="text" defaultValue="993" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Account</label>
+                      <input type="email" placeholder="hr@company.com" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Password / App Token</label>
+                      <input type="password" placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="ssl" defaultChecked className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                    <label htmlFor="ssl" className="text-sm font-bold text-slate-600 dark:text-slate-400">启用 SSL/TLS 安全连接</label>
+                  </div>
+                </section>
+
+                <div className="h-px bg-slate-100 dark:bg-slate-800"></div>
+
+                {/* API Section */}
+                <section className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600">
+                        <Key className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">API Access</h4>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">Manage access keys for external uploads</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={generateApiKey}
+                      className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-violet-700 transition-all"
+                    >
+                      <Plus className="w-3 h-3" /> Generate Key
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+                    {apiKeys.map((key) => (
+                      <div key={key.id} className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{key.name}</span>
+                            <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px] font-bold text-slate-500">{key.created}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <code className="text-xs font-mono bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-500">
+                              {key.key}
+                            </code>
+                            <button className="text-slate-400 hover:text-blue-600 transition-colors">
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => revokeApiKey(key.id)}
+                          className="p-2 hover:bg-rose-100 dark:hover:bg-rose-900/30 rounded-xl text-rose-500 transition-colors"
+                          title="Revoke Key"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                    {apiKeys.length === 0 && (
+                      <div className="p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">
+                        No active API keys
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">API Endpoint</label>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="text" 
+                        readOnly 
+                        value="https://api.mahui.com/v1/resume/upload" 
+                        className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none font-bold text-sm text-slate-500" 
+                      />
+                      <button className="px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )}
+
           </div>
 
           <div className="px-8 py-5 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-end">

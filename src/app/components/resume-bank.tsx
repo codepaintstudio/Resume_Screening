@@ -8,10 +8,12 @@ import { FilterToolbar } from './resume/FilterToolbar';
 import { StudentTable } from './resume/StudentTable';
 import { CandidateDrawer } from './resume/CandidateDrawer';
 import { AIScreeningDialog } from './resume/AIScreeningDialog';
+import { UploadResumeDialog } from './resume/UploadResumeDialog';
 
 export function ResumeBank() {
   const [students, setStudents] = useState<Student[]>(initialMockStudents);
   const [loading, setLoading] = useState(true);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [filterDept, setFilterDept] = useState(DEPARTMENTS[0]);
   const [sortBy, setSortBy] = useState<SortOptionId>('ai');
@@ -94,6 +96,28 @@ export function ResumeBank() {
     setIsScreeningOpen(false);
   };
 
+  const handleUpload = (files: File[]) => {
+    const newStudents: Student[] = files.map((file, index) => ({
+      id: `new-${Date.now()}-${index}`,
+      name: file.name.replace(/\.[^/.]+$/, ""),
+      studentId: `2024${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+      department: DEPARTMENTS[Math.floor(Math.random() * (DEPARTMENTS.length - 1)) + 1],
+      submissionDate: new Date().toISOString().split('T')[0],
+      gpa: (Math.random() * 1.5 + 2.5).toFixed(1),
+      aiScore: Math.floor(Math.random() * 20) + 80,
+      status: 'pending' as const,
+      tags: ['新上传'],
+      email: 'candidate@example.com',
+      phone: '13800000000',
+      skills: [],
+      experience: []
+    }));
+    
+    setStudents(prev => [...newStudents, ...prev]);
+    toast.success(`成功上传 ${files.length} 份简历`);
+    setIsUploadOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       <FilterToolbar 
@@ -106,6 +130,7 @@ export function ResumeBank() {
         filterDept={filterDept}
         setFilterDept={setFilterDept}
         onOpenScreening={() => setIsScreeningOpen(true)}
+        onOpenUpload={() => setIsUploadOpen(true)}
       />
 
       <StudentTable 
@@ -129,6 +154,12 @@ export function ResumeBank() {
         promptConfig={promptConfig}
         setPromptConfig={setPromptConfig}
         onStartScreening={handleStartScreening}
+      />
+
+      <UploadResumeDialog 
+        open={isUploadOpen}
+        onOpenChange={setIsUploadOpen}
+        onUpload={handleUpload}
       />
     </div>
   );

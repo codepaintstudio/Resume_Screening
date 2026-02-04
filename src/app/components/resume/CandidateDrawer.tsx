@@ -103,7 +103,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
     );
   };
 
-  const currentStatus = (student as any)?.stage || student?.status;
+  const currentStatus = (student as any)?.stage || (student as any)?.status;
 
   React.useEffect(() => {
     if (student) {

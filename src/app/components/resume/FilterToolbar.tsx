@@ -20,6 +20,7 @@ interface FilterToolbarProps {
   filterDept: string;
   setFilterDept: (value: string) => void;
   onOpenScreening: () => void;
+  onOpenUpload: () => void;
 }
 
 export function FilterToolbar({
@@ -31,7 +32,8 @@ export function FilterToolbar({
   setSortOrder,
   filterDept,
   setFilterDept,
-  onOpenScreening
+  onOpenScreening,
+  onOpenUpload
 }: FilterToolbarProps) {
   return (
     <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
@@ -98,7 +100,10 @@ export function FilterToolbar({
           <BrainCircuit className="w-4 h-4" />
           AI 批量筛选
         </button>
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all" onClick={() => toast.info('上传功能开发中')}>
+        <button 
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all" 
+          onClick={onOpenUpload}
+        >
           <Upload className="w-4 h-4" />
           上传简历
         </button>
