@@ -196,7 +196,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
            time: dateTime, 
            date: formattedDate,
            interviewers: selectedInterviewers,
-           stage: 'pending_interview' 
+           stage: type === 'interview' ? 'pending' : 'pending_interview'
          });
      }
      
@@ -262,7 +262,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
               </div>
                 {/* Status Actions */}
                 <div className="flex items-center gap-2">
-                  {currentStatus === 'pending' && (
+                  {currentStatus === 'pending' && type !== 'interview' && (
                     <>
                       <button 
                         onClick={() => onStatusChange(student.id, 'pending_interview')}
@@ -278,7 +278,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       </button>
                     </>
                   )}
-                  {currentStatus === 'pending_interview' && (
+                  {(currentStatus === 'pending_interview' || (currentStatus === 'pending' && type === 'interview')) && (
                     <Popover>
                       <PopoverTrigger asChild>
                         <button 
@@ -347,6 +347,14 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                         </div>
                       </PopoverContent>
                     </Popover>
+                  )}
+                  {currentStatus === 'pending' && type === 'interview' && (
+                    <button 
+                      onClick={() => onStatusChange(student.id, 'rejected')}
+                      className="px-4 py-2 bg-rose-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all"
+                    >
+                      淘汰
+                    </button>
                   )}
                   {currentStatus === 'interviewing' && (
                     <>

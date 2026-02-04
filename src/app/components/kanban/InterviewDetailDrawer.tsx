@@ -13,7 +13,8 @@ import {
   Mail,
   HelpCircle,
   Info,
-  Users
+  Users,
+  Check
 } from 'lucide-react';
 import { Input } from "@/app/components/ui/input";
 import { Badge } from "@/app/components/ui/badge";
@@ -30,8 +31,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/app/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/app/components/ui/popover";
 import { InterviewTask, Stage } from '@/types';
 import { ErrorBoundary } from '../ErrorBoundary';
+import { AVAILABLE_INTERVIEWERS } from '@/config/constants';
+import { toast } from "sonner";
 
 interface InterviewDetailDrawerProps {
   task: InterviewTask | null;
@@ -50,10 +58,41 @@ export function InterviewDetailDrawer({
   const [showScrollTip, setShowScrollTip] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<any>({});
+  const [selectedInterviewers, setSelectedInterviewers] = useState<string[]>([]);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+
+  const toggleInterviewer = (interviewer: string) => {
+    setSelectedInterviewers(prev => 
+      prev.includes(interviewer) 
+        ? prev.filter(i => i !== interviewer)
+        : [...prev, interviewer]
+    );
+  };
+
+  const handleScheduleInterview = () => {
+    if (selectedInterviewers.length === 0) {
+      toast.error("请至少选择一位面试官");
+      return;
+    }
+
+    if (task) {
+      const updatedTask = {
+        ...task,
+        interviewers: selectedInterviewers
+      };
+      
+      onMoveTask(task.id, 'interviewing');
+      onUpdateTaskStage(updatedTask, 'interviewing');
+      setIsPopoverOpen(false);
+      toast.success("面试安排已更新");
+    }
+  };
 
   useEffect(() => {
     if (task) {
+      setSelectedInterviewers(task.interviewers || []);
       setFormData({
+        ...task,
         ...task,
         email: task.email || 'admin@mahui.com',
         phone: task.phone || '13800138000',
@@ -140,15 +179,52 @@ export function InterviewDetailDrawer({
               <div className="flex items-center gap-2">
                 <div className="hidden sm:flex items-center gap-2">
                 {task.stage === 'pending' && (
-                  <button 
-                    onClick={() => { 
-                      onMoveTask(task.id, 'interviewing'); 
-                      onUpdateTaskStage(task, 'interviewing');
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-blue-700 transition-all"
-                  >
-                    安排面试
-                  </button>
+                  <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <button 
+                        className="px-4 py-2 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-blue-700 transition-all"
+                      >
+                        安排面试
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-3" align="end">
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <h4 className="font-bold text-xs text-slate-500 uppercase">选择面试官</h4>
+                          <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
+                            {AVAILABLE_INTERVIEWERS.map(interviewer => (
+                              <div 
+                                key={interviewer}
+                                onClick={() => toggleInterviewer(interviewer)}
+                                className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all text-xs ${
+                                  selectedInterviewers.includes(interviewer)
+                                    ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                                    : 'bg-white border-slate-100 dark:bg-slate-900 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-800'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                    selectedInterviewers.includes(interviewer) ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'
+                                  }`}>
+                                    {interviewer.slice(0, 1)}
+                                  </div>
+                                  <span className="font-bold text-slate-900 dark:text-white">{interviewer}</span>
+                                </div>
+                                {selectedInterviewers.includes(interviewer) && <Check className="w-3 h-3 text-blue-600" />}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <button 
+                          onClick={handleScheduleInterview}
+                          disabled={selectedInterviewers.length === 0}
+                          className="w-full py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          确认安排
+                        </button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 )}
                 {task.stage === 'interviewing' && (
                   <>
