@@ -7,16 +7,23 @@ export function RecentActivity() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/dashboard/activities')
-      .then(res => res.json())
-      .then(data => {
-        setActivities(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to load activities:', err);
-        setLoading(false);
-      });
+    const loadActivities = () => {
+      fetch('/api/dashboard/activities')
+        .then(res => res.json())
+        .then(data => {
+          setActivities(data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Failed to load activities:', err);
+          setLoading(false);
+        });
+    };
+
+    loadActivities();
+    // Poll every 30 seconds
+    const interval = setInterval(loadActivities, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {

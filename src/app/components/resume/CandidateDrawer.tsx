@@ -155,16 +155,27 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
           setIsLoadingDetails(false);
         });
 
-      fetch(`/api/resumes/${student.id}/comments`)
-        .then(res => res.json())
-        .then(data => {
-          setComments(data);
-          setIsLoadingComments(false);
-        })
-        .catch(err => {
-          console.error("Failed to fetch comments", err);
-          setIsLoadingComments(false);
-        });
+      // Function to fetch comments
+      const fetchComments = () => {
+        fetch(`/api/resumes/${student.id}/comments`)
+          .then(res => res.json())
+          .then(data => {
+            setComments(data);
+            setIsLoadingComments(false);
+          })
+          .catch(err => {
+            console.error("Failed to fetch comments", err);
+            setIsLoadingComments(false);
+          });
+      };
+
+      // Initial fetch
+      fetchComments();
+      
+      // Poll for new comments every 3 seconds (simulating real-time discussion)
+      const interval = setInterval(fetchComments, 3000);
+      
+      return () => clearInterval(interval);
     }
   }, [student]);
 

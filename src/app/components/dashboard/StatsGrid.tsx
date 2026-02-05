@@ -30,16 +30,23 @@ export function StatsGrid() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/stats')
-      .then(res => res.json())
-      .then(data => {
-        setStats(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to load stats:', err);
-        setLoading(false);
-      });
+    const loadStats = () => {
+      fetch('/api/stats')
+        .then(res => res.json())
+        .then(data => {
+          setStats(data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Failed to load stats:', err);
+          setLoading(false);
+        });
+    };
+
+    loadStats();
+    // Poll every 30 seconds for real-time updates
+    const interval = setInterval(loadStats, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {

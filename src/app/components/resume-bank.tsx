@@ -71,34 +71,35 @@ export function ResumeBank() {
       });
   }, [students, searchQuery, filterDept, sortBy, sortOrder]);
 
-  useEffect(() => {
-    // Backend API integration
-    const fetchData = async () => {
-      try {
-        const [resumesRes, deptsRes] = await Promise.all([
-          fetch('/api/resumes'),
-          fetch('/api/departments')
-        ]);
+  // Backend API integration
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [resumesRes, deptsRes] = await Promise.all([
+        fetch('/api/resumes'),
+        fetch('/api/departments')
+      ]);
 
-        if (resumesRes.ok) {
-          const data = await resumesRes.json();
-          setStudents(data);
-        } else {
-          throw new Error('Failed to fetch resumes');
-        }
-
-        if (deptsRes.ok) {
-          const deptsData = await deptsRes.json();
-          setDepartments(['全部部门', ...deptsData]);
-        }
-      } catch (error) {
-        toast.error('获取数据失败');
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
+      if (resumesRes.ok) {
+        const data = await resumesRes.json();
+        setStudents(data);
+      } else {
+        throw new Error('Failed to fetch resumes');
       }
-    };
-    
+
+      if (deptsRes.ok) {
+        const deptsData = await deptsRes.json();
+        setDepartments(['全部部门', ...deptsData]);
+      }
+    } catch (error) {
+      toast.error('获取数据失败');
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -214,6 +215,7 @@ export function ResumeBank() {
         onOpenScreening={() => setIsScreeningOpen(true)}
         onOpenUpload={() => setIsUploadOpen(true)}
         departments={departments}
+        onRefresh={fetchData}
       />
 
       <StudentTable 

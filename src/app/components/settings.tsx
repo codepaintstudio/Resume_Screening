@@ -48,6 +48,8 @@ import {
 } from "@/app/components/ui/dialog";
 import { Button } from "@/app/components/ui/button";
 
+import { Skeleton } from "@/app/components/ui/skeleton";
+
 interface SettingsPageProps {
   role: 'admin' | 'teacher' | 'hr';
 }
@@ -248,8 +250,46 @@ export function SettingsPage({ role }: SettingsPageProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Sidebar Loading Skeleton */}
+        <aside className="w-full lg:w-64 space-y-1">
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full rounded-2xl" />
+          ))}
+        </aside>
+
+        {/* Content Loading Skeleton */}
+        <div className="flex-1 max-w-3xl space-y-6">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
+            <div className="p-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <Skeleton className="h-6 w-32 mb-2" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+              <Skeleton className="h-10 w-28 rounded-xl" />
+            </div>
+            <div className="p-8 space-y-8">
+              <div className="flex items-center gap-6">
+                <Skeleton className="w-20 h-20 rounded-2xl" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-6 w-40" />
+                  <Skeleton className="h-4 w-60" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-12 w-full rounded-xl" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-12 w-full rounded-xl" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -731,7 +771,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
 
           </div>
 
-          <div className="px-8 py-5 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+          <div className="px-8 py-5 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-end hidden">
             <button 
               onClick={handleSave}
               className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all active:scale-95"

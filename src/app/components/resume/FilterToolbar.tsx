@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Filter, ArrowUpDown, BrainCircuit, Upload } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, BrainCircuit, Upload, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Select,
@@ -22,6 +22,7 @@ interface FilterToolbarProps {
   onOpenScreening: () => void;
   onOpenUpload: () => void;
   departments?: string[];
+  onRefresh?: () => void;
 }
 
 export function FilterToolbar({
@@ -35,7 +36,8 @@ export function FilterToolbar({
   setFilterDept,
   onOpenScreening,
   onOpenUpload,
-  departments = [...DEPARTMENTS]
+  departments = [...DEPARTMENTS],
+  onRefresh
 }: FilterToolbarProps) {
   return (
     <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
@@ -50,6 +52,16 @@ export function FilterToolbar({
             className="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-sm w-full sm:w-64 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none font-bold"
           />
         </div>
+        
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            className="flex items-center justify-center w-[38px] h-[38px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl hover:border-blue-500 hover:text-blue-500 transition-all text-slate-400"
+            title="刷新列表"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        )}
         
         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar">
           {SORT_OPTIONS.map(s => (

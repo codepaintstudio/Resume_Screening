@@ -7,7 +7,8 @@ import {
   Calendar as CalendarIcon,
   Clock,
   X,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Stage, InterviewTask } from '@/types';
@@ -65,9 +66,10 @@ export function InterviewKanban() {
 
   // Filter State
   const [filterDate, setFilterDate] = useState<Date>();
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Fetch tasks from API
-  useEffect(() => {
+  const fetchTasks = () => {
     setIsLoading(true);
     // Fetch interviewers
     fetch('/api/interviewers')
@@ -96,6 +98,10 @@ export function InterviewKanban() {
         toast.error("加载数据失败");
         setIsLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchTasks();
   }, []);
 
   const pendingTasks = tasks.filter(t => t.stage === 'to_be_scheduled');
@@ -105,9 +111,23 @@ export function InterviewKanban() {
     const isBoardStage = ['pending_interview', 'interviewing', 'passed', 'rejected'].includes(t.stage);
     if (!isBoardStage) return false;
 
-    if (!filterDate) return true;
-    if (!t.date) return false;
-    return t.date === formatDate(filterDate);
+    if (!filterDate && !searchQuery) return true;
+    
+    // Filter by Date
+    if (filterDate && t.date !== formatDate(filterDate)) return false;
+
+    // Filter by Search Query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        t.name?.toLowerCase().includes(query) ||
+        t.department?.toLowerCase().includes(query) ||
+        (t.role || '').toLowerCase().includes(query) ||
+        (t.studentId || '').toLowerCase().includes(query)
+      );
+    }
+
+    return true;
   });
 
   useEffect(() => {
@@ -341,6 +361,8 @@ export function InterviewKanban() {
             <input 
               type="text" 
               placeholder="搜索候选人..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-sm w-64 outline-none focus:ring-2 focus:ring-blue-500/20 font-bold"
             />
           </div>
@@ -380,13 +402,23 @@ export function InterviewKanban() {
           )}
         </div>
         
-        <button 
-          onClick={() => setIsBatchDialogOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          新增面试安排
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={fetchTasks}
+            className="flex items-center justify-center w-[38px] h-[38px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl hover:border-blue-500 hover:text-blue-500 transition-all text-slate-400"
+            title="刷新看板"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          
+          <button 
+            onClick={() => setIsBatchDialogOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            新增面试安排
+          </button>
+        </div>
 
         <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
           <DialogContent className="sm:max-w-5xl w-full">
