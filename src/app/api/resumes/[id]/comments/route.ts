@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getComments, addComment } from '@/data/comments-mock';
+import { addActivity } from '@/data/activity-log';
 
 export async function GET(
   request: Request,
@@ -21,7 +22,7 @@ export async function POST(
 ) {
   const id = (await params).id;
   const body = await request.json();
-  const { content } = body;
+  const { content, user } = body;
 
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 300));
@@ -32,10 +33,18 @@ export async function POST(
 
   const newComment = addComment({
     studentId: id,
-    user: 'Me', // In real app, get from session
-    role: '面试官',
-    avatar: 'M',
+    user: user?.name || 'Me', // In real app, get from session
+    role: user?.role || '面试官',
+    avatar: user?.avatar || 'M',
     content: content
+  });
+
+  // Log Activity
+  addActivity({
+    user: user?.name || 'Me',
+    action: `评论了候选人 [ID:${id}]`,
+    role: user?.role || '面试官',
+    avatar: user?.avatar || ''
   });
 
   return NextResponse.json({

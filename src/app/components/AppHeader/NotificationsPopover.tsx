@@ -21,6 +21,7 @@ import {
 import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Button } from '@/app/components/ui/button';
 import { cn } from '@/app/components/ui/utils';
+import { useAppStore } from '@/store';
 
 type NotificationType = 'interview' | 'resume' | 'system';
 
@@ -117,6 +118,7 @@ const initialNotifications: Notification[] = [
 ];
 
 export function NotificationsPopover() {
+  const { currentUser } = useAppStore();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
@@ -131,7 +133,7 @@ export function NotificationsPopover() {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch('/api/notifications');
+      const res = await fetch(`/api/notifications?userId=${currentUser?.id || ''}`);
       const data = await res.json();
       setNotifications(data);
     } catch (error) {
@@ -150,7 +152,10 @@ export function NotificationsPopover() {
       await fetch('/api/notifications', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ markAll: true })
+        body: JSON.stringify({ 
+          markAll: true,
+          user: currentUser
+        })
       });
     } catch (error) {
       setNotifications(previous);
@@ -171,7 +176,10 @@ export function NotificationsPopover() {
       await fetch('/api/notifications', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
+        body: JSON.stringify({ 
+          id,
+          user: currentUser
+        })
       });
     } catch (error) {
       console.error('Failed to mark as read:', error);

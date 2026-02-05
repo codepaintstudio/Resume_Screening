@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Student } from '@/types';
 import { DEPARTMENTS, STATUS_MAP, SortOptionId } from '@/config/constants';
 
+import { useAppStore } from '@/store';
 import { FilterToolbar } from './resume/FilterToolbar';
 import { StudentTable } from './resume/StudentTable';
 import { CandidateDrawer } from './resume/CandidateDrawer';
@@ -26,6 +27,8 @@ export function ResumeBank() {
     from: undefined,
     to: undefined,
   });
+
+  const { currentUser } = useAppStore();
 
   const filteredStudents = useMemo(() => {
     return students
@@ -123,7 +126,10 @@ export function ResumeBank() {
       const res = await fetch(`/api/resumes/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ 
+          status: newStatus,
+          user: currentUser
+        })
       });
       
       const data = await res.json();
@@ -146,7 +152,11 @@ export function ResumeBank() {
       fetch('/api/resumes/batch-screen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ department: screeningDept, prompt: promptConfig })
+        body: JSON.stringify({ 
+          department: screeningDept, 
+          prompt: promptConfig,
+          user: currentUser
+        })
       }).then(async (res) => {
         const data = await res.json();
         if (!data.success) throw new Error(data.message);
@@ -186,7 +196,10 @@ export function ResumeBank() {
       const res = await fetch('/api/resumes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newStudents)
+        body: JSON.stringify({
+          students: newStudents,
+          user: currentUser
+        })
       });
       
       if (res.ok) {

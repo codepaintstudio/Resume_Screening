@@ -34,6 +34,7 @@ import { zhCN } from 'date-fns/locale';
 import { format } from "date-fns";
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
+import { useAppStore } from '@/store';
 
 const today = new Date();
 const tomorrow = new Date(today);
@@ -50,6 +51,7 @@ const stages: { id: Stage, label: string, color: string }[] = [
 ];
 
 export function InterviewKanban() {
+  const { currentUser } = useAppStore();
   const [tasks, setTasks] = useState<InterviewTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<InterviewTask | null>(null);
@@ -170,7 +172,10 @@ export function InterviewKanban() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: newStage }),
+        body: JSON.stringify({ 
+          status: newStage,
+          user: currentUser
+        }),
       });
       
       const data = await res.json();
@@ -246,7 +251,10 @@ export function InterviewKanban() {
           const res = await fetch(`/api/resumes/${draggableId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: destStageId }),
+            body: JSON.stringify({ 
+              status: destStageId,
+              user: currentUser
+            }),
           });
           const data = await res.json();
           if (data.success) {

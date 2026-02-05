@@ -1,12 +1,13 @@
 
 import { NextResponse } from 'next/server';
 import { addHistory, getTemplates } from '@/data/email-mock';
+import { addActivity } from '@/data/activity-log';
 import { format } from 'date-fns';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { templateId, recipients, customSubject, customContent } = body;
+    const { templateId, recipients, customSubject, customContent, user } = body;
 
     // In a real app, you would fetch recipients and send emails here.
     // We simulate a delay and success.
@@ -20,6 +21,8 @@ export async function POST(request: Request) {
     const recipientList = Array.isArray(recipients) 
         ? recipients.map((r: any) => ({ name: r.name, email: r.email, status: 'sent' }))
         : [];
+    
+    const count = recipientList.length || 0;
 
     addHistory({
       id: Date.now().toString(),
@@ -27,9 +30,17 @@ export async function POST(request: Request) {
       subject: customSubject || (template ? template.subject : 'No Subject'),
       content: customContent || (template ? template.content : 'No Content'),
       recipients: recipientList,
-      recipientCount: recipientList.length || 0,
+      recipientCount: count,
       status: 'success',
       sentAt: format(new Date(), 'yyyy-MM-dd HH:mm')
+    });
+
+    // Log Activity
+    addActivity({
+      user: user?.name || 'Admin',
+      action: `发送了 ${count} 封邮件`,
+      role: user?.role || '管理员',
+      avatar: user?.avatar || ''
     });
 
     return NextResponse.json({ success: true, message: 'Emails sent successfully' });

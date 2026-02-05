@@ -35,6 +35,7 @@ import {
   Maximize2, Minimize2
 } from 'lucide-react';
 import { toast } from "sonner";
+import { useAppStore } from '@/store';
 
 interface CandidateDrawerProps {
   student: Student | InterviewTask | null;
@@ -89,6 +90,7 @@ function YearMonthPicker({ value, onChange }: { value: string, onChange: (val: s
 import { Skeleton } from "@/app/components/ui/skeleton";
 
 export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, type = 'resume' }: CandidateDrawerProps) {
+  const { currentUser } = useAppStore();
   const [mounted, setMounted] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -215,7 +217,10 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
       const res = await fetch(`/api/resumes/${student.id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newComment })
+        body: JSON.stringify({ 
+          content: newComment,
+          user: currentUser 
+        })
       });
       const data = await res.json();
       

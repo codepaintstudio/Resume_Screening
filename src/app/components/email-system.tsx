@@ -49,6 +49,7 @@ import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { DateRange } from "react-day-picker";
 import { cn } from "@/app/components/ui/utils";
+import { useAppStore } from '@/store';
 
 interface Template {
   id: string;
@@ -72,6 +73,7 @@ const mockTemplates: Template[] = [
 ];
 
 export function EmailSystem() {
+  const { currentUser } = useAppStore();
   const [activeTab, setActiveTab] = useState<'send' | 'templates' | 'history' | 'config'>('send');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [templates, setTemplates] = useState<Template[]>(mockTemplates);
@@ -220,7 +222,8 @@ export function EmailSystem() {
           templateId: selectedTemplate?.id,
           recipientCount: 12, // Mock count
           customSubject: selectedTemplate ? undefined : 'Custom Subject', // Simplify for now
-          customContent: selectedTemplate ? undefined : 'Custom Content'
+          customContent: selectedTemplate ? undefined : 'Custom Content',
+          user: currentUser
         })
       });
       const data = await res.json();

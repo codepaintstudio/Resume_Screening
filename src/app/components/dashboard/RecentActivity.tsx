@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityItem } from './ActivityItem';
 import { Skeleton } from "@/app/components/ui/skeleton";
+import { ActivityFeedModal } from './ActivityFeedModal';
 
 export function RecentActivity() {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isViewAllOpen, setIsViewAllOpen] = useState(false);
 
   useEffect(() => {
     const loadActivities = () => {
-      fetch('/api/dashboard/activities')
+      fetch('/api/dashboard/activities?page=1&limit=5')
         .then(res => res.json())
         .then(data => {
-          setActivities(data);
+          setActivities(data.data);
           setLoading(false);
         })
         .catch(err => {
@@ -28,7 +30,7 @@ export function RecentActivity() {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm h-[420px]">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-black tracking-tight">最新动态</h3>
           <Skeleton className="h-4 w-16" />
@@ -49,16 +51,28 @@ export function RecentActivity() {
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-black tracking-tight">最新动态</h3>
-        <button className="text-xs text-blue-600 font-black uppercase tracking-wider hover:underline">View All</button>
+    <>
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm h-[420px] flex flex-col">
+        <div className="flex items-center justify-between mb-6 shrink-0">
+          <h3 className="text-lg font-black tracking-tight">最新动态</h3>
+          <button 
+            onClick={() => setIsViewAllOpen(true)}
+            className="text-xs text-blue-600 font-black uppercase tracking-wider hover:underline"
+          >
+            View All
+          </button>
+        </div>
+        <div className="space-y-5 overflow-y-auto pr-2 custom-scrollbar flex-1">
+          {activities.map((activity, idx) => (
+            <ActivityItem key={idx} {...activity} />
+          ))}
+        </div>
       </div>
-      <div className="space-y-5">
-        {activities.map((activity, idx) => (
-          <ActivityItem key={idx} {...activity} />
-        ))}
-      </div>
-    </div>
+
+      <ActivityFeedModal 
+        open={isViewAllOpen} 
+        onOpenChange={setIsViewAllOpen} 
+      />
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { addActivity } from '@/data/activity-log';
 
 export async function GET(
   request: Request,
@@ -60,9 +61,29 @@ export async function PATCH(
 ) {
   const id = (await params).id;
   const body = await request.json();
+  const { status, user } = body; // Expect user info in body
 
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 500));
+
+  // Log activity if status changed
+  if (status) {
+    // Mapping status to readable text
+    const statusMap: Record<string, string> = {
+      'pending': '待筛选',
+      'pending_interview': '待面试',
+      'interviewing': '面试中',
+      'passed': '面试通过',
+      'rejected': '未通过'
+    };
+
+    addActivity({
+      user: user?.name || 'Admin',
+      action: `更新候选人状态为 [${statusMap[status] || status}]`,
+      role: user?.role || '管理员',
+      avatar: user?.avatar || ''
+    });
+  }
 
   return NextResponse.json({
     success: true,

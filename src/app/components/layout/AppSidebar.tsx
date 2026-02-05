@@ -98,14 +98,6 @@ export function AppSidebar() {
             {isSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
             {isSidebarOpen && <span className="text-sm font-medium">收起侧边栏</span>}
           </button>
-          
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-all group"
-          >
-            <LogOut className="w-5 h-5" />
-            {isSidebarOpen && <span className="text-sm font-medium">退出登录</span>}
-          </button>
         </div>
       </motion.aside>
   );

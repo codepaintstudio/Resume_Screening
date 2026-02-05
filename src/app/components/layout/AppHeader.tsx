@@ -4,15 +4,26 @@ import {
   Sun,
   Moon,
   Menu,
+  LogOut,
+  User,
+  Settings,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/app/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
 } from "@/app/components/ui/sheet";
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { navItems } from '@/config/nav';
 import { NotificationsPopover } from '../AppHeader/NotificationsPopover';
 import { MemberResume } from '../AppHeader/MemberResume';
@@ -20,12 +31,21 @@ import { useTheme } from 'next-themes';
 import React, { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 
+import { useAppStore } from '@/store';
+
 export function AppHeader() {
   const { theme, setTheme } = useTheme();
+  const { currentUser, userRole, setIsLoggedIn } = useAppStore();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showResume, setShowResume] = useState(false);
   const pathname = usePathname();
+
+  // Safe user display
+  const displayName = currentUser?.name || '主理人';
+  const displayRole = currentUser?.role || userRole || 'Admin';
+  const displayAvatar = currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100";
 
   useEffect(() => {
     setMounted(true);
@@ -141,6 +161,11 @@ export function AppHeader() {
   const currentPath = pathname?.split('/')[1] || 'dashboard';
   const currentLabel = navItems.find(item => item.id === currentPath)?.label || '工作台';
 
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    router.push('/login');
+  };
+
   return (
     <header className="h-16 flex items-center justify-between px-4 md:px-6 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 z-10">
       <div className="flex items-center gap-4">
@@ -221,17 +246,38 @@ export function AppHeader() {
 
         <div className="h-6 w-px bg-slate-100 dark:bg-slate-800 mx-1"></div>
 
-        <div className="flex items-center gap-3 ml-1">
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold leading-none text-slate-900 dark:text-slate-100">主理人</p>
-            <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider font-bold">Admin</p>
-          </div>
-          <img 
-            src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100" 
-            alt="Admin" 
-            className="w-10 h-10 rounded-xl object-cover border border-slate-100 dark:border-slate-800 shadow-sm"
-          />
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-3 ml-1 hover:bg-slate-50 dark:hover:bg-slate-800 p-1.5 rounded-xl transition-colors outline-none">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-bold leading-none text-slate-900 dark:text-slate-100">{displayName}</p>
+                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider font-bold">{displayRole}</p>
+              </div>
+              <img 
+                src={displayAvatar} 
+                alt={displayName} 
+                className="w-10 h-10 rounded-xl object-cover border border-slate-100 dark:border-slate-800 shadow-sm"
+              />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 z-[1002]">
+            <DropdownMenuLabel>我的账号</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/settings')}>
+              <User className="mr-2 h-4 w-4" />
+              <span>个人中心</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/settings')}>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>设置</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/10" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>退出登录</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

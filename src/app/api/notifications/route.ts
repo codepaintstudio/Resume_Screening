@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { addActivity } from '@/data/activity-log';
 
 // Mock database
 let notifications = [
@@ -93,10 +94,20 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, markAll } = body;
+    const { id, markAll, user } = body;
 
     if (markAll) {
       notifications = notifications.map(n => ({ ...n, unread: false }));
+      
+      // Log Activity for Mark All Read
+      if (user) {
+        addActivity({
+          user: user.name || 'User',
+          action: '标记所有通知为已读',
+          role: user.role || '成员',
+          avatar: user.avatar || ''
+        });
+      }
     } else if (id) {
       notifications = notifications.map(n => 
         n.id === id ? { ...n, unread: false } : n
