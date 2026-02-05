@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AuthScreenProps {
-  onLogin: () => void;
+  onLogin: (user?: any) => void;
 }
 
 export function AuthScreen({ onLogin }: AuthScreenProps) {
@@ -45,22 +45,51 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
     })
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    
+    try {
       if (mode === 'login') {
-        onLogin();
-        toast.success('登录成功');
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          toast.success('登录成功');
+          onLogin(data.user);
+        } else {
+          toast.error(data.message || '登录失败');
+        }
       } else if (mode === 'register') {
-        toast.success('注册成功，请登录');
-        handleModeChange('login');
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, code })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          toast.success('注册成功，请登录');
+          handleModeChange('login');
+        } else {
+          toast.error(data.message || '注册失败');
+        }
       } else {
-        toast.success('重置连接已发送');
-        handleModeChange('login');
+        // Mock forgot password
+        setTimeout(() => {
+            toast.success('重置连接已发送');
+            handleModeChange('login');
+        }, 800);
       }
-    }, 800);
+    } catch (error) {
+      toast.error('请求出错');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
