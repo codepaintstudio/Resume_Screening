@@ -31,7 +31,8 @@ import {
   XCircle, Download, FileSearch, 
   Briefcase, MessageSquare, Send, AtSign,
   Phone, Mail, Edit2, Save, HelpCircle,
-  BrainCircuit, Plus, X, Trash2, Calendar as CalendarIcon, Clock, ChevronDown, Check
+  BrainCircuit, Plus, X, Trash2, Calendar as CalendarIcon, Clock, ChevronDown, Check,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { toast } from "sonner";
 
@@ -98,6 +99,10 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
   const [interviewTime, setInterviewTime] = useState<string>("14:00");
   const [selectedInterviewers, setSelectedInterviewers] = useState<string[]>([]);
   const [availableInterviewers, setAvailableInterviewers] = useState<string[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [isPostingComment, setIsPostingComment] = useState(false);
+  const [isCommentsExpanded, setIsCommentsExpanded] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -191,6 +196,78 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
     setFormData({ ...formData, experiences: newExps });
   };
 
+  const handlePostComment = async () => {
+    if (!newComment.trim() || !student) return;
+    
+    setIsPostingComment(true);
+    try {
+      const res = await fetch(`/api/resumes/${student.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newComment })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setComments(prev => [...prev, data.data]);
+        setNewComment('');
+        toast.success('评论已发布');
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      console.error("Failed to post comment", err);
+      toast.error('发布评论失败');
+    } finally {
+      setIsPostingComment(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!student) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/resumes/${student.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('档案已保存');
+        setIsEditing(false);
+        if (onUpdate) onUpdate(formData);
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      console.error("Failed to save profile", err);
+      toast.error('保存失败');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleViewPDF = () => {
+    if (!student) return;
+    window.open(`/api/resumes/${student.id}/pdf`, '_blank');
+  };
+
+  const handleDownload = () => {
+    if (!student) return;
+    const link = document.createElement('a');
+    link.href = `/api/resumes/${student.id}/download`;
+    link.download = `${student.name}_resume.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleStatusUpdate = (id: string | number, newStatus: any) => {
+     setFormData((prev: any) => ({ ...prev, status: newStatus }));
+     onStatusChange(id, newStatus);
+  };
+
   const handleScheduleInterview = () => {
      if (!interviewDate) return;
      if (selectedInterviewers.length === 0) {
@@ -219,7 +296,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
 
      // Also trigger status change to ensure it moves to pending_interview state
      if (student) {
-        onStatusChange(student.id, 'pending_interview');
+        handleStatusUpdate(student.id, 'pending_interview');
      }
      
      toast.success("面试安排已更新");
@@ -287,13 +364,13 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   {currentStatus === 'pending' && type !== 'interview' && (
                     <>
                       <button 
-                        onClick={() => onStatusChange(student.id, 'to_be_scheduled')}
+                        onClick={() => handleStatusUpdate(student.id, 'to_be_scheduled')}
                         className="px-4 py-2 bg-purple-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-purple-700 transition-all"
                       >
                         简历通过
                       </button>
                       <button 
-                        onClick={() => onStatusChange(student.id, 'rejected')}
+                        onClick={() => handleStatusUpdate(student.id, 'rejected')}
                         className="px-4 py-2 bg-rose-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all"
                       >
                         淘汰
@@ -373,7 +450,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                         </PopoverContent>
                       </Popover>
                       <button 
-                        onClick={() => onStatusChange(student.id, 'rejected')}
+                        onClick={() => handleStatusUpdate(student.id, 'rejected')}
                         className="px-4 py-2 bg-rose-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all"
                       >
                         淘汰
@@ -454,7 +531,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   )}
                   {currentStatus === 'pending' && type === 'interview' && (
                     <button 
-                      onClick={() => onStatusChange(student.id, 'rejected')}
+                      onClick={() => handleStatusUpdate(student.id, 'rejected')}
                       className="px-4 py-2 bg-rose-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all"
                     >
                       淘汰
@@ -463,13 +540,13 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   {currentStatus === 'interviewing' && (
                     <>
                       <button 
-                        onClick={() => onStatusChange(student.id, 'passed')}
+                        onClick={() => handleStatusUpdate(student.id, 'passed')}
                         className="px-4 py-2 bg-emerald-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-emerald-700 transition-all"
                       >
                         通过面试
                       </button>
                       <button 
-                        onClick={() => onStatusChange(student.id, 'rejected')}
+                        onClick={() => handleStatusUpdate(student.id, 'rejected')}
                         className="px-4 py-2 bg-rose-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all"
                       >
                         淘汰
@@ -481,7 +558,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   <div className="relative">
                       <Select 
                         value={currentStatus}
-                        onValueChange={(val: keyof typeof STATUS_MAP) => onStatusChange(student.id, val)}
+                        onValueChange={(val: keyof typeof STATUS_MAP) => handleStatusUpdate(student.id, val)}
                       >
                         <SelectTrigger className="w-[140px] h-9 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20">
                           <SelectValue />
@@ -497,7 +574,12 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       </Select>
                   </div>
 
-                  <button className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-slate-400"><Download className="w-4 h-4" /></button>
+                  <button 
+                    onClick={handleDownload}
+                    className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
                 </div>
             </div>
 
@@ -637,22 +719,36 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
 
                 {/* Actions for original file & Edit Profile */}
                 <div className="flex gap-4 mb-10">
-                  <button className="flex-1 flex items-center justify-center gap-2 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 shadow-xl shadow-black/10">
+                  <button 
+                    onClick={handleViewPDF}
+                    className="flex-1 flex items-center justify-center gap-2 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 shadow-xl shadow-black/10"
+                  >
                     <FileSearch className="w-4 h-4" />
                     查看原简历 PDF
                   </button>
                   <button 
-                    onClick={() => setIsEditing(!isEditing)}
+                    onClick={() => {
+                      if (isEditing) {
+                        handleSaveProfile();
+                      } else {
+                        setIsEditing(true);
+                      }
+                    }}
+                    disabled={isSaving}
                     className={`flex-1 flex items-center justify-center gap-2 py-4 border-2 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
                       isEditing 
-                        ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700' 
+                        ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed' 
                         : 'border-slate-100 dark:border-slate-800 hover:bg-slate-50'
                     }`}
                   >
                     {isEditing ? (
                       <>
-                        <Save className="w-4 h-4" />
-                        保存档案
+                        {isSaving ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
+                        {isSaving ? '保存中...' : '保存档案'}
                       </>
                     ) : (
                       <>
@@ -822,12 +918,25 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
             </div>
 
             {/* Discussion Area */}
-            <div className="h-80 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex flex-col">
-              <div className="px-6 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className={cn(
+              "border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col transition-all duration-300 ease-in-out relative z-10",
+              isCommentsExpanded ? "h-[60vh] -mt-[20vh] shadow-[0_-10px_40px_rgba(0,0,0,0.1)]" : "h-80"
+            )}>
+              <div className="px-6 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between cursor-pointer bg-slate-50 dark:bg-slate-900" onClick={() => setIsCommentsExpanded(!isCommentsExpanded)}>
                 <div className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-blue-600" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Team Discussion</span>
                 </div>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setIsCommentsExpanded(!isCommentsExpanded); }}
+                  className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors"
+                >
+                  {isCommentsExpanded ? (
+                    <Minimize2 className="w-4 h-4 text-slate-400" />
+                  ) : (
+                    <Maximize2 className="w-4 h-4 text-slate-400" />
+                  )}
+                </button>
               </div>
               
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -847,24 +956,34 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                      </div>
                   </div>
                 ) : comments.length > 0 ? (
-                  comments.map((comment: any) => (
-                    <div key={comment.id} className="flex gap-3">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-xs ${
+                  comments.map((comment: any) => {
+                    const isMe = comment.user === 'Me' || comment.user === 'Recruiter'; // Match current user
+                    return (
+                    <div key={comment.id} className={cn("flex gap-3", isMe && "flex-row-reverse")}>
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-xs overflow-hidden shrink-0 ${
                         comment.user === 'System' ? 'bg-slate-400' : 'bg-blue-600'
                       }`}>
-                        {comment.avatar}
+                        {comment.avatar && (comment.avatar.startsWith('http') || comment.avatar.startsWith('/')) && comment.avatar.length > 2 ? (
+                          <img src={comment.avatar} alt={comment.user} className="w-full h-full object-cover" />
+                        ) : (
+                          <span>{comment.user.substring(0, 2).toUpperCase()}</span>
+                        )}
                       </div>
-                      <div className="flex-1 bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none border border-slate-100 dark:border-slate-700 shadow-sm">
-                        <div className="flex justify-between items-center mb-1">
+                      <div className={cn(
+                        "flex-1 p-4 shadow-sm border border-slate-100 dark:border-slate-700",
+                        isMe ? "bg-blue-50 dark:bg-blue-900/20 rounded-2xl rounded-tr-none" : "bg-white dark:bg-slate-800 rounded-2xl rounded-tl-none"
+                      )}>
+                        <div className={cn("flex items-center mb-1", isMe ? "justify-end" : "justify-between")}>
                           <span className="text-[10px] font-black uppercase">{comment.user} <span className="text-slate-400 font-normal normal-case ml-1">({comment.role})</span></span>
-                          <span className="text-[9px] text-slate-300">{comment.time}</span>
+                          {!isMe && <span className="text-[9px] text-slate-300 ml-auto">{comment.time}</span>}
+                          {isMe && <span className="text-[9px] text-slate-300 mr-2 order-first">{comment.time}</span>}
                         </div>
                         <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
                           {comment.content}
                         </p>
                       </div>
                     </div>
-                  ))
+                  )})
                 ) : (
                    <div className="text-center py-8">
                       <p className="text-xs text-slate-400 italic">暂无讨论记录</p>
@@ -875,8 +994,22 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
               <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 border border-slate-100 dark:border-slate-700">
                   <AtSign className="w-4 h-4 text-slate-400" />
-                  <input type="text" placeholder="回复评论..." className="flex-1 bg-transparent border-none text-xs outline-none focus:ring-0 font-medium" />
-                  <button className="p-1.5 bg-blue-600 text-white rounded-lg"><Send className="w-3.5 h-3.5" /></button>
+                  <input 
+                    type="text" 
+                    placeholder="回复评论..." 
+                    className="flex-1 bg-transparent border-none text-xs outline-none focus:ring-0 font-medium"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePostComment()}
+                    disabled={isPostingComment}
+                  />
+                  <button 
+                    onClick={handlePostComment}
+                    disabled={isPostingComment || !newComment.trim()}
+                    className="p-1.5 bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             </div>

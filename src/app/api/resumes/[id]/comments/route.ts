@@ -41,3 +41,28 @@ export async function GET(
   
   return NextResponse.json(comments.slice(0, count));
 }
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const body = await request.json();
+  const { content } = body;
+
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  const newComment = {
+    id: `new-${Date.now()}`,
+    user: 'Me', // In real app, get from session
+    role: '面试官',
+    avatar: 'M',
+    content: content,
+    time: '刚刚'
+  };
+
+  return NextResponse.json({
+    success: true,
+    data: newComment
+  });
+}

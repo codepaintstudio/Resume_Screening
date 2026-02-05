@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   
   return NextResponse.json({
     success: true,
-    message: `Successfully scheduled interviews for ${candidateIds.length} candidates`,
+    message: `成功为 ${candidateIds.length} 位同学安排面试`,
     updatedFields: {
       time,
       date,

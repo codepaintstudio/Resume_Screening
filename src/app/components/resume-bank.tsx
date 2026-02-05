@@ -21,6 +21,7 @@ export function ResumeBank() {
   const [isScreeningOpen, setIsScreeningOpen] = useState(false);
   const [screeningDept, setScreeningDept] = useState('all');
   const [promptConfig, setPromptConfig] = useState('');
+  const [departments, setDepartments] = useState<string[]>([...DEPARTMENTS]);
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
     to: undefined,
@@ -74,13 +75,25 @@ export function ResumeBank() {
     // Backend API integration
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/resumes');
-        if (!res.ok) throw new Error('Network response was not ok');
-        const data = await res.json();
-        setStudents(data);
+        const [resumesRes, deptsRes] = await Promise.all([
+          fetch('/api/resumes'),
+          fetch('/api/departments')
+        ]);
+
+        if (resumesRes.ok) {
+          const data = await resumesRes.json();
+          setStudents(data);
+        } else {
+          throw new Error('Failed to fetch resumes');
+        }
+
+        if (deptsRes.ok) {
+          const deptsData = await deptsRes.json();
+          setDepartments(['全部部门', ...deptsData]);
+        }
       } catch (error) {
-        toast.error('获取简历数据失败');
-        console.error('Error fetching resumes:', error);
+        toast.error('获取数据失败');
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
@@ -181,6 +194,7 @@ export function ResumeBank() {
         setFilterDept={setFilterDept}
         onOpenScreening={() => setIsScreeningOpen(true)}
         onOpenUpload={() => setIsUploadOpen(true)}
+        departments={departments}
       />
 
       <StudentTable 

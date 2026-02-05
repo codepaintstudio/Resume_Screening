@@ -21,6 +21,7 @@ interface FilterToolbarProps {
   setFilterDept: (value: string) => void;
   onOpenScreening: () => void;
   onOpenUpload: () => void;
+  departments?: string[];
 }
 
 export function FilterToolbar({
@@ -33,7 +34,8 @@ export function FilterToolbar({
   filterDept,
   setFilterDept,
   onOpenScreening,
-  onOpenUpload
+  onOpenUpload,
+  departments = [...DEPARTMENTS]
 }: FilterToolbarProps) {
   return (
     <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
@@ -84,7 +86,7 @@ export function FilterToolbar({
             </div>
           </SelectTrigger>
           <SelectContent>
-            {DEPARTMENTS.map((dept) => (
+            {departments.map((dept) => (
               <SelectItem key={dept} value={dept} className="text-[10px] font-black uppercase tracking-wider">
                 {dept}
               </SelectItem>
