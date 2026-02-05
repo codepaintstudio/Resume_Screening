@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Stage, InterviewTask } from '@/types';
-import { AVAILABLE_INTERVIEWERS } from '@/config/constants';
 import { KanbanColumn } from './kanban/KanbanColumn';
 import { CandidateDrawer } from './resume/CandidateDrawer';
 import {
@@ -32,6 +31,7 @@ import { Checkbox } from "./ui/checkbox";
 import { cn } from "./ui/utils";
 import { zhCN } from 'date-fns/locale';
 import { format } from "date-fns";
+import { Skeleton } from "@/app/components/ui/skeleton";
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 
 const today = new Date();
@@ -41,23 +41,16 @@ const dateFeb5 = new Date(today.getFullYear(), 1, 5);
 
 const formatDate = (d: Date) => format(d, 'yyyy-MM-dd');
 
-const initialTasks: InterviewTask[] = [
-  { id: '1', name: '王晓燕', major: '数字媒体艺术', department: 'UI部', time: '14:00 今天', interviewers: ['张静'], date: formatDate(today), location: '飞书会议', priority: 'high', stage: 'interviewing', studentId: '2021001', gpa: '3.8', aiScore: 92, tags: ['Figma', '插画'] },
-  { id: '2', name: '刘洋', major: '软件工程', department: '前端部', time: '10:00 明天', interviewers: ['李雷', '王武'], date: formatDate(tomorrow), location: '工作室A区', priority: 'medium', stage: 'pending', studentId: '2021045', gpa: '3.7', aiScore: 85, tags: ['React', 'Node'] },
-  { id: '3', name: '周博', major: '人工智能', department: '运维', time: '15:30 2月5日', interviewers: ['王武'], date: formatDate(dateFeb5), location: '电话面试', priority: 'low', stage: 'passed', studentId: '2022012', gpa: '3.9', aiScore: 88, tags: ['Linux', 'Python'] },
-  { id: '4', name: '李华', major: '计算机科学', department: '前端部', time: '未安排', interviewers: [], location: '待定', priority: 'medium', stage: 'pending', studentId: '2021046', gpa: '3.6', aiScore: 82, tags: ['Vue', 'TS'] },
-  { id: '5', name: '张三', major: '软件工程', department: '后端部', time: '未安排', interviewers: [], location: '待定', priority: 'high', stage: 'pending', studentId: '2021047', gpa: '3.9', aiScore: 90, tags: ['Java', 'Spring'] },
-];
-
 const stages: { id: Stage, label: string, color: string }[] = [
-  { id: 'pending', label: '待面试', color: 'bg-slate-500' },
+  { id: 'pending_interview', label: '待面试', color: 'bg-slate-500' },
   { id: 'interviewing', label: '面试中', color: 'bg-blue-500' },
   { id: 'passed', label: '面试通过', color: 'bg-emerald-500' },
   { id: 'rejected', label: '未通过', color: 'bg-rose-500' },
 ];
 
 export function InterviewKanban() {
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = useState<InterviewTask[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<InterviewTask | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTip, setShowScrollTip] = useState(false);
@@ -68,13 +61,50 @@ export function InterviewKanban() {
   const [batchDate, setBatchDate] = useState<Date>();
   const [batchTime, setBatchTime] = useState('');
   const [batchInterviewers, setBatchInterviewers] = useState<string[]>([]);
+  const [availableInterviewers, setAvailableInterviewers] = useState<string[]>([]);
 
   // Filter State
   const [filterDate, setFilterDate] = useState<Date>();
   
-  const pendingTasks = tasks.filter(t => t.stage === 'pending');
+  // Fetch tasks from API
+  useEffect(() => {
+    setIsLoading(true);
+    // Fetch interviewers
+    fetch('/api/interviewers')
+      .then(res => res.json())
+      .then(data => setAvailableInterviewers(data))
+      .catch(err => console.error("Failed to fetch interviewers", err));
+
+    fetch('/api/resumes')
+      .then(res => res.json())
+      .then(data => {
+        // Map Student to InterviewTask
+        // Note: The API returns Student[], we need to ensure InterviewTask properties exist or are defaulted
+        const mappedTasks: InterviewTask[] = data.map((student: any) => ({
+          ...student,
+          time: student.time || '未安排',
+          interviewers: student.interviewers || [],
+          location: student.location || '待定',
+          priority: student.priority || 'medium',
+          stage: student.status // Ensure status maps to stage
+        }));
+        setTasks(mappedTasks);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch interview tasks", err);
+        toast.error("加载数据失败");
+        setIsLoading(false);
+      });
+  }, []);
+
+  const pendingTasks = tasks.filter(t => t.stage === 'to_be_scheduled');
 
   const filteredTasks = tasks.filter(t => {
+    // Show only interview-related stages on the board
+    const isBoardStage = ['pending_interview', 'interviewing', 'passed', 'rejected'].includes(t.stage);
+    if (!isBoardStage) return false;
+
     if (!filterDate) return true;
     if (!t.date) return false;
     return t.date === formatDate(filterDate);
@@ -109,12 +139,34 @@ export function InterviewKanban() {
     }
   }, []);
 
-  const moveTask = (taskId: string, newStage: Stage) => {
+  const moveTask = async (taskId: string, newStage: Stage) => {
+    // Optimistic update
+    const previousTasks = [...tasks];
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, stage: newStage } : t));
-    toast.success('状态已更新');
+    
+    try {
+      const res = await fetch(`/api/resumes/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStage }),
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        toast.success('状态已更新');
+      } else {
+        throw new Error(data.message || 'Update failed');
+      }
+    } catch (err) {
+      console.error("Failed to update status", err);
+      toast.error("更新状态失败");
+      setTasks(previousTasks); // Revert
+    }
   };
 
-  const onDragEnd = (result: DropResult) => {
+  const onDragEnd = async (result: DropResult) => {
     const { source, destination, draggableId } = result;
 
     if (!destination) return;
@@ -167,7 +219,27 @@ export function InterviewKanban() {
     }
     
     setTasks(newTasks);
-    toast.success('状态已更新');
+    
+    // Call API if stage changed
+    if (sourceStageId !== destStageId) {
+        try {
+          const res = await fetch(`/api/resumes/${draggableId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: destStageId }),
+          });
+          const data = await res.json();
+          if (data.success) {
+             toast.success('状态已更新');
+          } else {
+             throw new Error(data.message);
+          }
+        } catch (err) {
+            console.error("Failed to update status on drag", err);
+            toast.error("更新状态失败");
+            setTasks(currentTasks); // Revert
+        }
+    }
   };
 
   const handleUpdateTaskStage = (task: InterviewTask, newStage: Stage) => {
@@ -192,25 +264,51 @@ export function InterviewKanban() {
     const formattedISODate = formatDate(batchDate);
     const newTime = `${batchTime} ${formattedDate}`;
 
-    setTasks(prev => prev.map(t => {
-      if (selectedBatchCandidates.includes(t.id)) {
-        return { 
-            ...t, 
-            time: newTime, 
-            date: formattedISODate,
-            interviewers: batchInterviewers,
-            stage: 'interviewing' as Stage 
-        };
+    // Call API to schedule interviews
+    const promise = fetch('/api/interviews/schedule', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        candidateIds: selectedBatchCandidates,
+        time: newTime,
+        date: formattedISODate,
+        interviewers: batchInterviewers
+      }),
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        setTasks(prev => prev.map(t => {
+          if (selectedBatchCandidates.includes(t.id)) {
+            return { 
+                ...t, 
+                time: newTime, 
+                date: formattedISODate,
+                interviewers: batchInterviewers,
+                stage: 'pending_interview' as Stage 
+            };
+          }
+          return t;
+        }));
+        
+        setIsBatchDialogOpen(false);
+        setSelectedBatchCandidates([]);
+        setBatchDate(undefined);
+        setBatchTime('');
+        setBatchInterviewers([]);
+        return data.message;
+      } else {
+        throw new Error(data.message || 'Schedule failed');
       }
-      return t;
-    }));
+    });
 
-    toast.success(`已为 ${selectedBatchCandidates.length} 位候选人安排面试`);
-    setIsBatchDialogOpen(false);
-    setSelectedBatchCandidates([]);
-    setBatchDate(undefined);
-    setBatchTime('');
-    setBatchInterviewers([]);
+    toast.promise(promise, {
+      loading: '正在安排面试...',
+      success: (msg) => msg || `已为 ${selectedBatchCandidates.length} 位候选人安排面试`,
+      error: '安排面试失败',
+    });
   };
 
   const toggleBatchCandidate = (id: string) => {
@@ -372,7 +470,7 @@ export function InterviewKanban() {
               <div className="w-1/3 pl-2 flex flex-col">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">选择面试官</h4>
                 <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-2 custom-scrollbar">
-                    {AVAILABLE_INTERVIEWERS.map(interviewer => (
+                    {availableInterviewers.map(interviewer => (
                         <div 
                             key={interviewer}
                             onClick={() => toggleBatchInterviewer(interviewer)}
@@ -426,14 +524,34 @@ export function InterviewKanban() {
         className="flex-1 overflow-x-auto pb-4 no-scrollbar"
       >
         <div className="flex gap-6 h-full min-w-full lg:min-w-0">
-          {stages.map((stage) => (
-            <KanbanColumn 
-                key={stage.id} 
-                stage={stage} 
-                tasks={filteredTasks.filter(t => t.stage === stage.id)}
-                onTaskClick={setSelectedTask}
-            />
-          ))}
+          {isLoading ? (
+            // Skeleton Columns
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-80 h-full flex flex-col bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="w-3 h-3 rounded-full" />
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-5 w-6 rounded-full" />
+                  </div>
+                </div>
+                <div className="space-y-3 flex-1">
+                   <Skeleton className="h-32 w-full rounded-xl" />
+                   <Skeleton className="h-32 w-full rounded-xl" />
+                   <Skeleton className="h-32 w-full rounded-xl" />
+                </div>
+              </div>
+            ))
+          ) : (
+            stages.map((stage) => (
+              <KanbanColumn 
+                  key={stage.id} 
+                  stage={stage} 
+                  tasks={filteredTasks.filter(t => t.stage === stage.id)}
+                  onTaskClick={setSelectedTask}
+              />
+            ))
+          )}
         </div>
       </div>
       

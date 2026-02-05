@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Student } from '@/types';
-import { mockStudents as initialMockStudents } from '@/data/mock';
 import { DEPARTMENTS, STATUS_MAP, SortOptionId } from '@/config/constants';
 
 import { FilterToolbar } from './resume/FilterToolbar';
@@ -11,7 +10,7 @@ import { AIScreeningDialog } from './resume/AIScreeningDialog';
 import { UploadResumeDialog } from './resume/UploadResumeDialog';
 
 export function ResumeBank() {
-  const [students, setStudents] = useState<Student[]>(initialMockStudents);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -72,12 +71,28 @@ export function ResumeBank() {
   }, [students, searchQuery, filterDept, sortBy, sortOrder]);
 
   useEffect(() => {
-    // Backend API integration pending
-    setLoading(false);
+    // Backend API integration
+    const fetchData = async () => {
+      try {
+        const res = await fetch('/api/resumes');
+        if (!res.ok) throw new Error('Network response was not ok');
+        const data = await res.json();
+        setStudents(data);
+      } catch (error) {
+        toast.error('获取简历数据失败');
+        console.error('Error fetching resumes:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
   }, []);
 
-  const handleStatusChange = (taskId: string | number, newStatus: keyof typeof STATUS_MAP) => {
-    toast.success(`状态已更新为：${STATUS_MAP[newStatus].label}`);
+  const handleStatusChange = async (taskId: string | number, newStatus: keyof typeof STATUS_MAP) => {
+    // Optimistic update
+    const prevStudents = [...students];
+    const prevSelected = selectedStudent;
     
     // Update selected student state
     setSelectedStudent(prev => prev ? { 
@@ -89,6 +104,27 @@ export function ResumeBank() {
     setStudents(prev => prev.map(s => 
       s.id === taskId ? { ...s, status: newStatus } : s
     ));
+    
+    try {
+      const res = await fetch(`/api/resumes/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`状态已更新为：${STATUS_MAP[newStatus].label}`);
+      } else {
+        throw new Error(data.message || 'Update failed');
+      }
+    } catch (err) {
+      console.error("Failed to update status", err);
+      toast.error("更新状态失败");
+      // Revert
+      setStudents(prevStudents);
+      setSelectedStudent(prevSelected);
+    }
   };
 
   const handleStartScreening = () => {
@@ -96,7 +132,7 @@ export function ResumeBank() {
     setIsScreeningOpen(false);
   };
 
-  const handleUpload = (files: File[]) => {
+  const handleUpload = async (files: File[]) => {
     const newStudents: Student[] = files.map((file, index) => ({
       id: `new-${Date.now()}-${index}`,
       name: file.name.replace(/\.[^/.]+$/, ""),
@@ -113,9 +149,23 @@ export function ResumeBank() {
       experience: []
     }));
     
-    setStudents(prev => [...newStudents, ...prev]);
-    toast.success(`成功上传 ${files.length} 份简历`);
-    setIsUploadOpen(false);
+    try {
+      const res = await fetch('/api/resumes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newStudents)
+      });
+      
+      if (res.ok) {
+        setStudents(prev => [...newStudents, ...prev]);
+        toast.success(`成功上传 ${files.length} 份简历`);
+        setIsUploadOpen(false);
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (error) {
+      toast.error('上传失败，请重试');
+    }
   };
 
   return (
@@ -136,6 +186,7 @@ export function ResumeBank() {
       <StudentTable 
         students={filteredStudents}
         onSelectStudent={setSelectedStudent}
+        loading={loading}
       />
 
       <CandidateDrawer 

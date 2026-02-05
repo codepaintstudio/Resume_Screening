@@ -2,13 +2,72 @@ import React from 'react';
 import { Mail, MoreHorizontal } from 'lucide-react';
 import { Student } from '@/types';
 import { STATUS_MAP, TABLE_HEADERS } from '@/config/constants';
+import { Skeleton } from "@/app/components/ui/skeleton";
 
 interface StudentTableProps {
   students: Student[];
   onSelectStudent: (student: Student) => void;
+  loading?: boolean;
 }
 
-export function StudentTable({ students, onSelectStudent }: StudentTableProps) {
+export function StudentTable({ students, onSelectStudent, loading = false }: StudentTableProps) {
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                {TABLE_HEADERS.map((header, index) => (
+                  <th key={index} className={`px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest ${header.className}`}>
+                    {header.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+              {[...Array(5)].map((_, index) => (
+                <tr key={index}>
+                  <td className="px-4 md:px-6 py-4">
+                    <div>
+                      <Skeleton className="h-5 w-24 mb-2" />
+                      <div className="flex gap-1">
+                        <Skeleton className="h-4 w-12" />
+                        <Skeleton className="h-4 w-12" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 md:px-6 py-4 text-center">
+                    <Skeleton className="h-8 w-12 mx-auto rounded-lg" />
+                  </td>
+                  <td className="px-4 md:px-6 py-4">
+                    <Skeleton className="h-5 w-20 mb-1" />
+                    <Skeleton className="h-3 w-16" />
+                  </td>
+                  <td className="px-4 md:px-6 py-4">
+                    <Skeleton className="h-5 w-24" />
+                  </td>
+                  <td className="px-4 md:px-6 py-4 text-center">
+                    <Skeleton className="h-5 w-10 mx-auto" />
+                  </td>
+                  <td className="px-4 md:px-6 py-4">
+                    <Skeleton className="h-6 w-16 rounded-lg" />
+                  </td>
+                  <td className="px-4 md:px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Skeleton className="h-8 w-8 rounded-lg" />
+                      <Skeleton className="h-8 w-8 rounded-lg" />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
       <div className="overflow-x-auto">

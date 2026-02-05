@@ -26,7 +26,7 @@ import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/app/components/ui/utils";
 import { Student, InterviewTask, Experience } from '@/types';
-import { STATUS_MAP, AVAILABLE_INTERVIEWERS } from '@/config/constants';
+import { STATUS_MAP } from '@/config/constants';
 import { 
   XCircle, Download, FileSearch, 
   Briefcase, MessageSquare, Send, AtSign,
@@ -85,16 +85,26 @@ function YearMonthPicker({ value, onChange }: { value: string, onChange: (val: s
   );
 }
 
+import { Skeleton } from "@/app/components/ui/skeleton";
+
 export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, type = 'resume' }: CandidateDrawerProps) {
   const [mounted, setMounted] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [comments, setComments] = useState<any[]>([]);
   const [formData, setFormData] = useState<any>({});
   const [interviewDate, setInterviewDate] = useState<Date | undefined>(undefined);
   const [interviewTime, setInterviewTime] = useState<string>("14:00");
   const [selectedInterviewers, setSelectedInterviewers] = useState<string[]>([]);
+  const [availableInterviewers, setAvailableInterviewers] = useState<string[]>([]);
 
   useEffect(() => {
     setMounted(true);
+    fetch('/api/interviewers')
+      .then(res => res.json())
+      .then(data => setAvailableInterviewers(data))
+      .catch(err => console.error("Failed to fetch interviewers", err));
   }, []);
 
   const toggleInterviewer = (name: string) => {
@@ -103,46 +113,53 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
     );
   };
 
-  const currentStatus = (student as any)?.stage || (student as any)?.status;
+  const currentStatus = formData.status || (student as any)?.stage || (student as any)?.status || 'pending';
 
   React.useEffect(() => {
     if (student) {
-      const existingExperiences = (student as any).experiences || [];
-      // If no experiences, use default mock data for demo purposes, 
-      // but respecting if user cleared them. 
-      // Checking if property exists on student object to decide.
-      const initialExperiences = existingExperiences.length > 0 ? existingExperiences : (
-         (student as any).experience ? [{ // migration from old string field
-           id: '1',
-           startDate: '2023.09',
-           endDate: '2024.01',
-           title: '实验室官网开发项目',
-           description: (student as any).experience
-         }] : [
-           { 
-             id: '1',
-             startDate: '2023.09',
-             endDate: '2024.01',
-             title: '实验室官网开发项目',
-             description: '独立使用 Next.js 完成了官网的前端构建，集成了暗色模式与响应式设计。'
-           }
-         ]
-      );
-
+      // First set basic data to show something immediately if desired, 
+      // but if we want a full "loading screen" effect, we might skip this or just use it for the header.
+      // The user requested a "separate loading screen", so we will show skeleton for the content.
+      
       setFormData({
         ...student,
-        email: (student as any).email || 'admin@mahui.com',
-        phone: (student as any).phone || '13800138000',
-        class: (student as any).class || '2103班',
-        skills: (student as any).skills || [
-          { name: 'React', level: 'master' },
-          { name: 'TypeScript', level: 'skilled' },
-          { name: 'Node.js', level: 'proficient' },
-          { name: 'Python', level: 'familiar' },
-          { name: 'Go', level: 'understanding' },
-        ],
-        experiences: initialExperiences
+        // Reset these to empty/loading state to ensure we don't show stale data or partial data
+        email: '',
+        phone: '',
+        class: '',
+        skills: [],
+        experiences: []
       });
+      
+      setIsLoadingDetails(true);
+      setIsLoadingComments(true);
+
+      fetch(`/api/resumes/${student.id}`)
+        .then(res => res.json())
+        .then(data => {
+          setFormData(prev => ({
+            ...prev,
+            ...data,
+            // Preserve status from props if it differs (though usually it should be in sync)
+            status: prev.status 
+          }));
+          setIsLoadingDetails(false);
+        })
+        .catch(err => {
+          console.error("Failed to fetch candidate details", err);
+          setIsLoadingDetails(false);
+        });
+
+      fetch(`/api/resumes/${student.id}/comments`)
+        .then(res => res.json())
+        .then(data => {
+          setComments(data);
+          setIsLoadingComments(false);
+        })
+        .catch(err => {
+          console.error("Failed to fetch comments", err);
+          setIsLoadingComments(false);
+        });
     }
   }, [student]);
 
@@ -198,6 +215,11 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
            interviewers: selectedInterviewers,
            stage: type === 'interview' ? 'pending' : 'pending_interview'
          });
+     }
+
+     // Also trigger status change to ensure it moves to pending_interview state
+     if (student) {
+        onStatusChange(student.id, 'pending_interview');
      }
      
      toast.success("面试安排已更新");
@@ -265,7 +287,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   {currentStatus === 'pending' && type !== 'interview' && (
                     <>
                       <button 
-                        onClick={() => onStatusChange(student.id, 'pending_interview')}
+                        onClick={() => onStatusChange(student.id, 'to_be_scheduled')}
                         className="px-4 py-2 bg-purple-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-purple-700 transition-all"
                       >
                         简历通过
@@ -278,18 +300,100 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       </button>
                     </>
                   )}
+                  
+                  {/* To Be Scheduled State - Show Schedule Button */}
+                  {currentStatus === 'to_be_scheduled' && (
+                     <>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button 
+                            className="px-4 py-2 bg-amber-500 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-amber-600 transition-all"
+                          >
+                            安排面试
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-4 z-[1002]" align="end">
+                           <div className="space-y-4">
+                            <h4 className="font-bold text-sm">设置面试时间</h4>
+                            <Calendar
+                              mode="single"
+                              selected={interviewDate}
+                              onSelect={setInterviewDate}
+                              className="rounded-md border"
+                              locale={zhCN}
+                            />
+                            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+                              <Clock className="w-4 h-4 text-slate-400" />
+                              <div className="relative flex-1">
+                                  <input 
+                                    type="time" 
+                                    value={interviewTime}
+                                    onChange={(e) => setInterviewTime(e.target.value)}
+                                    className="w-full bg-transparent text-sm font-bold border-none focus:ring-0 p-0 text-slate-700 dark:text-slate-300"
+                                  />
+                              </div>
+                              <ChevronDown className="w-3 h-3 text-slate-400 pointer-events-none" />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <h4 className="font-bold text-xs text-slate-500 uppercase">选择面试官</h4>
+                              <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
+                                  {availableInterviewers.map(interviewer => (
+                                      <div 
+                                          key={interviewer}
+                                          onClick={() => toggleInterviewer(interviewer)}
+                                          className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all text-xs ${
+                                              selectedInterviewers.includes(interviewer)
+                                                  ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                                                  : 'bg-white border-slate-100 dark:bg-slate-900 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-800'
+                                          }`}
+                                      >
+                                          <div className="flex items-center gap-2">
+                                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                                  selectedInterviewers.includes(interviewer) ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'
+                                              }`}>
+                                                  {interviewer.slice(0, 1)}
+                                              </div>
+                                              <span className="font-bold text-slate-900 dark:text-white">{interviewer}</span>
+                                          </div>
+                                          {selectedInterviewers.includes(interviewer) && <Check className="w-3 h-3 text-blue-600" />}
+                                      </div>
+                                  ))}
+                              </div>
+                            </div>
+
+                            <button 
+                              onClick={handleScheduleInterview}
+                              disabled={!interviewDate}
+                              className="w-full py-2 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              确认安排
+                            </button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      <button 
+                        onClick={() => onStatusChange(student.id, 'rejected')}
+                        className="px-4 py-2 bg-rose-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all"
+                      >
+                        淘汰
+                      </button>
+                     </>
+                  )}
+
+                  {/* Scheduled / Waiting for Interview */}
                   {(currentStatus === 'pending_interview' || (currentStatus === 'pending' && type === 'interview')) && (
                     <Popover>
                       <PopoverTrigger asChild>
                         <button 
                           className="px-4 py-2 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-blue-700 transition-all"
                         >
-                          安排面试
+                          修改安排
                         </button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-4 z-[1002]" align="end">
                         <div className="space-y-4">
-                          <h4 className="font-bold text-sm">设置面试时间</h4>
+                          <h4 className="font-bold text-sm">修改面试时间</h4>
                           <Calendar
                             mode="single"
                             selected={interviewDate}
@@ -313,7 +417,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                           <div className="space-y-2">
                             <h4 className="font-bold text-xs text-slate-500 uppercase">选择面试官</h4>
                             <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
-                                {AVAILABLE_INTERVIEWERS.map(interviewer => (
+                                {availableInterviewers.map(interviewer => (
                                     <div 
                                         key={interviewer}
                                         onClick={() => toggleInterviewer(interviewer)}
@@ -342,7 +446,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                             disabled={!interviewDate}
                             className="w-full py-2 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            确认安排
+                            确认修改
                           </button>
                         </div>
                       </PopoverContent>
@@ -384,6 +488,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                         </SelectTrigger>
                         <SelectContent className="z-[1002]">
                           <SelectItem value="pending">待处理</SelectItem>
+                          <SelectItem value="to_be_scheduled">待安排</SelectItem>
                           <SelectItem value="pending_interview">待面试</SelectItem>
                           <SelectItem value="interviewing">面试中</SelectItem>
                           <SelectItem value="passed">已通过</SelectItem>
@@ -398,6 +503,56 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
 
             <div className="flex-1 overflow-y-auto">
               <div className="p-8">
+                {isLoadingDetails ? (
+                  <div className="space-y-8 animate-pulse">
+                     <div className="flex justify-between items-start">
+                        <div className="space-y-4">
+                            <Skeleton className="h-10 w-48" />
+                            <div className="flex gap-2">
+                                <Skeleton className="h-4 w-16" />
+                                <Skeleton className="h-4 w-16" />
+                                <Skeleton className="h-4 w-16" />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-20 ml-auto" />
+                            <Skeleton className="h-12 w-20 ml-auto" />
+                        </div>
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                         <Skeleton className="h-24 rounded-2xl" />
+                         <Skeleton className="h-24 rounded-2xl" />
+                     </div>
+                     <div className="flex gap-4">
+                         <Skeleton className="h-12 flex-1 rounded-2xl" />
+                         <Skeleton className="h-12 flex-1 rounded-2xl" />
+                     </div>
+                     <div className="space-y-4">
+                         <Skeleton className="h-4 w-24" />
+                         <div className="flex flex-wrap gap-2">
+                             <Skeleton className="h-8 w-20 rounded-full" />
+                             <Skeleton className="h-8 w-24 rounded-full" />
+                             <Skeleton className="h-8 w-16 rounded-full" />
+                         </div>
+                     </div>
+                     <div className="space-y-6">
+                         <Skeleton className="h-4 w-32" />
+                         <div className="pl-4 border-l-2 border-slate-100 space-y-8">
+                             <div className="space-y-2">
+                                 <Skeleton className="h-3 w-24" />
+                                 <Skeleton className="h-5 w-48" />
+                                 <Skeleton className="h-16 w-full" />
+                             </div>
+                             <div className="space-y-2">
+                                 <Skeleton className="h-3 w-24" />
+                                 <Skeleton className="h-5 w-48" />
+                                 <Skeleton className="h-16 w-full" />
+                             </div>
+                         </div>
+                     </div>
+                  </div>
+                ) : (
+                  <>
                 <div className="flex justify-between items-start mb-10">
                   <div className="flex-1 mr-8">
                     <h2 className="text-4xl font-black tracking-tight mb-3">{student.name}</h2>
@@ -661,6 +816,8 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                     )}
                   </div>
                 </section>
+                  </>
+                )}
               </div>
             </div>
 
@@ -674,18 +831,45 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
               </div>
               
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-xs">M</div>
-                  <div className="flex-1 bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none border border-slate-100 dark:border-slate-700 shadow-sm">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[10px] font-black uppercase">Admin</span>
-                      <span className="text-[9px] text-slate-300">刚刚</span>
-                    </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                      该候选人的 GitHub 提交记录非常活跃，建议面试时重点考察项目实践。
-                    </p>
+                {isLoadingComments ? (
+                  <div className="space-y-4 animate-pulse">
+                     <div className="flex gap-3">
+                        <Skeleton className="w-8 h-8 rounded-xl" />
+                        <div className="flex-1 space-y-2">
+                           <Skeleton className="h-20 w-full rounded-2xl rounded-tl-none" />
+                        </div>
+                     </div>
+                     <div className="flex gap-3">
+                        <Skeleton className="w-8 h-8 rounded-xl" />
+                        <div className="flex-1 space-y-2">
+                           <Skeleton className="h-16 w-3/4 rounded-2xl rounded-tl-none" />
+                        </div>
+                     </div>
                   </div>
-                </div>
+                ) : comments.length > 0 ? (
+                  comments.map((comment: any) => (
+                    <div key={comment.id} className="flex gap-3">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-xs ${
+                        comment.user === 'System' ? 'bg-slate-400' : 'bg-blue-600'
+                      }`}>
+                        {comment.avatar}
+                      </div>
+                      <div className="flex-1 bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none border border-slate-100 dark:border-slate-700 shadow-sm">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[10px] font-black uppercase">{comment.user} <span className="text-slate-400 font-normal normal-case ml-1">({comment.role})</span></span>
+                          <span className="text-[9px] text-slate-300">{comment.time}</span>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                          {comment.content}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                   <div className="text-center py-8">
+                      <p className="text-xs text-slate-400 italic">暂无讨论记录</p>
+                   </div>
+                )}
               </div>
 
               <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">

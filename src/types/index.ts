@@ -15,7 +15,7 @@ export interface Student {
   class: string;
   gpa: string;
   graduationYear: string;
-  status: 'pending' | 'pending_interview' | 'interviewing' | 'passed' | 'rejected';
+  status: 'pending' | 'to_be_scheduled' | 'pending_interview' | 'interviewing' | 'passed' | 'rejected';
   tags: string[] | string; // DB might return string, frontend needs array
   aiScore: number;
   submissionDate: string;
@@ -23,7 +23,7 @@ export interface Student {
   experiences?: Experience[];
 }
 
-export type Stage = 'pending' | 'pending_interview' | 'interviewing' | 'passed' | 'rejected';
+export type Stage = 'pending' | 'to_be_scheduled' | 'pending_interview' | 'interviewing' | 'passed' | 'rejected';
 
 export interface InterviewTask {
   id: string;
