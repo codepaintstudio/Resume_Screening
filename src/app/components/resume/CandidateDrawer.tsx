@@ -958,15 +958,21 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                 ) : comments.length > 0 ? (
                   comments.map((comment: any) => {
                     const isMe = comment.user === 'Me' || comment.user === 'Recruiter'; // Match current user
+                    const isSystem = comment.user === 'System' || comment.role === '系统';
+                    
                     return (
                     <div key={comment.id} className={cn("flex gap-3", isMe && "flex-row-reverse")}>
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-xs overflow-hidden shrink-0 ${
-                        comment.user === 'System' ? 'bg-slate-400' : 'bg-blue-600'
+                        isSystem ? 'bg-white border border-slate-100 p-1' : 'bg-blue-600'
                       }`}>
-                        {comment.avatar && (comment.avatar.startsWith('http') || comment.avatar.startsWith('/')) && comment.avatar.length > 2 ? (
-                          <img src={comment.avatar} alt={comment.user} className="w-full h-full object-cover" />
+                        {isSystem ? (
+                          <img src="/logo.png" alt="System" className="w-full h-full object-contain" />
                         ) : (
-                          <span>{comment.user.substring(0, 2).toUpperCase()}</span>
+                          comment.avatar && (comment.avatar.startsWith('http') || comment.avatar.startsWith('/')) && comment.avatar.length > 2 ? (
+                            <img src={comment.avatar} alt={comment.user} className="w-full h-full object-cover" />
+                          ) : (
+                            <span>{comment.user.substring(0, 2).toUpperCase()}</span>
+                          )
                         )}
                       </div>
                       <div className={cn(

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   User, 
   Shield, 
@@ -20,7 +20,8 @@ import {
   Mail,
   Copy,
   Check,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -36,25 +37,142 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/app/components/ui/popover";
-// Select imports removed as they are replaced by Popover/Command
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/app/components/ui/dialog";
+import { Button } from "@/app/components/ui/button";
 
 interface SettingsPageProps {
   role: 'admin' | 'teacher' | 'hr';
 }
 
 export function SettingsPage({ role }: SettingsPageProps) {
+  const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<'personal' | 'platform' | 'ai' | 'notifications' | 'resume-import'>('personal');
-  const [apiKeys, setApiKeys] = useState<{id: string, name: string, key: string, created: string}[]>([
-    { id: '1', name: 'HR Portal Integration', key: 'sk_live_51M...', created: '2024-02-15' }
-  ]);
-  const [availableModels, setAvailableModels] = useState<string[]>(['gpt-4-turbo', 'gpt-3.5-turbo']);
-  const [llmBaseUrl, setLlmBaseUrl] = useState<string>('https://api.openai.com/v1');
-  const [llmApiKey, setLlmApiKey] = useState<string>('');
-  const [selectedModel, setSelectedModel] = useState<string>('');
-  const [openModelSelect, setOpenModelSelect] = useState(false);
+  
+  // State for settings
+  const [personal, setPersonal] = useState({
+    avatar: '',
+    displayName: '',
+    email: '',
+    department: ''
+  });
+  
+  const [platform, setPlatform] = useState({
+    departments: [] as string[]
+  });
 
-  const handleSave = () => {
-    toast.success('配置已保存并同步至服务器');
+  const [ai, setAi] = useState({
+    vision: { endpoint: '', model: '', apiKey: '' },
+    llm: { baseUrl: '', apiKey: '', model: '' }
+  });
+
+  const [notifications, setNotifications] = useState({
+    webhookUrl: '',
+    triggers: {} as Record<string, boolean>
+  });
+
+  const [resumeImport, setResumeImport] = useState({
+    imapServer: '',
+    port: '',
+    account: '',
+    password: ''
+  });
+
+  const [apiKeys, setApiKeys] = useState<{id: string, name: string, key: string, created: string}[]>([]);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [openModelSelect, setOpenModelSelect] = useState(false);
+  
+  // Password change state
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      const data = await res.json();
+      
+      setPersonal(data.personal || {});
+      setPlatform(data.platform || { departments: [] });
+      setAi(data.ai || { vision: {}, llm: {} });
+      setNotifications(data.notifications || { triggers: {} });
+      setResumeImport(data.resumeImport || {});
+      setApiKeys(data.apiKeys || []);
+      
+      // Initialize available models if needed or fetch them
+      if (data.ai?.llm?.baseUrl) {
+        // We could fetch models here if we wanted to auto-load
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      toast.error('加载配置失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    const promise = fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        personal,
+        platform,
+        ai,
+        notifications,
+        resumeImport,
+        apiKeys
+      })
+    });
+
+    toast.promise(promise, {
+      loading: '正在保存配置...',
+      success: '配置已保存并同步至服务器',
+      error: '保存失败'
+    });
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('两次输入的密码不一致');
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        toast.success('密码修改成功');
+        setIsPasswordDialogOpen(false);
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      } else {
+        toast.error(data.message || '修改失败');
+      }
+    } catch (error) {
+      toast.error('请求失败，请稍后重试');
+    }
   };
 
   const generateApiKey = () => {
@@ -74,7 +192,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
   };
 
   const fetchModels = () => {
-    const base = llmBaseUrl.replace(/\/+$/, '');
+    const base = ai.llm.baseUrl.replace(/\/+$/, '');
     const endpoint =
       base.includes('openai.com') ? `${base}/models` :
       base.includes('openrouter.ai') ? `${base}/models` :
@@ -82,7 +200,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
       base.includes('modelscope.cn') ? `${base}/models` :
       `${base}/models`;
     const headers: Record<string, string> = {};
-    if (llmApiKey) headers['Authorization'] = `Bearer ${llmApiKey}`;
+    if (ai.llm.apiKey) headers['Authorization'] = `Bearer ${ai.llm.apiKey}`;
     
     // Only show loading toast if we don't have models yet, to avoid annoyance on re-open
     if (availableModels.length === 0) {
@@ -128,6 +246,14 @@ export function SettingsPage({ role }: SettingsPageProps) {
     ] : []),
   ];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col lg:flex-row gap-8">
       {/* Sidebar Nav */}
@@ -151,11 +277,20 @@ export function SettingsPage({ role }: SettingsPageProps) {
       {/* Content Area */}
       <div className="flex-1 max-w-3xl space-y-6">
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
-          <div className="p-6 border-b border-slate-50 dark:border-slate-800">
-            <h3 className="text-xl font-black tracking-tight uppercase">
-              {sections.find(s => s.id === activeSection)?.label}
-            </h3>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Management Console</p>
+          <div className="p-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-black tracking-tight uppercase">
+                {sections.find(s => s.id === activeSection)?.label}
+              </h3>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Management Console</p>
+            </div>
+            <button 
+              onClick={handleSave}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors"
+            >
+              <Save className="w-3.5 h-3.5" />
+              Save Changes
+            </button>
           </div>
 
           <div className="p-8">
@@ -163,11 +298,11 @@ export function SettingsPage({ role }: SettingsPageProps) {
               <div className="space-y-8">
                 <div className="flex items-center gap-6">
                   <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-slate-100 dark:border-slate-800">
-                    <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150" className="w-full h-full object-cover" alt="" />
+                    <img src={personal.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150"} className="w-full h-full object-cover" alt="" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-lg font-black tracking-tight">码绘主理人</h4>
-                    <p className="text-sm text-slate-400 font-medium">admin@mahui.com</p>
+                    <h4 className="text-lg font-black tracking-tight">{personal.displayName || 'User'}</h4>
+                    <p className="text-sm text-slate-400 font-medium">{personal.email || 'email@example.com'}</p>
                     <button className="mt-3 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:underline">修改头像</button>
                   </div>
                 </div>
@@ -175,11 +310,74 @@ export function SettingsPage({ role }: SettingsPageProps) {
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">显示名称</label>
-                    <input type="text" defaultValue="张老师" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 font-bold text-sm" />
+                    <input 
+                      type="text" 
+                      value={personal.displayName} 
+                      onChange={(e) => setPersonal({...personal, displayName: e.target.value})}
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 font-bold text-sm" 
+                    />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">修改密码</label>
-                    <input type="password" placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 font-bold text-sm" />
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">所属部门</label>
+                    <input 
+                      type="text" 
+                      value={personal.department} 
+                      onChange={(e) => setPersonal({...personal, department: e.target.value})}
+                      placeholder="e.g. 技术部"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 font-bold text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">账号安全</label>
+                    <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+                      <DialogTrigger asChild>
+                        <button className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors group">
+                          <span className="font-bold text-sm text-slate-600 dark:text-slate-300">修改登录密码</span>
+                          <Key className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>修改密码</DialogTitle>
+                          <DialogDescription>
+                            为了您的账号安全，建议定期更换密码。
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">当前密码</label>
+                            <input 
+                              type="password" 
+                              value={passwordForm.currentPassword}
+                              onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                              className="w-full px-3 py-2 border rounded-md" 
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">新密码</label>
+                            <input 
+                              type="password" 
+                              value={passwordForm.newPassword}
+                              onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                              className="w-full px-3 py-2 border rounded-md" 
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">确认新密码</label>
+                            <input 
+                              type="password" 
+                              value={passwordForm.confirmPassword}
+                              onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                              className="w-full px-3 py-2 border rounded-md" 
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>取消</Button>
+                          <Button onClick={handleChangePassword}>确认修改</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
               </div>
@@ -195,7 +393,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                     </button>
                   </div>
                   <div className="space-y-2">
-                    {['前端部', 'UI部', '办公室', '运维'].map(dept => (
+                    {platform.departments.map(dept => (
                       <div key={dept} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl group transition-all">
                         <span className="text-sm font-black">{dept}</span>
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
@@ -223,16 +421,33 @@ export function SettingsPage({ role }: SettingsPageProps) {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">API Endpoint</label>
-                      <input type="text" placeholder="https://api.provider.com/v1" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                      <input 
+                        type="text" 
+                        value={ai.vision.endpoint}
+                        onChange={(e) => setAi({...ai, vision: {...ai.vision, endpoint: e.target.value}})}
+                        placeholder="https://api.provider.com/v1" 
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" 
+                      />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Model Name</label>
-                        <input type="text" defaultValue="vision-vk-v2" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                        <input 
+                          type="text" 
+                          value={ai.vision.model}
+                          onChange={(e) => setAi({...ai, vision: {...ai.vision, model: e.target.value}})}
+                          className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" 
+                        />
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">API Key</label>
-                        <input type="password" placeholder="sk-..." className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                        <input 
+                          type="password" 
+                          value={ai.vision.apiKey}
+                          onChange={(e) => setAi({...ai, vision: {...ai.vision, apiKey: e.target.value}})}
+                          placeholder="sk-..." 
+                          className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" 
+                        />
                       </div>
                     </div>
                   </div>
@@ -254,8 +469,8 @@ export function SettingsPage({ role }: SettingsPageProps) {
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base URL</label>
                       <input
                         type="text"
-                        value={llmBaseUrl}
-                        onChange={(e) => setLlmBaseUrl(e.target.value)}
+                        value={ai.llm.baseUrl}
+                        onChange={(e) => setAi({...ai, llm: {...ai.llm, baseUrl: e.target.value}})}
                         placeholder="https://api.openai.com/v1"
                         className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm"
                       />
@@ -264,8 +479,8 @@ export function SettingsPage({ role }: SettingsPageProps) {
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">API Key</label>
                       <input
                         type="password"
-                        value={llmApiKey}
-                        onChange={(e) => setLlmApiKey(e.target.value)}
+                        value={ai.llm.apiKey}
+                        onChange={(e) => setAi({...ai, llm: {...ai.llm, apiKey: e.target.value}})}
                         placeholder="sk-..."
                         className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm"
                       />
@@ -280,8 +495,8 @@ export function SettingsPage({ role }: SettingsPageProps) {
                           <div className="relative">
                              <input
                                 type="text"
-                                value={selectedModel}
-                                onChange={(e) => setSelectedModel(e.target.value)}
+                                value={ai.llm.model}
+                                onChange={(e) => setAi({...ai, llm: {...ai.llm, model: e.target.value}})}
                                 placeholder="Select or enter model"
                                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm pr-10"
                              />
@@ -296,18 +511,18 @@ export function SettingsPage({ role }: SettingsPageProps) {
                                {availableModels.length === 0 && <CommandEmpty>No models found.</CommandEmpty>}
                                <CommandGroup>
                                   {availableModels
-                                    .filter(model => model.toLowerCase().includes(selectedModel.toLowerCase()))
+                                    .filter(model => model.toLowerCase().includes(ai.llm.model.toLowerCase()))
                                     .map((model) => (
                                     <CommandItem
                                      key={model}
                                      value={model}
                                      onSelect={(currentValue) => {
-                                       setSelectedModel(currentValue);
+                                       setAi({...ai, llm: {...ai.llm, model: currentValue}});
                                        setOpenModelSelect(false);
                                      }}
                                    >
                                      <Check
-                                       className={`mr-2 h-4 w-4 ${selectedModel === model ? "opacity-100" : "opacity-0"}`}
+                                       className={`mr-2 h-4 w-4 ${ai.llm.model === model ? "opacity-100" : "opacity-0"}`}
                                      />
                                      {model}
                                    </CommandItem>
@@ -340,6 +555,8 @@ export function SettingsPage({ role }: SettingsPageProps) {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Webhook URL</label>
                     <input 
                       type="text" 
+                      value={notifications.webhookUrl}
+                      onChange={(e) => setNotifications({...notifications, webhookUrl: e.target.value})}
                       placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..." 
                       className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" 
                     />
@@ -347,10 +564,25 @@ export function SettingsPage({ role }: SettingsPageProps) {
                   <div className="space-y-4 pt-4">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">通知触发器</p>
                     <div className="space-y-2">
-                      {['有新简历解析成功', '面试前1小时提醒', '录用结果确认'].map(event => (
-                        <label key={event} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                          <span className="text-sm font-bold">{event}</span>
-                          <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                      {[
+                        { key: 'new_resume', label: '有新简历解析成功' },
+                        { key: 'interview_reminder', label: '面试前1小时提醒' },
+                        { key: 'offer_confirmed', label: '录用结果确认' }
+                      ].map(trigger => (
+                        <label key={trigger.key} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                          <span className="text-sm font-bold">{trigger.label}</span>
+                          <input 
+                            type="checkbox" 
+                            checked={notifications.triggers?.[trigger.key] || false}
+                            onChange={(e) => setNotifications({
+                              ...notifications, 
+                              triggers: {
+                                ...notifications.triggers,
+                                [trigger.key]: e.target.checked
+                              }
+                            })}
+                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
+                          />
                         </label>
                       ))}
                     </div>
@@ -373,23 +605,53 @@ export function SettingsPage({ role }: SettingsPageProps) {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">IMAP Server</label>
-                      <input type="text" placeholder="imap.exmail.qq.com" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                      <input 
+                        type="text" 
+                        value={resumeImport.imapServer || ''}
+                        onChange={(e) => setResumeImport({...resumeImport, imapServer: e.target.value})}
+                        placeholder="imap.exmail.qq.com" 
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" 
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Port</label>
-                      <input type="text" defaultValue="993" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                      <input 
+                        type="text" 
+                        value={resumeImport.port || ''}
+                        onChange={(e) => setResumeImport({...resumeImport, port: e.target.value})}
+                        placeholder="993" 
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" 
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Account</label>
-                      <input type="email" placeholder="hr@company.com" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                      <input 
+                        type="email" 
+                        value={resumeImport.account || ''}
+                        onChange={(e) => setResumeImport({...resumeImport, account: e.target.value})}
+                        placeholder="hr@company.com" 
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" 
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Password / App Token</label>
-                      <input type="password" placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" />
+                      <input 
+                        type="password" 
+                        value={resumeImport.password || ''}
+                        onChange={(e) => setResumeImport({...resumeImport, password: e.target.value})}
+                        placeholder="••••••••" 
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl outline-none font-bold text-sm" 
+                      />
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" id="ssl" defaultChecked className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                    <input 
+                      type="checkbox" 
+                      id="ssl" 
+                      checked={resumeImport.ssl !== false}
+                      onChange={(e) => setResumeImport({...resumeImport, ssl: e.target.checked})}
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
+                    />
                     <label htmlFor="ssl" className="text-sm font-bold text-slate-600 dark:text-slate-400">启用 SSL/TLS 安全连接</label>
                   </div>
                 </section>

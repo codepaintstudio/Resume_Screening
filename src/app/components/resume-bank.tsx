@@ -140,9 +140,28 @@ export function ResumeBank() {
     }
   };
 
-  const handleStartScreening = () => {
-    toast.success('AI 批量筛选任务已创建');
-    setIsScreeningOpen(false);
+  const handleStartScreening = async () => {
+    toast.promise(
+      fetch('/api/resumes/batch-screen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ department: screeningDept, prompt: promptConfig })
+      }).then(async (res) => {
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        return data;
+      }),
+      {
+        loading: 'AI 正在批量筛选简历中...',
+        success: (data) => {
+          setIsScreeningOpen(false);
+          // In a real app, we would refresh the list or update statuses here
+          // For now, we just simulate a refresh
+          return `筛选完成，已处理 ${data.data.screenedCount} 份简历`;
+        },
+        error: '筛选任务启动失败'
+      }
+    );
   };
 
   const handleUpload = async (files: File[]) => {

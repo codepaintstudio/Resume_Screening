@@ -9,13 +9,22 @@ export interface ActivityItemProps {
 }
 
 export function ActivityItem({ user, action, time, role, avatar }: ActivityItemProps) {
+  const isSystem = role === '系统' || user === 'System' || user === 'Lark Bot';
+  const displayAvatar = isSystem ? '/logo.png' : avatar;
+  
   return (
     <div className="flex items-center gap-4">
-      <img 
-        src={avatar} 
-        className="w-10 h-10 rounded-xl object-cover border border-slate-100 dark:border-slate-800 shadow-sm" 
-        alt="" 
-      />
+      {displayAvatar ? (
+        <img 
+          src={displayAvatar} 
+          className={`w-10 h-10 rounded-xl object-cover border border-slate-100 dark:border-slate-800 shadow-sm ${isSystem ? 'bg-white p-1' : ''}`}
+          alt={user} 
+        />
+      ) : (
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-100 text-blue-600 font-bold text-sm border border-blue-200">
+          {user.substring(0, 2).toUpperCase()}
+        </div>
+      )}
       <div className="flex-1">
         <p className="text-sm font-bold text-slate-900 dark:text-white">
           {user}

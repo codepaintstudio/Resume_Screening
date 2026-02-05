@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Bell, 
   Calendar, 
@@ -117,18 +117,63 @@ const initialNotifications: Notification[] = [
 ];
 
 export function NotificationsPopover() {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const unreadCount = notifications.filter(n => n.unread).length;
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch('/api/notifications');
+      const data = await res.json();
+      setNotifications(data);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const markAsRead = (id: string) => {
+  const markAllAsRead = async () => {
+    // Optimistic update
+    const previous = [...notifications];
+    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+
+    try {
+      await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markAll: true })
+      });
+    } catch (error) {
+      setNotifications(previous);
+      console.error('Failed to mark all as read:', error);
+    }
+  };
+
+  const markAsRead = async (id: string) => {
+    const notification = notifications.find(n => n.id === id);
+    if (!notification?.unread) return;
+
+    // Optimistic update
     setNotifications(prev => prev.map(n => 
       n.id === id ? { ...n, unread: false } : n
     ));
+
+    try {
+      await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+    } catch (error) {
+      console.error('Failed to mark as read:', error);
+      // Revert if needed, but for read status it might be less critical
+    }
   };
 
   const getIcon = (type: NotificationType) => {

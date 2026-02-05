@@ -15,10 +15,21 @@ export function UpcomingInterviews() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/interviews/upcoming')
+    // Reuse existing resumes API and filter for interviewing candidates
+    fetch('/api/resumes')
       .then(res => res.json())
-      .then(data => {
-        setInterviews(data);
+      .then((data: any[]) => {
+        // Filter students who are in interviewing status
+        const upcoming = data
+          .filter(s => s.status === 'interviewing')
+          .slice(0, 3)
+          .map(s => ({
+            student: s.name,
+            time: '待定', // In a real app, this would be from a scheduled_at field
+            dept: s.department,
+            type: '技术初试'
+          }));
+        setInterviews(upcoming);
         setLoading(false);
       })
       .catch(err => {

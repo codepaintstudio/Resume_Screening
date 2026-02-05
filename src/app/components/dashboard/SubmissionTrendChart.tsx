@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -7,16 +7,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/app/components/ui/chart';
-
-const dailyData = [
-  { name: '01-26', value: 12 },
-  { name: '01-27', value: 18 },
-  { name: '01-28', value: 24 },
-  { name: '01-29', value: 15 },
-  { name: '01-30', value: 32 },
-  { name: '01-31', value: 28 },
-  { name: '02-01', value: 45 },
-];
+import { Skeleton } from "@/app/components/ui/skeleton";
 
 const chartConfig = {
   value: {
@@ -25,6 +16,40 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function SubmissionTrendChart() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/dashboard/trend')
+      .then(res => res.json())
+      .then(data => {
+        setData(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load trend data:', err);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm h-[400px]">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <Skeleton className="h-6 w-32 mb-2" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-6 w-20" />
+        </div>
+        <Skeleton className="h-[300px] w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  // Dynamic interval calculation to show roughly 7-8 ticks max
+  const tickInterval = data.length > 8 ? Math.ceil(data.length / 8) - 1 : 0;
+
   return (
     <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
       <div className="flex flex-col h-full">
@@ -40,7 +65,7 @@ export function SubmissionTrendChart() {
         </div>
         <div className="flex-1 min-h-0">
           <ChartContainer config={chartConfig} className="max-h-[300px] w-full">
-            <BarChart data={dailyData}>
+            <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
               <XAxis 
                 dataKey="name" 
@@ -48,6 +73,7 @@ export function SubmissionTrendChart() {
                 tickLine={false} 
                 tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} 
                 dy={10}
+                interval={tickInterval}
               />
               <YAxis 
                 axisLine={false} 

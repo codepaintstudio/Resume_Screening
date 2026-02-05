@@ -1,16 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   PieChart, 
   Pie
 } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/app/components/ui/chart';
-
-const departmentData = [
-  { name: '前端部', value: 45, fill: '#2563eb' },
-  { name: 'UI部', value: 30, fill: '#8b5cf6' },
-  { name: '办公室', value: 20, fill: '#ec4899' },
-  { name: '运维', value: 15, fill: '#f97316' },
-];
+import { Skeleton } from "@/app/components/ui/skeleton";
 
 const chartConfig = {
   "前端部": {
@@ -32,6 +26,40 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function DepartmentDistributionChart() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/dashboard/distribution')
+      .then(res => res.json())
+      .then(data => {
+        setData(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load distribution data:', err);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <h3 className="text-lg font-black tracking-tight mb-6">简历占比</h3>
+        <div className="flex justify-center mb-6">
+          <Skeleton className="w-[180px] h-[180px] rounded-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-8 w-full rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const total = data.reduce((acc, curr) => acc + curr.value, 0);
+
   return (
     <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
       <h3 className="text-lg font-black tracking-tight mb-6">简历占比</h3>
@@ -40,7 +68,7 @@ export function DepartmentDistributionChart() {
           <PieChart>
             <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
             <Pie
-              data={departmentData}
+              data={data}
               dataKey="value"
               nameKey="name"
               innerRadius={60}
@@ -51,12 +79,12 @@ export function DepartmentDistributionChart() {
           </PieChart>
         </ChartContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-2xl font-black text-slate-900 dark:text-white">110</span>
+          <span className="text-2xl font-black text-slate-900 dark:text-white">{total}</span>
           <span className="text-[10px] text-slate-400 font-bold uppercase">Total</span>
         </div>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
-        {departmentData.map((item, idx) => (
+        {data.map((item, idx) => (
           <div key={idx} className="flex items-center gap-2 text-xs p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }}></div>
             <span className="text-slate-500 font-bold flex-1">{item.name}</span>
