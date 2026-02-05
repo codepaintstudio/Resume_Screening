@@ -90,6 +90,7 @@ export function EmailSystem() {
   const [viewingHistoryItem, setViewingHistoryItem] = useState<any>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
   
   // Config State
   const [config, setConfig] = useState<EmailConfig>({
@@ -247,6 +248,20 @@ export function EmailSystem() {
       }
     } catch (error) {
       toast.error('删除失败');
+    }
+  };
+
+  const handleViewDetail = async (id: string) => {
+    setIsDetailLoading(true);
+    try {
+      const res = await fetch(`/api/emails/history/${id}`);
+      if (!res.ok) throw new Error('Failed to fetch details');
+      const data = await res.json();
+      setViewingHistoryItem(data);
+    } catch (error) {
+      toast.error('获取详情失败');
+    } finally {
+      setIsDetailLoading(false);
     }
   };
 
@@ -761,14 +776,15 @@ export function EmailSystem() {
                       <td className="px-6 py-5 text-[10px] text-slate-400 uppercase font-black">{item.sentAt}</td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex items-center justify-end gap-2">
-                            <button 
-                              onClick={() => setViewingHistoryItem(item)}
-                              className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-slate-300 hover:text-blue-500 transition-colors"
-                              title="查看详情"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button 
+                             <button 
+                               onClick={() => handleViewDetail(item.id)}
+                               disabled={isDetailLoading}
+                               className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-slate-300 hover:text-blue-500 transition-colors disabled:opacity-50"
+                               title="查看详情"
+                             >
+                               <Eye className="w-4 h-4" />
+                             </button>
+                             <button 
                               onClick={() => handleDeleteHistory(item.id)}
                               className="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg text-slate-300 hover:text-rose-500 transition-colors"
                               title="删除记录"

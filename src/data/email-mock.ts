@@ -81,6 +81,7 @@ export const updateTemplate = (id: string, updates: Partial<EmailTemplate>) => {
 export const deleteTemplate = (id: string) => { templates = templates.filter(t => t.id !== id); };
 
 export const getHistory = () => history;
+export const getHistoryById = (id: string) => history.find(h => h.id === id);
 export const addHistory = (h: EmailHistoryItem) => { history.unshift(h); return h; };
 export const deleteHistory = (id: string) => { history = history.filter(h => h.id !== id); };
 
