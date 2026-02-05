@@ -1,5 +1,34 @@
 import { NextResponse } from 'next/server';
 
+/**
+ * @swagger
+ * /api/dashboard/distribution:
+ *   get:
+ *     tags:
+ *       - System
+ *     summary: 获取部门投递分布
+ *     description: 获取各部门收到的简历数量分布数据，用于饼图展示
+ *     responses:
+ *       200:
+ *         description: 成功获取分布数据
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                     example: "前端部"
+ *                   value:
+ *                     type: integer
+ *                     example: 45
+ *                   fill:
+ *                     type: string
+ *                     description: 图表颜色代码
+ *                     example: "#2563eb"
+ */
 export async function GET() {
   await new Promise(resolve => setTimeout(resolve, 700));
 

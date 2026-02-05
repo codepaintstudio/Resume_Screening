@@ -1,5 +1,69 @@
 import { NextResponse } from 'next/server';
 
+/**
+ * @swagger
+ * /api/settings:
+ *   get:
+ *     tags:
+ *       - System
+ *     summary: 获取系统设置
+ *     description: 获取包含个人、平台、AI、通知等的全局配置
+ *     responses:
+ *       200:
+ *         description: 成功获取配置
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 personal:
+ *                   type: object
+ *                   properties:
+ *                     avatar:
+ *                       type: string
+ *                     displayName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     department:
+ *                       type: string
+ *                 platform:
+ *                   type: object
+ *                   properties:
+ *                     departments:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                 ai:
+ *                   type: object
+ *                 notifications:
+ *                   type: object
+ *                 resumeImport:
+ *                   type: object
+ *                 apiKeys:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *   post:
+ *     tags:
+ *       - System
+ *     summary: 更新系统设置
+ *     description: 增量更新系统配置
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: 包含需更新的配置项对象
+ *     responses:
+ *       200:
+ *         description: 更新成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ */
+
 // Mock database for settings
 let settings = {
   personal: {

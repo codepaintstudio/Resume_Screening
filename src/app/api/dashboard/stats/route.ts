@@ -1,5 +1,40 @@
 import { NextResponse } from 'next/server';
 
+/**
+ * @swagger
+ * /api/dashboard/stats:
+ *   get:
+ *     tags:
+ *       - System
+ *     summary: 获取仪表盘统计数据
+ *     description: 获取首页顶部的关键统计指标（投递量、待处理、通过数等）
+ *     responses:
+ *       200:
+ *         description: 成功获取统计数据
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   label:
+ *                     type: string
+ *                     example: "总投递量"
+ *                   value:
+ *                     type: string
+ *                     example: "2,543"
+ *                   change:
+ *                     type: string
+ *                     example: "+12.5%"
+ *                   iconKey:
+ *                     type: string
+ *                   color:
+ *                     type: string
+ *                   trend:
+ *                     type: string
+ *                     enum: [up, down]
+ */
 export async function GET() {
   await new Promise(resolve => setTimeout(resolve, 800));
 

@@ -1,5 +1,24 @@
 import { NextResponse } from 'next/server';
 
+/**
+ * @swagger
+ * /api/resumes/{id}/pdf:
+ *   get:
+ *     tags:
+ *       - Resumes
+ *     summary: 预览简历 PDF
+ *     description: 在线预览指定候选人的简历 PDF
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 候选人 ID
+ *     responses:
+ *       307:
+ *         description: 临时重定向到 PDF 预览地址
+ */
 export async function GET() {
   // In a real app, this would return a PDF file stream or a redirect to a signed URL
   // For this mock, we'll redirect to a sample PDF or return a dummy response

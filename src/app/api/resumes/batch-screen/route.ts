@@ -1,6 +1,37 @@
 import { NextResponse } from 'next/server';
 import { addActivity } from '@/data/activity-log';
 
+/**
+ * @swagger
+ * /api/resumes/batch-screen:
+ *   post:
+ *     tags:
+ *       - Resumes
+ *     summary: 批量 AI 筛选
+ *     description: 使用 AI 根据设定条件批量筛选简历
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               department:
+ *                 type: string
+ *                 description: 筛选部门
+ *               prompt:
+ *                 type: string
+ *                 description: AI 筛选提示词
+ *               user:
+ *                 $ref: '#/components/schemas/User'
+ *     responses:
+ *       200:
+ *         description: 筛选任务启动成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ */
 export async function POST(request: Request) {
   try {
     const { department, prompt, user } = await request.json();

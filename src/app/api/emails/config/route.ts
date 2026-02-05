@@ -1,6 +1,67 @@
 import { NextResponse } from 'next/server';
 import { getConfig, updateConfig } from '@/data/email-mock';
 
+/**
+ * @swagger
+ * /api/emails/config:
+ *   get:
+ *     tags:
+ *       - Emails
+ *     summary: 获取邮件配置
+ *     description: 获取 SMTP 服务器等邮件发送配置
+ *     responses:
+ *       200:
+ *         description: 成功获取配置
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 host:
+ *                   type: string
+ *                 port:
+ *                   type: integer
+ *                 secure:
+ *                   type: boolean
+ *                 auth:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: string
+ *                     pass:
+ *                       type: string
+ *   post:
+ *     tags:
+ *       - Emails
+ *     summary: 更新邮件配置
+ *     description: 更新邮件服务器配置信息
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               host:
+ *                 type: string
+ *               port:
+ *                 type: integer
+ *               secure:
+ *                 type: boolean
+ *               auth:
+ *                 type: object
+ *                 properties:
+ *                   user:
+ *                     type: string
+ *                   pass:
+ *                     type: string
+ *     responses:
+ *       200:
+ *         description: 更新成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ */
 export async function GET() {
   return NextResponse.json(getConfig());
 }

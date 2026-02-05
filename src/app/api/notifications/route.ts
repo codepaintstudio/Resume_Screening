@@ -1,6 +1,52 @@
 import { NextResponse } from 'next/server';
 import { addActivity } from '@/data/activity-log';
 
+/**
+ * @swagger
+ * /api/notifications:
+ *   get:
+ *     tags:
+ *       - Notifications
+ *     summary: 获取通知列表
+ *     description: 获取当前用户的最近通知
+ *     responses:
+ *       200:
+ *         description: 成功获取通知
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Notification'
+ *   put:
+ *     tags:
+ *       - Notifications
+ *     summary: 标记通知为已读
+ *     description: 将指定通知或所有通知标记为已读
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: string
+ *                 description: 通知 ID (若 markAll 为 false 则必填)
+ *               markAll:
+ *                 type: boolean
+ *                 description: 是否标记所有通知为已读
+ *               user:
+ *                 $ref: '#/components/schemas/User'
+ *     responses:
+ *       200:
+ *         description: 操作成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ */
+
 // Mock database
 let notifications = [
   {

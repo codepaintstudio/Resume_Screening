@@ -4,6 +4,47 @@ import { addHistory, getTemplates } from '@/data/email-mock';
 import { addActivity } from '@/data/activity-log';
 import { format } from 'date-fns';
 
+/**
+ * @swagger
+ * /api/emails/send:
+ *   post:
+ *     tags:
+ *       - Emails
+ *     summary: 发送邮件
+ *     description: 发送面试通知、拒信或其他邮件
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               templateId:
+ *                 type: string
+ *                 description: 使用的模板 ID
+ *               recipients:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *               customSubject:
+ *                 type: string
+ *               customContent:
+ *                 type: string
+ *               user:
+ *                 $ref: '#/components/schemas/User'
+ *     responses:
+ *       200:
+ *         description: 邮件发送成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ */
 export async function POST(request: Request) {
   try {
     const body = await request.json();

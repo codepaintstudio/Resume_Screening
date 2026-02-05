@@ -1,6 +1,49 @@
 import { NextResponse } from 'next/server';
 import { addUser, checkUserExists } from '@/data/user-mock';
 
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: 用户注册
+ *     description: 创建新用户账号
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               code:
+ *                 type: string
+ *                 description: 邀请码/验证码
+ *     responses:
+ *       200:
+ *         description: 注册成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: 参数错误或邮箱已存在
+ */
 export async function POST(request: Request) {
   try {
     const body = await request.json();

@@ -1,6 +1,64 @@
 import { NextResponse } from 'next/server';
 import { deleteHistory, getHistoryById } from '@/data/email-mock';
 
+/**
+ * @swagger
+ * /api/emails/history/{id}:
+ *   get:
+ *     tags:
+ *       - Emails
+ *     summary: 获取记录详情
+ *     description: 获取单条发送记录的详细信息
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 记录 ID
+ *     responses:
+ *       200:
+ *         description: 成功获取详情
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 recipients:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *       404:
+ *         description: 记录不存在
+ *   delete:
+ *     tags:
+ *       - Emails
+ *     summary: 删除发送记录
+ *     description: 删除指定 ID 的发送记录
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 记录 ID
+ *     responses:
+ *       200:
+ *         description: 删除成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

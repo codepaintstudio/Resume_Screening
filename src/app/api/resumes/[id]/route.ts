@@ -1,6 +1,58 @@
 import { NextResponse } from 'next/server';
 import { addActivity } from '@/data/activity-log';
 
+/**
+ * @swagger
+ * /api/resumes/{id}:
+ *   get:
+ *     tags:
+ *       - Resumes
+ *     summary: 获取简历详情
+ *     description: 根据 ID 获取候选人的详细信息
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 候选人 ID
+ *     responses:
+ *       200:
+ *         description: 成功获取详情
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Student'
+ *   patch:
+ *     tags:
+ *       - Resumes
+ *     summary: 更新简历状态
+ *     description: 更新候选人的状态、备注或其他信息
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pending, to_be_scheduled, pending_interview, interviewing, passed, rejected]
+ *               user:
+ *                 $ref: '#/components/schemas/User'
+ *     responses:
+ *       200:
+ *         description: 更新成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

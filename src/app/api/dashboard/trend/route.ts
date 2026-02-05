@@ -1,5 +1,30 @@
 import { NextResponse } from 'next/server';
 
+/**
+ * @swagger
+ * /api/dashboard/trend:
+ *   get:
+ *     tags:
+ *       - System
+ *     summary: 获取趋势图表数据
+ *     description: 获取最近7天的投递量趋势数据
+ *     responses:
+ *       200:
+ *         description: 成功获取趋势数据
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                     example: "01-26"
+ *                   value:
+ *                     type: integer
+ *                     example: 42
+ */
 export async function GET() {
   await new Promise(resolve => setTimeout(resolve, 600));
 
