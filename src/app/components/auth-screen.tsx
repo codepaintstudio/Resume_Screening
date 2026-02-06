@@ -60,6 +60,10 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
         
         if (data.success) {
           toast.success('登录成功');
+          // Store token if provided
+          if (data.token) {
+            localStorage.setItem('auth_token', data.token);
+          }
           onLogin(data.user);
         } else {
           toast.error(data.message || '登录失败');

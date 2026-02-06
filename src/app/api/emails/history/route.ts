@@ -32,6 +32,12 @@ import { getHistory } from '@/data/email-mock';
  *                     type: string
  *                   recipientCount:
  *                     type: integer
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
   return NextResponse.json(getHistory());

@@ -39,6 +39,12 @@ import { addActivity } from '@/data/activity-log';
  *                     type: string
  *                   date:
  *                     type: string
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *   post:
  *     tags:
  *       - Resumes

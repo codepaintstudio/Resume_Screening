@@ -36,6 +36,12 @@ import { NextResponse } from 'next/server';
  *                   trend:
  *                     type: string
  *                     description: 趋势方向 (up/down)
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *               example:
  *                 - label: '收件箱简历'
  *                   value: '142'

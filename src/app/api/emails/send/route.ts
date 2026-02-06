@@ -44,6 +44,12 @@ import { format } from 'date-fns';
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
+ *       500:
+ *         description: 邮件发送失败
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function POST(request: Request) {
   try {

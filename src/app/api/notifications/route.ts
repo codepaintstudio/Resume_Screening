@@ -18,6 +18,12 @@ import { addActivity } from '@/data/activity-log';
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Notification'
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *   put:
  *     tags:
  *       - Notifications
@@ -45,6 +51,12 @@ import { addActivity } from '@/data/activity-log';
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
+ *       500:
+ *         description: 操作失败
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 
 // Mock database

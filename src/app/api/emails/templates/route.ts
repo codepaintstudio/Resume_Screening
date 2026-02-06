@@ -61,6 +61,18 @@ import { getTemplates, addTemplate, EmailTemplate } from '@/data/email-mock';
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         description: 缺少必填字段
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: 创建失败
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
   return NextResponse.json(getTemplates());

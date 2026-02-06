@@ -18,6 +18,12 @@ import { NextResponse } from 'next/server';
  *     responses:
  *       307:
  *         description: 临时重定向到 PDF 预览地址
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
   // In a real app, this would return a PDF file stream or a redirect to a signed URL

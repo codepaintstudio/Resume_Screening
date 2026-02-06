@@ -19,6 +19,12 @@ import { AVAILABLE_INTERVIEWERS } from '@/config/constants';
  *               items:
  *                 type: string
  *               example: ["张三", "李四", "王五"]
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
   // Simulate network delay

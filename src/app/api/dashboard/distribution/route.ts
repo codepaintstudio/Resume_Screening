@@ -28,6 +28,12 @@ import { NextResponse } from 'next/server';
  *                     type: string
  *                     description: 图表颜色代码
  *                     example: "#2563eb"
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
   await new Promise(resolve => setTimeout(resolve, 700));

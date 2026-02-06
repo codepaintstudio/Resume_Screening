@@ -30,23 +30,41 @@ import { getActivities } from '@/data/activity-log';
  *             schema:
  *               type: object
  *               properties:
- *                 activities:
+ *                 data:
  *                   type: array
  *                   items:
  *                     type: object
  *                     properties:
  *                       id:
  *                         type: string
+ *                         example: "1"
  *                       user:
  *                         type: string
+ *                         example: "Admin"
  *                       action:
  *                         type: string
+ *                         example: "解析了 5 份新简历"
  *                       time:
  *                         type: string
+ *                         example: "5分钟前"
  *                       role:
  *                         type: string
+ *                         example: "前端部"
+ *                       avatar:
+ *                         type: string
+ *                         example: "https://example.com/avatar.jpg"
  *                 hasMore:
  *                   type: boolean
+ *                   example: true
+ *                 total:
+ *                   type: integer
+ *                   example: 100
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

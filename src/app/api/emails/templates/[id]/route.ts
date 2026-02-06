@@ -41,6 +41,12 @@ import { deleteTemplate, updateTemplate } from '@/data/email-mock';
  *               $ref: '#/components/schemas/SuccessResponse'
  *       404:
  *         description: 模板不存在
+ *       500:
+ *         description: 更新失败
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *   delete:
  *     tags:
  *       - Emails
@@ -60,6 +66,12 @@ import { deleteTemplate, updateTemplate } from '@/data/email-mock';
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
+ *       500:
+ *         description: 删除失败
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function PUT(
   request: Request,

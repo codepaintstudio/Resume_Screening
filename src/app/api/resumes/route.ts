@@ -19,6 +19,12 @@ import { addActivity } from '@/data/activity-log';
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Student'
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *   post:
  *     tags:
  *       - Resumes
@@ -48,6 +54,12 @@ import { addActivity } from '@/data/activity-log';
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
+ *       500:
+ *         description: 上传失败
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
   // Simulate network delay

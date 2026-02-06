@@ -39,6 +39,12 @@ import { deleteHistory, getHistoryById } from '@/data/email-mock';
  *                         type: string
  *       404:
  *         description: 记录不存在
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *   delete:
  *     tags:
  *       - Emails
@@ -58,6 +64,12 @@ import { deleteHistory, getHistoryById } from '@/data/email-mock';
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
+ *       500:
+ *         description: 删除失败
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET(
   request: Request,

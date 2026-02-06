@@ -28,8 +28,14 @@ import { getConfig, updateConfig } from '@/data/email-mock';
  *                   properties:
  *                     user:
  *                       type: string
- *                     pass:
+ *                   pass:
  *                       type: string
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *   post:
  *     tags:
  *       - Emails
@@ -61,6 +67,12 @@ import { getConfig, updateConfig } from '@/data/email-mock';
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
+ *       500:
+ *         description: 更新失败
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
   return NextResponse.json(getConfig());

@@ -18,6 +18,12 @@ import { NextResponse } from 'next/server';
  *               items:
  *                 type: string
  *               example: ["前端部", "UI部", "运维", "办公室"]
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
   // In a real app, this would be fetched from a database or configuration service

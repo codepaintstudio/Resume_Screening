@@ -41,25 +41,29 @@ import { authenticateUser } from '@/data/user-mock';
  *                   type: boolean
  *                   example: true
  *                 user:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                     name:
- *                       type: string
- *                     email:
- *                       type: string
- *                     role:
- *                       type: string
+ *                   $ref: '#/components/schemas/User'
  *                 token:
  *                   type: string
  *                   description: Mock JWT token
+ *                   example: 'mock-jwt-token-1'
  *       400:
  *         description: 请求参数错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
- *         description: 认证失败
+ *         description: 认证失败 (邮箱或密码错误)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function POST(request: Request) {
   try {

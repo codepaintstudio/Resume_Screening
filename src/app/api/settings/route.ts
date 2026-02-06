@@ -36,14 +36,69 @@ import { NextResponse } from 'next/server';
  *                         type: string
  *                 ai:
  *                   type: object
+ *                   properties:
+ *                     vision:
+ *                       type: object
+ *                       properties:
+ *                         endpoint:
+ *                           type: string
+ *                         model:
+ *                           type: string
+ *                         apiKey:
+ *                           type: string
+ *                     llm:
+ *                       type: object
+ *                       properties:
+ *                         baseUrl:
+ *                           type: string
+ *                         apiKey:
+ *                           type: string
+ *                         model:
+ *                           type: string
  *                 notifications:
  *                   type: object
+ *                   properties:
+ *                     webhookUrl:
+ *                       type: string
+ *                     triggers:
+ *                       type: object
+ *                       properties:
+ *                         new_resume:
+ *                           type: boolean
+ *                         interview_reminder:
+ *                           type: boolean
+ *                         offer_confirmed:
+ *                           type: boolean
  *                 resumeImport:
  *                   type: object
+ *                   properties:
+ *                     imapServer:
+ *                       type: string
+ *                     port:
+ *                       type: string
+ *                     account:
+ *                       type: string
+ *                     password:
+ *                       type: string
  *                 apiKeys:
  *                   type: array
  *                   items:
  *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       key:
+ *                         type: string
+ *                       created:
+ *                         type: string
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *   post:
  *     tags:
  *       - System
@@ -54,7 +109,10 @@ import { NextResponse } from 'next/server';
  *         application/json:
  *           schema:
  *             type: object
- *             description: 包含需更新的配置项对象
+ *             description: 包含需更新的配置项对象，结构与GET响应一致
+ *             example:
+ *               personal:
+ *                 displayName: "新名称"
  *     responses:
  *       200:
  *         description: 更新成功
@@ -62,6 +120,12 @@ import { NextResponse } from 'next/server';
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
+ *       500:
+ *         description: 更新失败
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 
 // Mock database for settings

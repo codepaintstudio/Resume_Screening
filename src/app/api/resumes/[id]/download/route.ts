@@ -25,6 +25,12 @@ import { NextResponse } from 'next/server';
  *             schema:
  *               type: string
  *               format: binary
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
   await new Promise(resolve => setTimeout(resolve, 500));

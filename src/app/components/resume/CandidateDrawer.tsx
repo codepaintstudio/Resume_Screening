@@ -105,6 +105,14 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [isCommentsExpanded, setIsCommentsExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const wsRef = React.useRef<WebSocket | null>(null);
+  const commentsEndRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (commentsEndRef.current) {
+      commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [comments, isCommentsExpanded]);
 
   useEffect(() => {
     setMounted(true);
@@ -174,10 +182,45 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
       // Initial fetch
       fetchComments();
       
-      // Poll for new comments every 3 seconds (simulating real-time discussion)
-      const interval = setInterval(fetchComments, 3000);
+      // WebSocket Connection for Real-time Updates
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}/api/ws`;
       
-      return () => clearInterval(interval);
+      try {
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+        
+        ws.onopen = () => {
+          // Join the room for this candidate
+          ws.send(JSON.stringify({
+            type: 'JOIN',
+            candidateId: student.id
+          }));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'NEW_COMMENT' && data.candidateId === student.id) {
+              setComments(prev => {
+                if (prev.some(c => c.id === data.payload.id)) return prev;
+                return [...prev, data.payload];
+              });
+            }
+          } catch (e) {
+            console.error("Failed to parse WS message", e);
+          }
+        };
+      } catch (err) {
+        console.error("WebSocket connection failed", err);
+      }
+      
+      return () => {
+        if (wsRef.current) {
+          wsRef.current.close();
+        }
+      };
     }
   }, [student]);
 
@@ -214,22 +257,49 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
     
     setIsPostingComment(true);
     try {
-      const res = await fetch(`/api/resumes/${student.id}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+      // Map technical role to display role
+      const roleMapping: Record<string, string> = {
+        'admin': '面试官',
+        'member': 'HR',
+        'teacher': '教师'
+      };
+      const displayRole = roleMapping[currentUser?.role] || currentUser?.role || '访客';
+      const userPayload = {
+        ...currentUser,
+        role: displayRole,
+        name: currentUser?.name || 'Anonymous'
+      };
+
+      // Use WebSocket if available
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: 'SEND_COMMENT',
+          candidateId: student.id,
           content: newComment,
-          user: currentUser 
-        })
-      });
-      const data = await res.json();
-      
-      if (data.success) {
-        setComments(prev => [...prev, data.data]);
+          user: userPayload
+        }));
         setNewComment('');
-        toast.success('评论已发布');
+        // No need to manually update state, WS message handler will do it
+        // toast.success('评论已发布'); // Optional: wait for confirmation or assume success
       } else {
-        throw new Error(data.message);
+        // Fallback to HTTP
+        const res = await fetch(`/api/resumes/${student.id}/comments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            content: newComment,
+            user: userPayload 
+          })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          setComments(prev => [...prev, data.data]);
+          setNewComment('');
+          toast.success('评论已发布');
+        } else {
+          throw new Error(data.message);
+        }
       }
     } catch (err) {
       console.error("Failed to post comment", err);
@@ -973,7 +1043,9 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   </div>
                 ) : comments.length > 0 ? (
                   comments.map((comment: any) => {
-                    const isMe = comment.user === 'Me' || comment.user === 'Recruiter'; // Match current user
+                    // Check if the comment belongs to the current user
+                    // We compare names because that's what's stored in the comment
+                    const isMe = currentUser && (comment.user === currentUser.name || comment.user === 'Me');
                     const isSystem = comment.user === 'System' || comment.role === '系统';
                     
                     return (
@@ -1011,6 +1083,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       <p className="text-xs text-slate-400 italic">暂无讨论记录</p>
                    </div>
                 )}
+                <div ref={commentsEndRef} />
               </div>
 
               <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
