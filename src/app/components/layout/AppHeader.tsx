@@ -27,6 +27,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { navItems } from '@/config/nav';
 import { NotificationsPopover } from '../AppHeader/NotificationsPopover';
 import { MemberResume } from '../AppHeader/MemberResume';
+import { PersonalCenterModal } from '../PersonalCenterModal';
 import { useTheme } from 'next-themes';
 import React, { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
@@ -40,6 +41,7 @@ export function AppHeader() {
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showResume, setShowResume] = useState(false);
+  const [showPersonalCenter, setShowPersonalCenter] = useState(false);
   const pathname = usePathname();
 
   // Safe user display
@@ -263,14 +265,16 @@ export function AppHeader() {
           <DropdownMenuContent align="end" className="w-56 z-[1002]">
             <DropdownMenuLabel>我的账号</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/settings')}>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => setShowPersonalCenter(true)}>
               <User className="mr-2 h-4 w-4" />
               <span>个人中心</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/settings')}>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>设置</span>
-            </DropdownMenuItem>
+            {(currentUser?.role === 'admin' || userRole === 'admin') && (
+              <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/settings')}>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>系统设置</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/10" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
@@ -278,6 +282,11 @@ export function AppHeader() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <PersonalCenterModal 
+          open={showPersonalCenter} 
+          onOpenChange={setShowPersonalCenter} 
+        />
       </div>
     </header>
   );
