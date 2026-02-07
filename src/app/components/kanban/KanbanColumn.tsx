@@ -212,7 +212,7 @@ export function KanbanColumn({ stage, tasks, onTaskClick }: KanbanColumnProps) {
     <Droppable droppableId={stage.id}>
       {(provided, snapshot) => (
         <div
-          className={`w-[85vw] sm:w-96 lg:w-auto lg:flex-1 lg:min-w-[250px] h-full flex flex-col rounded-2xl p-4 border flex-shrink-0 lg:flex-shrink transition-colors duration-200 relative group ${
+          className={`w-[85vw] sm:w-96 lg:w-auto lg:flex-1 lg:min-w-[250px] min-h-[350px] h-full flex flex-col rounded-2xl p-4 border flex-shrink-0 lg:flex-shrink transition-colors duration-200 relative group ${
             snapshot.isDraggingOver
               ? 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
               : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800/50'
