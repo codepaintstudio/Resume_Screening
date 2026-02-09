@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { Octokit } from '@octokit/rest';
 import { getSettings } from '@/lib/settings-store';
+import { addMembers, Member } from '@/lib/github-store';
 
 /**
  * @swagger
@@ -9,7 +9,7 @@ import { getSettings } from '@/lib/settings-store';
  *     tags:
  *       - GitHub
  *     summary: Invite a user to GitHub organization
- *     description: Sends an invitation to the specified email to join the GitHub organization
+ *     description: Sends an invitation to the specified email to join the GitHub organization (Mock Data)
  *     requestBody:
  *       required: true
  *       content:
@@ -17,16 +17,12 @@ import { getSettings } from '@/lib/settings-store';
  *           schema:
  *             type: object
  *             required:
- *               - email
+ *               - usernames
  *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 description: Email address of the user to invite
- *               role:
- *                 type: string
- *                 enum: [admin, direct_member, billing_manager]
- *                 default: direct_member
+ *               usernames:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *     responses:
  *       200:
  *         description: Invitation sent successfully
@@ -55,59 +51,26 @@ export async function POST(request: Request) {
       );
     }
 
-    const octokit = new Octokit({
-      auth: personalAccessToken,
-    });
-
-    const invitedMembers = [];
-    const errors = [];
-
-    for (const username of usernames) {
-      try {
-        // 1. Get user ID from username
-        const userRes = await octokit.users.getByUsername({ username });
-        const userId = userRes.data.id;
-        const avatarUrl = userRes.data.avatar_url;
-
-        // 2. Invite user by ID
-        // https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28#create-an-organization-invitation
-        await octokit.orgs.createInvitation({
-          org: organization,
-          invitee_id: userId,
-          role: 'direct_member',
-        });
-
-        // 3. Add to result list (formatted for frontend)
-        invitedMembers.push({
-          id: userId.toString(),
-          username: username,
-          avatar: avatarUrl,
-          role: 'member',
-          joinedAt: new Date().getFullYear().toString(),
-          status: 'invited',
-          contributions: {
-            commits: 0,
-            lastActive: 'Just now'
-          }
-        });
-
-      } catch (err: any) {
-        console.error(`Failed to invite ${username}:`, err);
-        errors.push({ username, error: err.message });
+    // Mock invitation logic
+    const newMembers: Member[] = usernames.map((username: string) => ({
+      id: Math.random().toString(36).substring(7),
+      username,
+      avatar: `https://github.com/${username}.png`, // Mock avatar
+      role: 'member',
+      joinedAt: new Date().getFullYear().toString(),
+      status: 'invited',
+      contributions: {
+        commits: 0,
+        lastActive: 'Just now'
       }
-    }
+    }));
 
-    if (invitedMembers.length === 0 && errors.length > 0) {
-       return NextResponse.json(
-        { error: 'Failed to invite any users', details: errors },
-        { status: 500 }
-      );
-    }
+    const added = addMembers(newMembers);
 
     return NextResponse.json({
-      message: 'Invitations processed',
-      invited: invitedMembers,
-      errors: errors.length > 0 ? errors : undefined
+      message: 'Invitations processed (Mock)',
+      invited: added,
+      // errors: [] 
     });
 
   } catch (error: any) {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { Octokit } from '@octokit/rest';
 import { getSettings } from '@/lib/settings-store';
+import { getMembers } from '@/lib/github-store';
 
 /**
  * @swagger
@@ -9,7 +9,7 @@ import { getSettings } from '@/lib/settings-store';
  *     tags:
  *       - GitHub
  *     summary: List organization members
- *     description: Retrieves a list of members in the GitHub organization
+ *     description: Retrieves a list of members in the GitHub organization (Mock Data)
  *     responses:
  *       200:
  *         description: List of members
@@ -20,6 +20,7 @@ export async function GET() {
   try {
     const { personalAccessToken, organization } = getSettings().github;
 
+    // Check configuration only if we want to simulate the "Not Configured" state
     if (!personalAccessToken || !organization) {
       return NextResponse.json(
         { error: 'GitHub configuration missing in settings' },
@@ -27,27 +28,7 @@ export async function GET() {
       );
     }
 
-    const octokit = new Octokit({
-      auth: personalAccessToken,
-    });
-
-    const response = await octokit.orgs.listMembers({
-      org: organization,
-      per_page: 100,
-    });
-
-    const members = response.data.map((member: any) => ({
-      id: member.id.toString(),
-      username: member.login,
-      avatar: member.avatar_url,
-      role: member.site_admin ? 'owner' : 'member',
-      joinedAt: '2024', // GitHub API doesn't return join date in list endpoint
-      status: 'active',
-      contributions: {
-        commits: 0, // Requires separate API calls
-        lastActive: 'Recently'
-      }
-    }));
+    const members = getMembers();
 
     return NextResponse.json({
       organization,

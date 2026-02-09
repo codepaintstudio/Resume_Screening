@@ -58,6 +58,7 @@ import {
 import { Button } from "@/app/components/ui/button";
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { Switch } from "@/app/components/ui/switch";
+import { useSearchParams } from 'next/navigation';
 
 interface SettingsPageProps {
   role: 'admin' | 'teacher' | 'hr';
@@ -65,6 +66,15 @@ interface SettingsPageProps {
 
 export function SettingsPage({ role }: SettingsPageProps) {
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState('platform');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
   
   // State for settings
   const [platform, setPlatform] = useState({
@@ -299,7 +309,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
         </Button>
       </div>
 
-      <Tabs defaultValue="platform" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full justify-start h-auto p-1 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl mb-6 overflow-x-auto no-scrollbar">
           <TabsTrigger value="platform" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm font-bold text-slate-500">
             <Layout className="w-4 h-4 mr-2" />

@@ -350,7 +350,7 @@ export default function GithubPage() {
                       请前往系统设置配置 GitHub Organization 和 Personal Access Token 以启用团队管理功能。
                     </p>
                   </div>
-                  <Link href="/settings">
+                  <Link href="/settings?tab=github">
                     <Button className="mt-2 font-bold">
                       <Settings className="w-4 h-4 mr-2" />
                       前往配置
