@@ -15,7 +15,8 @@ import {
   Check,
   ChevronsUpDown,
   Loader2,
-  Lock
+  Lock,
+  Github
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -88,6 +89,13 @@ export function SettingsPage({ role }: SettingsPageProps) {
     ssl: true
   });
 
+  const [github, setGithub] = useState({
+    clientId: '',
+    clientSecret: '',
+    organization: '',
+    personalAccessToken: ''
+  });
+
   const [apiKeys, setApiKeys] = useState<{id: string, name: string, key: string, created: string, expiresAt?: string}[]>([]);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [openModelSelect, setOpenModelSelect] = useState(false);
@@ -107,12 +115,13 @@ export function SettingsPage({ role }: SettingsPageProps) {
 
   const fetchSettings = async () => {
     try {
-      const [pl, a, n, r, k] = await Promise.all([
+      const [pl, a, n, r, k, g] = await Promise.all([
         fetch('/api/settings/platform').then(res => res.json()),
         fetch('/api/settings/ai').then(res => res.json()),
         fetch('/api/settings/notifications').then(res => res.json()),
         fetch('/api/settings/resume-import').then(res => res.json()),
-        fetch('/api/settings/keys').then(res => res.json())
+        fetch('/api/settings/keys').then(res => res.json()),
+        fetch('/api/settings/github').then(res => res.json())
       ]);
       
       setPlatform(pl || { departments: [] });
@@ -120,6 +129,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
       setNotifications(n || { triggers: {} });
       setResumeImport(r || {});
       setApiKeys(k || []);
+      setGithub(g || { clientId: '', clientSecret: '', organization: '', personalAccessToken: '' });
       
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -135,7 +145,8 @@ export function SettingsPage({ role }: SettingsPageProps) {
         fetch('/api/settings/ai', { method: 'PUT', body: JSON.stringify(ai) }),
         fetch('/api/settings/notifications', { method: 'PUT', body: JSON.stringify(notifications) }),
         fetch('/api/settings/resume-import', { method: 'PUT', body: JSON.stringify(resumeImport) }),
-        fetch('/api/settings/keys', { method: 'PUT', body: JSON.stringify(apiKeys) })
+        fetch('/api/settings/keys', { method: 'PUT', body: JSON.stringify(apiKeys) }),
+        fetch('/api/settings/github', { method: 'PUT', body: JSON.stringify(github) })
     ];
 
     toast.promise(Promise.all(promises), {
@@ -305,6 +316,10 @@ export function SettingsPage({ role }: SettingsPageProps) {
           <TabsTrigger value="resume-import" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm font-bold text-slate-500">
             <Mail className="w-4 h-4 mr-2" />
             简历获取
+          </TabsTrigger>
+          <TabsTrigger value="github" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm font-bold text-slate-500">
+            <Github className="w-4 h-4 mr-2" />
+            GitHub
           </TabsTrigger>
           <TabsTrigger value="keys" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm font-bold text-slate-500">
             <Key className="w-4 h-4 mr-2" />
@@ -603,34 +618,112 @@ export function SettingsPage({ role }: SettingsPageProps) {
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Account</label>
                 <input 
-                  type="email" 
+                  type="text" 
                   value={resumeImport.account || ''}
                   onChange={(e) => setResumeImport({...resumeImport, account: e.target.value})}
-                  placeholder="hr@company.com" 
+                  placeholder="hr@example.com" 
                   className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Password / App Token</label>
-                <input 
-                  type="password" 
-                  value={resumeImport.password || ''}
-                  onChange={(e) => setResumeImport({...resumeImport, password: e.target.value})}
-                  placeholder="••••••••" 
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                <div className="relative">
+                  <input 
+                    type="password" 
+                    value={resumeImport.password || ''}
+                    onChange={(e) => setResumeImport({...resumeImport, password: e.target.value})}
+                    placeholder="••••••••" 
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                  />
+                  <Lock className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 md:col-span-2">
+                <Switch 
+                  id="ssl-mode" 
+                  checked={resumeImport.ssl !== false}
+                  onCheckedChange={(checked) => setResumeImport({...resumeImport, ssl: checked})}
                 />
+                <label htmlFor="ssl-mode" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  启用 SSL 安全连接
+                </label>
               </div>
             </div>
-            
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-              <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-slate-400" />
-                <span className="text-sm font-bold text-slate-600 dark:text-slate-300">启用 SSL/TLS 安全连接</span>
+          </TabsContent>
+
+          <TabsContent value="github" className="mt-0 space-y-8">
+            <div className="flex items-center gap-4 pb-6 border-b border-slate-50 dark:border-slate-800">
+              <div className="w-12 h-12 bg-slate-900 dark:bg-white/10 rounded-xl flex items-center justify-center text-white dark:text-white">
+                <Github className="w-6 h-6" />
               </div>
-              <Switch 
-                checked={resumeImport.ssl !== false}
-                onCheckedChange={(checked) => setResumeImport({...resumeImport, ssl: checked})}
-              />
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">GitHub 集成</h3>
+                <p className="text-sm text-slate-500">配置 GitHub OAuth 登录和组织成员管理功能</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-100 dark:border-slate-700">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-slate-500" />
+                  OAuth 应用配置
+                </h4>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Client ID</label>
+                    <input 
+                      type="text" 
+                      value={github.clientId || ''}
+                      onChange={(e) => setGithub({...github, clientId: e.target.value})}
+                      placeholder="Iv1..." 
+                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Client Secret</label>
+                    <div className="relative">
+                      <input 
+                        type="password" 
+                        value={github.clientSecret || ''}
+                        onChange={(e) => setGithub({...github, clientSecret: e.target.value})}
+                        placeholder="••••••••" 
+                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-100 dark:border-slate-700">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+                  <Layout className="w-4 h-4 text-slate-500" />
+                  组织管理配置
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Organization Name</label>
+                    <input 
+                      type="text" 
+                      value={github.organization || ''}
+                      onChange={(e) => setGithub({...github, organization: e.target.value})}
+                      placeholder="mahui-studio" 
+                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Personal Access Token</label>
+                    <div className="relative">
+                      <input 
+                        type="password" 
+                        value={github.personalAccessToken || ''}
+                        onChange={(e) => setGithub({...github, personalAccessToken: e.target.value})}
+                        placeholder="ghp_..." 
+                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
 

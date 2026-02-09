@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getSettings } from '@/lib/settings-store';
 
 /**
  * @swagger
@@ -29,10 +30,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
-    const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+    const { clientId, clientSecret } = getSettings().github;
 
-    if (!GITHUB_CLIENT_ID || !GITHUB_CLIENT_SECRET) {
+    if (!clientId || !clientSecret) {
       console.error('GitHub credentials not configured');
       return NextResponse.redirect(new URL('/login?error=server_configuration', request.url));
     }
@@ -45,8 +45,8 @@ export async function GET(request: Request) {
         Accept: 'application/json',
       },
       body: JSON.stringify({
-        client_id: GITHUB_CLIENT_ID,
-        client_secret: GITHUB_CLIENT_SECRET,
+        client_id: clientId,
+        client_secret: clientSecret,
         code,
       }),
     });
