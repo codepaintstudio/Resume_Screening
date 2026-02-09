@@ -106,6 +106,13 @@ export function SettingsPage({ role }: SettingsPageProps) {
     personalAccessToken: ''
   });
 
+  const [emailSending, setEmailSending] = useState({
+    host: '',
+    port: '',
+    user: '',
+    pass: ''
+  });
+
   const [apiKeys, setApiKeys] = useState<{id: string, name: string, key: string, created: string, expiresAt?: string}[]>([]);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [openModelSelect, setOpenModelSelect] = useState(false);
@@ -125,13 +132,14 @@ export function SettingsPage({ role }: SettingsPageProps) {
 
   const fetchSettings = async () => {
     try {
-      const [pl, a, n, r, k, g] = await Promise.all([
+      const [pl, a, n, r, k, g, e] = await Promise.all([
         fetch('/api/settings/platform').then(res => res.json()),
         fetch('/api/settings/ai').then(res => res.json()),
         fetch('/api/settings/notifications').then(res => res.json()),
         fetch('/api/settings/resume-import').then(res => res.json()),
         fetch('/api/settings/keys').then(res => res.json()),
-        fetch('/api/settings/github').then(res => res.json())
+        fetch('/api/settings/github').then(res => res.json()),
+        fetch('/api/settings/email-sending').then(res => res.json())
       ]);
       
       setPlatform(pl || { departments: [] });
@@ -140,6 +148,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
       setResumeImport(r || {});
       setApiKeys(k || []);
       setGithub(g || { clientId: '', clientSecret: '', organization: '', personalAccessToken: '' });
+      setEmailSending(e || { host: '', port: '', user: '', pass: '' });
       
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -156,7 +165,8 @@ export function SettingsPage({ role }: SettingsPageProps) {
         fetch('/api/settings/notifications', { method: 'PUT', body: JSON.stringify(notifications) }),
         fetch('/api/settings/resume-import', { method: 'PUT', body: JSON.stringify(resumeImport) }),
         fetch('/api/settings/keys', { method: 'PUT', body: JSON.stringify(apiKeys) }),
-        fetch('/api/settings/github', { method: 'PUT', body: JSON.stringify(github) })
+        fetch('/api/settings/github', { method: 'PUT', body: JSON.stringify(github) }),
+        fetch('/api/settings/email-sending', { method: 'PUT', body: JSON.stringify(emailSending) })
     ];
 
     toast.promise(Promise.all(promises), {
@@ -330,6 +340,10 @@ export function SettingsPage({ role }: SettingsPageProps) {
           <TabsTrigger value="github" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm font-bold text-slate-500">
             <Github className="w-4 h-4 mr-2" />
             GitHub
+          </TabsTrigger>
+          <TabsTrigger value="email-sending" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm font-bold text-slate-500">
+            <Mail className="w-4 h-4 mr-2" />
+            发信设置
           </TabsTrigger>
           <TabsTrigger value="keys" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm font-bold text-slate-500">
             <Key className="w-4 h-4 mr-2" />
@@ -732,6 +746,65 @@ export function SettingsPage({ role }: SettingsPageProps) {
                       />
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="email-sending" className="mt-0 space-y-8">
+            <div className="flex items-center gap-4 pb-6 border-b border-slate-50 dark:border-slate-800">
+              <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-500">
+                <Mail className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">SMTP 发信配置</h3>
+                <p className="text-sm text-slate-500">配置邮件发送服务器，用于发送通知和面试邀请</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">SMTP 服务器</label>
+                  <input 
+                    type="text" 
+                    value={emailSending.host}
+                    onChange={(e) => setEmailSending({...emailSending, host: e.target.value})}
+                    placeholder="smtp.example.com" 
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">SMTP 端口</label>
+                  <input 
+                    type="text" 
+                    value={emailSending.port}
+                    onChange={(e) => setEmailSending({...emailSending, port: e.target.value})}
+                    placeholder="465" 
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                  />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">发信账号</label>
+                  <input 
+                    type="text" 
+                    value={emailSending.user}
+                    onChange={(e) => setEmailSending({...emailSending, user: e.target.value})}
+                    placeholder="hr@example.com" 
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">授权码/密码</label>
+                  <input 
+                    type="password" 
+                    value={emailSending.pass}
+                    onChange={(e) => setEmailSending({...emailSending, pass: e.target.value})}
+                    placeholder="••••••••" 
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                  />
                 </div>
               </div>
             </div>

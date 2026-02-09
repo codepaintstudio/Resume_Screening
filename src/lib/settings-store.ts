@@ -50,6 +50,12 @@ export interface SettingsState {
     organization: string;
     personalAccessToken: string;
   };
+  emailSending: {
+    host: string;
+    port: string;
+    user: string;
+    pass: string;
+  };
   apiKeys: {
     id: string;
     name: string;
@@ -102,6 +108,12 @@ const defaultSettings: SettingsState = {
     organization: 'mahui-studio',
     personalAccessToken: '',
   },
+  emailSending: {
+    host: 'smtp.example.com',
+    port: '465',
+    user: 'hr@example.com',
+    pass: '',
+  },
   apiKeys: [
     { id: '1', name: 'HR Portal Integration', key: 'sk_live_51M...', created: '2024-02-15' }
   ]
@@ -138,6 +150,7 @@ const loadSettings = () => {
         },
         resumeImport: { ...defaultSettings.resumeImport, ...loaded.resumeImport },
         github: { ...defaultSettings.github, ...loaded.github },
+        emailSending: { ...defaultSettings.emailSending, ...loaded.emailSending },
         apiKeys: loaded.apiKeys || defaultSettings.apiKeys
       };
       console.log('Settings loaded from', SETTINGS_FILE);

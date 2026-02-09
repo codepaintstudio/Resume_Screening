@@ -1,14 +1,16 @@
 import { 
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   LogOut,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAppStore } from '@/store';
 import { navItems } from '@/config/nav';
 import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
 export function AppSidebar() {
   const { 
@@ -17,7 +19,25 @@ export function AppSidebar() {
     setIsLoggedIn 
   } = useAppStore();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+
+  useEffect(() => {
+    navItems.forEach(item => {
+      if ('subItems' in item && item.subItems) {
+        if (pathname.startsWith(`/${item.id}`) && !expandedItems.includes(item.id)) {
+          setExpandedItems(prev => [...prev, item.id]);
+        }
+      }
+    });
+  }, [pathname]);
+
+  const toggleExpand = (id: string) => {
+    setExpandedItems(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
@@ -56,6 +76,80 @@ export function AppSidebar() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname.startsWith(`/${item.id}`);
+            const hasSubItems = 'subItems' in item && (item as any).subItems;
+            const isExpanded = expandedItems.includes(item.id);
+
+            if (hasSubItems) {
+              return (
+                <div key={item.id} className="space-y-1">
+                  <button
+                    onClick={() => {
+                      if (!isSidebarOpen) toggleSidebar();
+                      toggleExpand(item.id);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative group",
+                      isActive 
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold' 
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+                    )}
+                  >
+                    <Icon className={cn("w-5 h-5 flex-shrink-0 transition-transform", isActive ? 'scale-110' : 'group-hover:scale-110')} />
+                    <AnimatePresence mode="wait">
+                      {isSidebarOpen && (
+                        <motion.span
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="whitespace-nowrap flex-1 text-left"
+                        >
+                          {item.label}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                    {isSidebarOpen && (
+                      <ChevronDown className={cn("w-4 h-4 transition-transform", isExpanded ? "rotate-180" : "")} />
+                    )}
+                    {!isSidebarOpen && (
+                      <div className="absolute left-16 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                        {item.label}
+                      </div>
+                    )}
+                  </button>
+                  <AnimatePresence>
+                    {isSidebarOpen && isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pl-11 pr-2 space-y-1 pb-1">
+                          {(item as any).subItems.map((sub: any) => {
+                             const isSubActive = pathname === '/emails' && searchParams.get('tab') === sub.id;
+                             return (
+                              <Link
+                                key={sub.id}
+                                href={sub.href}
+                                className={cn(
+                                  "block w-full text-sm py-2 px-3 rounded-lg transition-colors",
+                                  isSubActive
+                                    ? "text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 font-medium"
+                                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                )}
+                              >
+                                {sub.label}
+                              </Link>
+                             );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={item.id}

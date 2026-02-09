@@ -50,6 +50,8 @@ import { zhCN } from 'date-fns/locale';
 import { DateRange } from "react-day-picker";
 import { cn } from "@/app/components/ui/utils";
 import { useAppStore } from '@/store';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 interface Template {
   id: string;
@@ -57,13 +59,6 @@ interface Template {
   subject: string;
   content: string;
   category: string;
-}
-
-interface EmailConfig {
-  host: string;
-  port: string;
-  user: string;
-  pass: string;
 }
 
 const mockTemplates: Template[] = [
@@ -74,7 +69,9 @@ const mockTemplates: Template[] = [
 
 export function EmailSystem() {
   const { currentUser } = useAppStore();
-  const [activeTab, setActiveTab] = useState<'send' | 'templates' | 'history' | 'config'>('send');
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'batch';
+  
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [templates, setTemplates] = useState<Template[]>(mockTemplates);
   
@@ -93,15 +90,8 @@ export function EmailSystem() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [configMissing, setConfigMissing] = useState(false);
   
-  // Config State
-  const [config, setConfig] = useState<EmailConfig>({
-    host: 'smtp.example.com',
-    port: '465',
-    user: 'hr@example.com',
-    pass: ''
-  });
-
   // Candidate Filter State
   const [candidates, setCandidates] = useState<any[]>([]);
   const [filters, setFilters] = useState({
@@ -113,9 +103,23 @@ export function EmailSystem() {
   useEffect(() => {
     fetchTemplates();
     fetchHistory();
-    fetchConfig();
     fetchCandidates();
+    checkConfig();
   }, []);
+
+  const checkConfig = async () => {
+    try {
+      const res = await fetch('/api/settings/email-sending');
+      const data = await res.json();
+      if (!data.host || !data.user || !data.pass) {
+        setConfigMissing(true);
+      } else {
+        setConfigMissing(false);
+      }
+    } catch (error) {
+      console.error('Failed to check email config', error);
+    }
+  };
 
   const fetchCandidates = async () => {
     try {
@@ -181,34 +185,6 @@ export function EmailSystem() {
       setHistory(data);
     } catch (error) {
       console.error('Failed to fetch history', error);
-    }
-  };
-
-  const fetchConfig = async () => {
-    try {
-      const res = await fetch('/api/emails/config');
-      const data = await res.json();
-      if (data) setConfig(data);
-    } catch (error) {
-      console.error('Failed to fetch config', error);
-    }
-  };
-
-  const saveConfig = async () => {
-    try {
-      const res = await fetch('/api/emails/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success('SMTP 配置已保存');
-      } else {
-        toast.error('保存失败');
-      }
-    } catch (error) {
-      toast.error('保存出错');
     }
   };
 
@@ -329,30 +305,25 @@ export function EmailSystem() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-900 w-fit rounded-xl border border-slate-200 dark:border-slate-800">
-        {[
-          { id: 'send', label: '群发邮件', icon: Send },
-          { id: 'templates', label: '模版管理', icon: FileText },
-          { id: 'history', label: '发送记录', icon: History },
-          { id: 'config', label: '发信配置', icon: Settings2 },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-              activeTab === tab.id 
-                ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm' 
-                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <tab.icon className="w-3.5 h-3.5" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {activeTab === 'send' && (
+        {activeTab === 'batch' && (
+          configMissing ? (
+            <div className="lg:col-span-3 flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+              <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 mb-6">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">未配置发信服务</h3>
+              <p className="text-slate-500 mb-8 max-w-md text-center">
+                请先前往系统设置配置 SMTP 服务，配置完成后即可开始群发通知。
+              </p>
+              <Link href="/settings?tab=email-sending">
+                <button className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                  <Settings className="w-4 h-4" />
+                  前往配置
+                </button>
+              </Link>
+            </div>
+          ) : (
           <>
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -548,67 +519,7 @@ export function EmailSystem() {
               </div>
             </div>
           </>
-        )}
-
-        {activeTab === 'config' && (
-          <div className="lg:col-span-3 bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-            <h3 className="text-lg font-black mb-8 tracking-tight uppercase flex items-center gap-2">
-              <Settings2 className="w-5 h-5 text-blue-600" />
-              SMTP 发信配置
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SMTP 服务器</label>
-                  <input 
-                    type="text" 
-                    value={config.host}
-                    onChange={(e) => setConfig({...config, host: e.target.value})}
-                    placeholder="smtp.example.com" 
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl font-bold text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SMTP 端口</label>
-                  <input 
-                    type="text" 
-                    value={config.port}
-                    onChange={(e) => setConfig({...config, port: e.target.value})}
-                    placeholder="465" 
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl font-bold text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" 
-                  />
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">发信账号</label>
-                  <input 
-                    type="text" 
-                    value={config.user}
-                    onChange={(e) => setConfig({...config, user: e.target.value})}
-                    placeholder="hr@example.com" 
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl font-bold text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">授权码/密码</label>
-                  <input 
-                    type="password" 
-                    value={config.pass}
-                    onChange={(e) => setConfig({...config, pass: e.target.value})}
-                    placeholder="••••••••" 
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl font-bold text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" 
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="mt-8 pt-8 border-t border-slate-50 dark:border-slate-800 flex justify-end">
-              <button onClick={saveConfig} className="flex items-center gap-2 px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black uppercase tracking-widest text-xs hover:opacity-90 transition-opacity">
-                <Save className="w-4 h-4" />
-                保存并测试
-              </button>
-            </div>
-          </div>
+          )
         )}
 
         {activeTab === 'templates' && (

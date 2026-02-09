@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { addHistory, getTemplates } from '@/data/email-mock';
 import { addActivity } from '@/data/activity-log';
 import { format } from 'date-fns';
+import { getSettings } from '@/lib/settings-store';
 
 /**
  * @swagger
@@ -53,6 +54,11 @@ import { format } from 'date-fns';
  */
 export async function POST(request: Request) {
   try {
+    const { host, user: smtpUser, pass } = getSettings().emailSending;
+    if (!host || !smtpUser || !pass) {
+      return NextResponse.json({ success: false, message: 'SMTP configuration missing' }, { status: 500 });
+    }
+
     const body = await request.json();
     const { templateId, recipients, customSubject, customContent, user } = body;
 
