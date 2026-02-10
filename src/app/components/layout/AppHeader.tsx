@@ -1,5 +1,4 @@
 import { 
-  Search, 
   Bell, 
   Sun,
   Moon,
@@ -26,8 +25,8 @@ import {
 import { usePathname, useRouter } from 'next/navigation';
 import { navItems } from '@/config/nav';
 import { NotificationsPopover } from '../AppHeader/NotificationsPopover';
-import { MemberResume } from '../AppHeader/MemberResume';
 import { PersonalCenterModal } from '../PersonalCenterModal';
+import { GlobalSearch } from './GlobalSearch';
 import { useTheme } from 'next-themes';
 import React, { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
@@ -39,8 +38,6 @@ export function AppHeader() {
   const { currentUser, userRole, setIsLoggedIn } = useAppStore();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showResume, setShowResume] = useState(false);
   const [showPersonalCenter, setShowPersonalCenter] = useState(false);
   const pathname = usePathname();
 
@@ -52,14 +49,6 @@ export function AppHeader() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.nativeEvent.isComposing) return;
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      e.preventDefault();
-      setShowResume(true);
-    }
-  };
 
   const toggleTheme = (event: React.MouseEvent) => {
     const isDark = theme === 'dark';
@@ -215,26 +204,9 @@ export function AppHeader() {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden md:flex relative mr-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="搜索成员、简历..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={handleSearchKeyDown}
-            className={cn(
-              "pl-10 pr-4 py-1.5 bg-slate-50 dark:bg-slate-800 border-none rounded-full text-sm transition-all outline-none focus:ring-2 focus:ring-blue-500/20",
-              searchQuery ? "w-64" : "w-48 focus:w-64"
-            )}
-          />
+        <div className="hidden md:block mr-2">
+          <GlobalSearch />
         </div>
-
-        <MemberResume 
-          url="mock-resume" 
-          open={showResume} 
-          onOpenChange={setShowResume} 
-        />
         
         <button 
           onClick={toggleTheme}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
+import { useSearchParams } from 'next/navigation';
 import { Student } from '@/types';
 import { DEPARTMENTS, STATUS_MAP, SortOptionId } from '@/config/constants';
 
@@ -28,7 +29,25 @@ export function ResumeBank() {
     to: undefined,
   });
 
+  const searchParams = useSearchParams();
   const { currentUser } = useAppStore();
+
+  // Handle URL candidateId parameter
+  useEffect(() => {
+    const candidateId = searchParams.get('candidateId');
+    if (candidateId && students.length > 0) {
+      // Find student by ID (handling both string and number IDs if necessary)
+      // Since MOCK_CANDIDATES use '1', '2' etc, and real students might have different IDs.
+      // We'll try to match loosely.
+      const targetStudent = students.find(s => String(s.id) === candidateId);
+      if (targetStudent) {
+        setSelectedStudent(targetStudent);
+      } else {
+        // If we can't find it in the current list, maybe we should fetch it individually?
+        // For now, assuming it's in the list or we just ignore if not found.
+      }
+    }
+  }, [searchParams, students]);
 
   const filteredStudents = useMemo(() => {
     return students

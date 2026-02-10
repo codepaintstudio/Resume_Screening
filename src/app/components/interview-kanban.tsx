@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { useAppStore } from '@/store';
+import { useSearchParams } from 'next/navigation';
 
 const today = new Date();
 const tomorrow = new Date(today);
@@ -52,6 +53,7 @@ const stages: { id: Stage, label: string, color: string }[] = [
 
 export function InterviewKanban() {
   const { currentUser } = useAppStore();
+  const searchParams = useSearchParams();
   const [tasks, setTasks] = useState<InterviewTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<InterviewTask | null>(null);
@@ -105,6 +107,17 @@ export function InterviewKanban() {
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  // Handle URL candidateId parameter
+  useEffect(() => {
+    const candidateId = searchParams.get('candidateId');
+    if (candidateId && tasks.length > 0) {
+      const targetTask = tasks.find(t => String(t.id) === candidateId);
+      if (targetTask) {
+        setSelectedTask(targetTask);
+      }
+    }
+  }, [searchParams, tasks]);
 
   const pendingTasks = tasks.filter(t => t.stage === 'to_be_scheduled');
 
