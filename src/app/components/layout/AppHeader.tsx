@@ -21,6 +21,8 @@ import {
   Sheet,
   SheetContent,
   SheetTrigger,
+  SheetTitle,
+  SheetDescription,
 } from "@/app/components/ui/sheet";
 import { usePathname, useRouter } from 'next/navigation';
 import { navItems } from '@/config/nav';
@@ -167,6 +169,8 @@ export function AppHeader() {
             </button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[240px] p-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <SheetTitle className="sr-only">导航菜单</SheetTitle>
+            <SheetDescription className="sr-only">移动端导航菜单</SheetDescription>
             <div className="flex items-center h-16 px-6 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3 whitespace-nowrap">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
