@@ -6,6 +6,7 @@ import {
   LogOut,
   User,
   Settings,
+  ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -24,7 +25,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/app/components/ui/sheet";
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { navItems } from '@/config/nav';
 import { NotificationsPopover } from '../AppHeader/NotificationsPopover';
 import { PersonalCenterModal } from '../PersonalCenterModal';
@@ -32,6 +33,7 @@ import { GlobalSearch } from './GlobalSearch';
 import { useTheme } from 'next-themes';
 import React, { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
+import { motion, AnimatePresence } from 'motion/react';
 
 import { useAppStore } from '@/store';
 
@@ -39,9 +41,28 @@ export function AppHeader() {
   const { theme, setTheme } = useTheme();
   const { currentUser, userRole, setIsLoggedIn } = useAppStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const [showPersonalCenter, setShowPersonalCenter] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const pathname = usePathname();
+
+  // Handle auto-expansion of active items with sub-items
+  useEffect(() => {
+    navItems.forEach(item => {
+      if ('subItems' in item && item.subItems) {
+        if (pathname.startsWith(`/${item.id}`) && !expandedItems.includes(item.id)) {
+          setExpandedItems(prev => [...prev, item.id]);
+        }
+      }
+    });
+  }, [pathname]);
+
+  const toggleExpand = (id: string) => {
+    setExpandedItems(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
 
   // Safe user display
   const displayName = currentUser?.name || '主理人';
@@ -173,8 +194,9 @@ export function AppHeader() {
             <SheetDescription className="sr-only">移动端导航菜单</SheetDescription>
             <div className="flex items-center h-16 px-6 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3 whitespace-nowrap">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-lg">M</span>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <img src="/logo.png" alt="Logo" className="w-full h-full object-cover dark:hidden" />
+                  <img src="/logo-dark.png" alt="Logo" className="w-full h-full object-cover hidden dark:block" />
                 </div>
                 <span className="font-bold text-lg tracking-tight">码绘工作室</span>
               </div>
@@ -183,6 +205,59 @@ export function AppHeader() {
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname.startsWith(`/${item.id}`);
+                const hasSubItems = 'subItems' in item && (item as any).subItems;
+                const isExpanded = expandedItems.includes(item.id);
+
+                if (hasSubItems) {
+                  return (
+                    <div key={item.id} className="space-y-1">
+                      <button
+                        onClick={() => toggleExpand(item.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative group",
+                          isActive 
+                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold' 
+                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+                        )}
+                      >
+                        <Icon className={cn("w-5 h-5 flex-shrink-0", isActive ? 'scale-110' : '')} />
+                        <span className="whitespace-nowrap flex-1 text-left">{item.label}</span>
+                        <ChevronDown className={cn("w-4 h-4 transition-transform", isExpanded ? "rotate-180" : "")} />
+                      </button>
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pl-11 pr-2 space-y-1 pb-1">
+                              {(item as any).subItems.map((sub: any) => {
+                                 const isSubActive = pathname === '/emails' && searchParams.get('tab') === sub.id;
+                                 return (
+                                  <Link
+                                    key={sub.id}
+                                    href={sub.href}
+                                    className={cn(
+                                      "block w-full text-sm py-2 px-3 rounded-lg transition-colors",
+                                      isSubActive
+                                        ? "text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 font-medium"
+                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                    )}
+                                  >
+                                    {sub.label}
+                                  </Link>
+                                 );
+                              })}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                }
+
                 return (
                   <Link
                     key={item.id}
