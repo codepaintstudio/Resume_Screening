@@ -34,6 +34,7 @@ import { zhCN } from 'date-fns/locale';
 import { format } from "date-fns";
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
+import { motion, AnimatePresence } from "motion/react";
 import { useAppStore } from '@/store';
 import { useSearchParams } from 'next/navigation';
 
@@ -72,6 +73,20 @@ export function InterviewKanban() {
   const [filterDate, setFilterDate] = useState<Date>();
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Mobile View State
+  const [mobileTabIndex, setMobileTabIndex] = useState(0);
+  const [direction, setDirection] = useState(0); // -1 for left, 1 for right
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Fetch tasks from API
   const fetchTasks = () => {
     setIsLoading(true);
@@ -372,58 +387,74 @@ export function InterviewKanban() {
     }
   };
 
+  const handleMobileNext = () => {
+    if (mobileTabIndex < stages.length - 1) {
+      setDirection(1);
+      setMobileTabIndex(prev => prev + 1);
+    }
+  };
+
+  const handleMobilePrev = () => {
+    if (mobileTabIndex > 0) {
+      setDirection(-1);
+      setMobileTabIndex(prev => prev - 1);
+    }
+  };
+
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="h-[calc(100vh-180px)] flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="relative">
+      <div className="h-[calc(100dvh-180px)] flex flex-col gap-4 md:gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
+          <div className="relative w-full md:w-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input 
               type="text" 
               placeholder="搜索候选人..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-sm w-64 outline-none focus:ring-2 focus:ring-blue-500/20 font-bold"
+              className="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-sm w-full md:w-64 outline-none focus:ring-2 focus:ring-blue-500/20 font-bold"
             />
           </div>
           
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn(
-                  "w-[240px] justify-start text-left font-normal rounded-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900",
-                  !filterDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {filterDate ? format(filterDate, "PPP", { locale: zhCN }) : <span>按日期筛选</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={filterDate}
-                onSelect={setFilterDate}
-                initialFocus
-                locale={zhCN}
-              />
-            </PopoverContent>
-          </Popover>
-          {filterDate && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setFilterDate(undefined)}
-                className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                  <X className="w-4 h-4 text-slate-500" />
-              </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "flex-1 md:w-[240px] justify-start text-left font-normal rounded-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900",
+                    !filterDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filterDate ? format(filterDate, "PPP", { locale: zhCN }) : <span>按日期筛选</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={filterDate}
+                  onSelect={setFilterDate}
+                  initialFocus
+                  locale={zhCN}
+                />
+              </PopoverContent>
+            </Popover>
+            {filterDate && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setFilterDate(undefined)}
+                  className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
+                >
+                    <X className="w-4 h-4 text-slate-500" />
+                </Button>
+            )}
+          </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between md:justify-end gap-2">
           <button 
             onClick={fetchTasks}
             className="flex items-center justify-center w-[38px] h-[38px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl hover:border-blue-500 hover:text-blue-500 transition-all text-slate-400"
@@ -434,7 +465,7 @@ export function InterviewKanban() {
           
           <button 
             onClick={() => setIsBatchDialogOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             新增面试安排
@@ -442,13 +473,13 @@ export function InterviewKanban() {
         </div>
 
         <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
-          <DialogContent className="sm:max-w-5xl w-full">
-            <DialogHeader>
+          <DialogContent className="sm:max-w-5xl w-[95vw] max-h-[90dvh] overflow-y-auto p-0 gap-0">
+            <DialogHeader className="p-6 pb-2">
               <DialogTitle>批量安排面试</DialogTitle>
             </DialogHeader>
-            <div className="flex gap-6 py-4">
+            <div className="flex flex-col lg:flex-row gap-0 lg:gap-6 p-6 pt-2">
               {/* Left: Candidate List */}
-              <div className="w-1/3 border-r border-slate-100 dark:border-slate-800 pr-6">
+              <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-slate-100 dark:border-slate-800 pb-6 lg:pb-0 lg:pr-6 mb-6 lg:mb-0">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white">待安排候选人 ({pendingTasks.length})</h4>
                   <button 
@@ -495,7 +526,7 @@ export function InterviewKanban() {
               </div>
 
               {/* Middle: Date & Time */}
-              <div className="w-1/3 border-r border-slate-100 dark:border-slate-800 px-6">
+              <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-slate-100 dark:border-slate-800 pb-6 lg:pb-0 lg:px-6 mb-6 lg:mb-0">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">设置时间</h4>
                 <div className="space-y-4">
                   <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 flex justify-center">
@@ -503,7 +534,7 @@ export function InterviewKanban() {
                       mode="single"
                       selected={batchDate}
                       onSelect={setBatchDate}
-                      className="rounded-md border bg-white dark:bg-slate-950 shadow-sm"
+                      className="rounded-md border bg-white dark:bg-slate-950 shadow-sm w-full flex justify-center"
                       locale={zhCN}
                     />
                   </div>
@@ -520,7 +551,7 @@ export function InterviewKanban() {
               </div>
               
               {/* Right: Interviewers */}
-              <div className="w-1/3 pl-2 flex flex-col">
+              <div className="w-full lg:w-1/3 lg:pl-2 flex flex-col h-[400px] lg:h-auto">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">选择面试官</h4>
                 <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-2 custom-scrollbar">
                     {availableInterviewers.map(interviewer => (
@@ -546,7 +577,7 @@ export function InterviewKanban() {
                     ))}
                 </div>
                 
-                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto">
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto sticky bottom-0 bg-white dark:bg-slate-950">
                     <button 
                       onClick={handleBatchSchedule}
                       disabled={selectedBatchCandidates.length === 0 || !batchDate || !batchTime || batchInterviewers.length === 0}
@@ -562,7 +593,7 @@ export function InterviewKanban() {
       </div>
 
       {showScrollTip && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-none">
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-none hidden md:block">
           <div className="bg-slate-900/90 text-white px-4 py-2 rounded-full shadow-xl flex items-center gap-2 text-xs font-medium backdrop-blur-sm border border-white/10">
             <span className="bg-white/20 p-1 rounded-full">
               <MousePointer className="w-3 h-3" />
@@ -572,43 +603,135 @@ export function InterviewKanban() {
         </div>
       )}
 
-      <div 
-        ref={scrollContainerRef}
-        className="flex-1 overflow-x-auto pb-4 no-scrollbar"
-      >
-        <div className="flex gap-6 h-full min-w-full lg:min-w-0">
-          {isLoading ? (
-            // Skeleton Columns
-            Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-80 h-full flex flex-col bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="w-3 h-3 rounded-full" />
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-5 w-6 rounded-full" />
+      <div className="flex-1 overflow-hidden">
+        {/* Desktop View: Horizontal Scroll List */}
+        {!isMobile && (
+          <div 
+            ref={scrollContainerRef}
+            className="hidden md:flex gap-6 h-full min-w-full lg:min-w-0 overflow-x-auto no-scrollbar scroll-smooth"
+            style={{ overscrollBehavior: 'contain' }}
+          >
+            {isLoading ? (
+              // Skeleton Columns
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-80 h-full flex flex-col bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="w-3 h-3 rounded-full" />
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-5 w-6 rounded-full" />
+                    </div>
+                  </div>
+                  <div className="space-y-3 flex-1">
+                     <Skeleton className="h-32 w-full rounded-xl" />
+                     <Skeleton className="h-32 w-full rounded-xl" />
+                     <Skeleton className="h-32 w-full rounded-xl" />
                   </div>
                 </div>
-                <div className="space-y-3 flex-1">
-                   <Skeleton className="h-32 w-full rounded-xl" />
-                   <Skeleton className="h-32 w-full rounded-xl" />
-                   <Skeleton className="h-32 w-full rounded-xl" />
-                </div>
+              ))
+            ) : (
+              stages.map((stage) => (
+                <KanbanColumn 
+                    key={stage.id} 
+                    stage={stage} 
+                    tasks={filteredTasks.filter(t => t.stage === stage.id)}
+                    onTaskClick={setSelectedTask}
+                    onMoveTask={moveTask}
+                />
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Mobile View: Single Page Column */}
+        {isMobile && (
+          <div className="md:hidden h-full flex flex-col">
+              <div className="flex-1 overflow-hidden px-1 relative">
+                  {isLoading ? (
+                      <div className="w-full h-full flex flex-col bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
+                          <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2">
+                                  <Skeleton className="w-3 h-3 rounded-full" />
+                                  <Skeleton className="h-4 w-20" />
+                                  <Skeleton className="h-5 w-6 rounded-full" />
+                              </div>
+                          </div>
+                          <div className="space-y-3 flex-1">
+                              <Skeleton className="h-32 w-full rounded-xl" />
+                              <Skeleton className="h-32 w-full rounded-xl" />
+                              <Skeleton className="h-32 w-full rounded-xl" />
+                          </div>
+                      </div>
+                  ) : (
+                      <AnimatePresence initial={false} custom={direction} mode="wait">
+                          <motion.div
+                              key={mobileTabIndex}
+                              custom={direction}
+                              initial={{ x: direction > 0 ? '100%' : '-100%', opacity: 0 }}
+                              animate={{ x: 0, opacity: 1 }}
+                              exit={{ x: direction > 0 ? '-100%' : '100%', opacity: 0 }}
+                              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                              className="w-full h-full"
+                          >
+                              <KanbanColumn 
+                                  stage={stages[mobileTabIndex]}
+                                  tasks={filteredTasks.filter(t => t.stage === stages[mobileTabIndex].id)}
+                                  onTaskClick={setSelectedTask}
+                                  onMoveTask={moveTask}
+                                  className="w-full h-full"
+                              />
+                          </motion.div>
+                      </AnimatePresence>
+                  )}
               </div>
-            ))
-          ) : (
-            stages.map((stage) => (
-              <KanbanColumn 
-                  key={stage.id} 
-                  stage={stage} 
-                  tasks={filteredTasks.filter(t => t.stage === stage.id)}
-                  onTaskClick={setSelectedTask}
-              />
-            ))
-          )}
-        </div>
+              
+              {/* Mobile Pagination Controls */}
+              <div className="flex items-center justify-between pt-4 px-2">
+                  <button 
+                      onClick={handleMobilePrev}
+                      disabled={mobileTabIndex === 0}
+                      className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm active:scale-95 transition-all"
+                  >
+                      <span className="sr-only">Previous</span>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-slate-600 dark:text-slate-300">
+                          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                  </button>
+                  
+                  <div className="flex flex-col items-center gap-1">
+                      <span className="text-sm font-black text-slate-700 dark:text-slate-200">
+                          {stages[mobileTabIndex].label}
+                      </span>
+                      <div className="flex gap-1.5">
+                          {stages.map((_, idx) => (
+                              <div 
+                                  key={idx}
+                                  className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                                      idx === mobileTabIndex 
+                                          ? 'bg-blue-600 w-3' 
+                                          : 'bg-slate-200 dark:bg-slate-700'
+                                  }`}
+                              />
+                          ))}
+                      </div>
+                  </div>
+
+                  <button 
+                      onClick={handleMobileNext}
+                      disabled={mobileTabIndex === stages.length - 1}
+                      className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm active:scale-95 transition-all"
+                  >
+                      <span className="sr-only">Next</span>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-slate-600 dark:text-slate-300">
+                          <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                  </button>
+              </div>
+          </div>
+        )}
       </div>
       
-      <div className="flex items-center justify-center gap-2 pb-2 text-slate-400">
+      <div className="hidden md:flex items-center justify-center gap-2 pb-2 text-slate-400">
         <MousePointer className="w-3 h-3" />
         <span className="text-[10px] font-medium uppercase tracking-widest">
           Tips: 鼠标滚轮下滑向右，上滑向左

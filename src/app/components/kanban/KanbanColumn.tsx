@@ -8,6 +8,8 @@ interface KanbanColumnProps {
   stage: { id: Stage; label: string; color: string };
   tasks: InterviewTask[];
   onTaskClick: (task: InterviewTask) => void;
+  onMoveTask?: (taskId: string, newStage: Stage) => void;
+  className?: string;
 }
 
 /**
@@ -22,7 +24,7 @@ const DRAG_SCROLL_CONFIG = {
   SCROLL_INTERVAL: 50,
 } as const;
 
-export function KanbanColumn({ stage, tasks, onTaskClick }: KanbanColumnProps) {
+export function KanbanColumn({ stage, tasks, onTaskClick, onMoveTask, className }: KanbanColumnProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -212,14 +214,14 @@ export function KanbanColumn({ stage, tasks, onTaskClick }: KanbanColumnProps) {
     <Droppable droppableId={stage.id}>
       {(provided, snapshot) => (
         <div
-          className={`w-[85vw] sm:w-96 lg:w-auto lg:flex-1 lg:min-w-[250px] h-full flex flex-col rounded-2xl p-4 border flex-shrink-0 lg:flex-shrink transition-colors duration-200 relative group ${
+          className={`h-full flex flex-col rounded-2xl p-4 border flex-shrink-0 lg:flex-shrink transition-colors duration-200 relative group snap-center ${
             snapshot.isDraggingOver
               ? 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
               : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800/50'
-          }`}
+          } ${className || 'w-[85vw] sm:w-96 lg:w-auto lg:flex-1 lg:min-w-[250px]'}`}
         >
           {/* 头部：标题 + 滚动按钮 */}
-          <div className="flex items-center justify-between mb-4 px-2">
+          <div className="hidden md:flex items-center justify-between mb-4 px-2">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${stage.color}`}></div>
               <h3 className="font-black text-[10px] uppercase tracking-widest text-slate-500">
@@ -288,6 +290,7 @@ export function KanbanColumn({ stage, tasks, onTaskClick }: KanbanColumnProps) {
                   task={task}
                   index={index}
                   onClick={onTaskClick}
+                  onMoveTask={onMoveTask}
                 />
               ))}
               {provided.placeholder}

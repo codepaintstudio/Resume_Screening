@@ -438,26 +438,26 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed top-0 right-0 h-[100dvh] w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl z-[1000] overflow-hidden flex flex-col border-l border-slate-100 dark:border-slate-800"
           >
-            <div className="flex items-center justify-between p-6 border-b border-slate-50 dark:border-slate-800">
-              <div className="flex items-center gap-4">
-                <button onClick={onClose} className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
+            <div className="flex flex-col md:flex-row md:items-center justify-between p-4 md:p-6 border-b border-slate-50 dark:border-slate-800 gap-4">
+              <div className="flex items-center gap-2 md:gap-4">
+                <button onClick={onClose} className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors flex-shrink-0">
                   <XCircle className="w-5 h-5 text-slate-400" />
                 </button>
-                <h3 className="text-lg font-black tracking-tight">候选人档案</h3>
+                <h3 className="text-sm md:text-lg font-black tracking-tight whitespace-nowrap">候选人档案</h3>
               </div>
                 {/* Status Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {currentStatus === 'pending' && type !== 'interview' && (
                     <>
                       <button 
                         onClick={() => handleStatusUpdate(student.id, 'to_be_scheduled')}
-                        className="px-4 py-2 bg-purple-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-purple-700 transition-all"
+                        className="px-3 md:px-4 py-2 bg-purple-600 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl hover:bg-purple-700 transition-all flex-1 md:flex-none"
                       >
                         简历通过
                       </button>
                       <button 
                         onClick={() => handleStatusUpdate(student.id, 'rejected')}
-                        className="px-4 py-2 bg-rose-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all"
+                        className="px-3 md:px-4 py-2 bg-rose-600 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all flex-1 md:flex-none"
                       >
                         淘汰
                       </button>
@@ -470,12 +470,12 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       <Popover>
                         <PopoverTrigger asChild>
                           <button 
-                            className="px-4 py-2 bg-amber-500 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-amber-600 transition-all"
+                            className="px-3 md:px-4 py-2 bg-amber-500 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl hover:bg-amber-600 transition-all flex-1 md:flex-none"
                           >
                             安排面试
                           </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-4 z-[1002]" align="end">
+                        <PopoverContent className="w-[calc(100vw-32px)] md:w-auto p-4 z-[1002]" align="end">
                            <div className="space-y-4">
                             <h4 className="font-bold text-sm">设置面试时间</h4>
                             <Calendar
@@ -618,7 +618,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   {currentStatus === 'pending' && type === 'interview' && (
                     <button 
                       onClick={() => handleStatusUpdate(student.id, 'rejected')}
-                      className="px-4 py-2 bg-rose-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all"
+                      className="px-3 md:px-4 py-2 bg-rose-600 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all flex-1 md:flex-none"
                     >
                       淘汰
                     </button>
@@ -627,13 +627,13 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                     <>
                       <button 
                         onClick={() => handleStatusUpdate(student.id, 'passed')}
-                        className="px-4 py-2 bg-emerald-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-emerald-700 transition-all"
+                        className="px-3 md:px-4 py-2 bg-emerald-600 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl hover:bg-emerald-700 transition-all flex-1 md:flex-none"
                       >
                         通过面试
                       </button>
                       <button 
                         onClick={() => handleStatusUpdate(student.id, 'rejected')}
-                        className="px-4 py-2 bg-rose-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all"
+                        className="px-3 md:px-4 py-2 bg-rose-600 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all flex-1 md:flex-none"
                       >
                         淘汰
                       </button>
@@ -641,12 +641,12 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   )}
                   
                   {/* Status Override / Correction */}
-                  <div className="relative">
+                  <div className="relative flex-1 md:flex-none">
                       <Select 
                         value={currentStatus}
                         onValueChange={(val: keyof typeof STATUS_MAP) => handleStatusUpdate(student.id, val)}
                       >
-                        <SelectTrigger className="w-[140px] h-9 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20">
+                        <SelectTrigger className="w-full md:w-[140px] h-9 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="z-[1002]">
@@ -662,7 +662,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
 
                   <button 
                     onClick={handleDownload}
-                    className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                    className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all flex-shrink-0"
                   >
                     <Download className="w-4 h-4" />
                   </button>
@@ -670,131 +670,130 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              <div className="p-8">
+              <div className="p-4 md:p-8">
                 {isLoadingDetails ? (
-                  <div className="space-y-8 animate-pulse">
+                  <div className="space-y-6 md:space-y-8 animate-pulse">
                      <div className="flex justify-between items-start">
-                        <div className="space-y-4">
-                            <Skeleton className="h-10 w-48" />
+                        <div className="space-y-3 md:space-y-4">
+                            <Skeleton className="h-8 md:h-10 w-32 md:w-48" />
                             <div className="flex gap-2">
-                                <Skeleton className="h-4 w-16" />
-                                <Skeleton className="h-4 w-16" />
-                                <Skeleton className="h-4 w-16" />
+                                <Skeleton className="h-3 md:h-4 w-12 md:w-16" />
+                                <Skeleton className="h-3 md:h-4 w-12 md:w-16" />
+                                <Skeleton className="h-3 md:h-4 w-12 md:w-16" />
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Skeleton className="h-4 w-20 ml-auto" />
-                            <Skeleton className="h-12 w-20 ml-auto" />
+                            <Skeleton className="h-3 md:h-4 w-16 md:w-20 ml-auto" />
+                            <Skeleton className="h-10 md:h-12 w-16 md:w-20 ml-auto" />
                         </div>
                      </div>
-                     <div className="grid grid-cols-2 gap-4">
-                         <Skeleton className="h-24 rounded-2xl" />
-                         <Skeleton className="h-24 rounded-2xl" />
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                         <Skeleton className="h-20 md:h-24 rounded-2xl" />
+                         <Skeleton className="h-20 md:h-24 rounded-2xl" />
                      </div>
-                     <div className="flex gap-4">
-                         <Skeleton className="h-12 flex-1 rounded-2xl" />
-                         <Skeleton className="h-12 flex-1 rounded-2xl" />
+                     <div className="flex flex-col sm:flex-row gap-4">
+                         <Skeleton className="h-10 md:h-12 flex-1 rounded-2xl" />
+                         <Skeleton className="h-10 md:h-12 flex-1 rounded-2xl" />
                      </div>
                      <div className="space-y-4">
                          <Skeleton className="h-4 w-24" />
                          <div className="flex flex-wrap gap-2">
-                             <Skeleton className="h-8 w-20 rounded-full" />
-                             <Skeleton className="h-8 w-24 rounded-full" />
-                             <Skeleton className="h-8 w-16 rounded-full" />
+                             <Skeleton className="h-7 md:h-8 w-16 md:w-20 rounded-full" />
+                             <Skeleton className="h-7 md:h-8 w-20 md:w-24 rounded-full" />
+                             <Skeleton className="h-7 md:h-8 w-14 md:w-16 rounded-full" />
                          </div>
                      </div>
                      <div className="space-y-6">
                          <Skeleton className="h-4 w-32" />
-                         <div className="pl-4 border-l-2 border-slate-100 space-y-8">
+                         <div className="pl-4 border-l-2 border-slate-100 space-y-6 md:space-y-8">
                              <div className="space-y-2">
-                                 <Skeleton className="h-3 w-24" />
-                                 <Skeleton className="h-5 w-48" />
-                                 <Skeleton className="h-16 w-full" />
+                                 <Skeleton className="h-3 w-20 md:w-24" />
+                                 <Skeleton className="h-4 md:h-5 w-40 md:w-48" />
+                                 <Skeleton className="h-12 md:h-16 w-full" />
                              </div>
                              <div className="space-y-2">
-                                 <Skeleton className="h-3 w-24" />
-                                 <Skeleton className="h-5 w-48" />
-                                 <Skeleton className="h-16 w-full" />
+                                 <Skeleton className="h-3 w-20 md:w-24" />
+                                 <Skeleton className="h-4 md:h-5 w-40 md:w-48" />
+                                 <Skeleton className="h-12 md:h-16 w-full" />
                              </div>
                          </div>
                      </div>
                   </div>
                 ) : (
                   <>
-                <div className="flex justify-between items-start mb-10">
-                  <div className="flex-1 mr-8">
-                    <h2 className="text-4xl font-black tracking-tight mb-3">{student.name}</h2>
+                <div className="flex flex-col sm:flex-row justify-between items-start mb-8 md:mb-10 gap-6">
+                  <div className="flex-1 w-full sm:mr-8">
+                    <h2 className="text-2xl md:text-4xl font-black tracking-tight mb-3">{student.name}</h2>
                     {isEditing ? (
-                      <div className="grid grid-cols-2 gap-3 max-w-md">
+                      <div className="grid grid-cols-2 gap-2 md:gap-3 max-w-md">
                          <Input 
                            value={formData.department || ''} 
                            onChange={(e) => setFormData({...formData, department: e.target.value})} 
                            placeholder="部门/角色"
-                           className="h-8 text-xs font-bold bg-white dark:bg-slate-900"
+                           className="h-8 text-[10px] md:text-xs font-bold bg-white dark:bg-slate-900"
                          />
                          <Input 
                            value={formData.major || ''} 
                            onChange={(e) => setFormData({...formData, major: e.target.value})} 
                            placeholder="专业"
-                           className="h-8 text-xs font-bold bg-white dark:bg-slate-900"
+                           className="h-8 text-[10px] md:text-xs font-bold bg-white dark:bg-slate-900"
                          />
                          <Input 
                            value={formData.class || ''} 
                            onChange={(e) => setFormData({...formData, class: e.target.value})} 
                            placeholder="班级"
-                           className="h-8 text-xs font-bold bg-white dark:bg-slate-900"
+                           className="h-8 text-[10px] md:text-xs font-bold bg-white dark:bg-slate-900"
                          />
                          <Input 
                            value={formData.studentId || ''} 
                            onChange={(e) => setFormData({...formData, studentId: e.target.value})} 
                            placeholder="学号"
-                           className="h-8 text-xs font-bold bg-white dark:bg-slate-900"
+                           className="h-8 text-[10px] md:text-xs font-bold bg-white dark:bg-slate-900"
                          />
                       </div>
                     ) : (
-                      <p className="text-slate-400 font-bold uppercase tracking-wider text-xs flex flex-wrap gap-2 items-center">
+                      <p className="text-slate-400 font-bold uppercase tracking-wider text-[10px] md:text-xs flex flex-wrap gap-x-2 gap-y-1 items-center">
                         <span>{formData.department}</span>
-                        <span className="text-slate-300">•</span>
+                        <span className="text-slate-300 hidden xs:inline">•</span>
                         <span>{formData.major}</span>
-                        <span className="text-slate-300">•</span>
+                        <span className="text-slate-300 hidden xs:inline">•</span>
                         <span>{formData.class}</span>
-                        <span className="text-slate-300">•</span>
+                        <span className="text-slate-300 hidden xs:inline">•</span>
                         <span>学号: {formData.studentId}</span>
                       </p>
                     )}
-                    {/* Tags section removed as per user request */}
                   </div>
-                  <div className="text-right">
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">AI 评估得分</div>
-                    <div className="text-5xl font-black text-blue-600">{student.aiScore}</div>
+                  <div className="text-left sm:text-right w-full sm:w-auto flex sm:flex-col items-center sm:items-end justify-between sm:justify-start bg-slate-50 dark:bg-slate-800/50 sm:bg-transparent p-4 sm:p-0 rounded-2xl border border-slate-100 dark:border-slate-800 sm:border-none">
+                    <div className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0 sm:mb-1">AI 评估得分</div>
+                    <div className="text-3xl md:text-5xl font-black text-blue-600 leading-none">{student.aiScore}</div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-10">
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800 shadow-sm">
-                      <p className="text-[10px] text-blue-600 uppercase font-black tracking-widest mb-1">联系邮箱</p>
-                      <div className="flex items-center gap-2 font-black text-sm text-blue-900 dark:text-blue-300">
-                        <Mail className="w-4 h-4 flex-shrink-0" />
+                <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 md:gap-4 mb-8 md:mb-10">
+                    <div className="p-3 md:p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800 shadow-sm">
+                      <p className="text-[8px] md:text-[10px] text-blue-600 uppercase font-black tracking-widest mb-1">联系邮箱</p>
+                      <div className="flex items-center gap-2 font-black text-xs md:text-sm text-blue-900 dark:text-blue-300">
+                        <Mail className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
                         {isEditing ? (
                           <Input 
                             value={formData.email || ''} 
                             onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                            className="h-7 text-xs bg-white/50 border-blue-200" 
+                            className="h-6 md:h-7 text-[10px] md:text-xs bg-white/50 border-blue-200" 
                           />
                         ) : (
                           <span className="truncate">{formData.email}</span>
                         )}
                       </div>
                     </div>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-50 dark:border-slate-700 shadow-sm">
-                      <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">联系电话</p>
-                      <div className="flex items-center gap-2 font-black text-sm">
-                        <Phone className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <div className="p-3 md:p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-50 dark:border-slate-700 shadow-sm">
+                      <p className="text-[8px] md:text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">联系电话</p>
+                      <div className="flex items-center gap-2 font-black text-xs md:text-sm">
+                        <Phone className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-600 flex-shrink-0" />
                         {isEditing ? (
                           <Input 
                             value={formData.phone || ''} 
                             onChange={(e) => setFormData({...formData, phone: e.target.value})} 
-                            className="h-7 text-xs bg-white border-slate-200" 
+                            className="h-6 md:h-7 text-[10px] md:text-xs bg-white border-slate-200" 
                           />
                         ) : (
                           <span>{formData.phone}</span>
@@ -804,10 +803,10 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                 </div>
 
                 {/* Actions for original file & Edit Profile */}
-                <div className="flex gap-4 mb-10">
+                <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-8 md:mb-10">
                   <button 
                     onClick={handleViewPDF}
-                    className="flex-1 flex items-center justify-center gap-2 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 shadow-xl shadow-black/10"
+                    className="flex-1 flex items-center justify-center gap-2 py-3 md:py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest hover:opacity-90 shadow-xl shadow-black/10"
                   >
                     <FileSearch className="w-4 h-4" />
                     查看原简历 PDF
@@ -821,7 +820,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       }
                     }}
                     disabled={isSaving}
-                    className={`flex-1 flex items-center justify-center gap-2 py-4 border-2 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 md:py-4 border-2 rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest transition-all ${
                       isEditing 
                         ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed' 
                         : 'border-slate-100 dark:border-slate-800 hover:bg-slate-50'
@@ -1006,9 +1005,9 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
             {/* Discussion Area */}
             <div className={cn(
               "border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col transition-all duration-300 ease-in-out relative z-10",
-              isCommentsExpanded ? "h-[60vh] -mt-[20vh] shadow-[0_-10px_40px_rgba(0,0,0,0.1)]" : "h-80"
+              isCommentsExpanded ? "h-[60vh] -mt-[20vh] shadow-[0_-10px_40px_rgba(0,0,0,0.1)]" : "h-72 md:h-80"
             )}>
-              <div className="px-6 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between cursor-pointer bg-slate-50 dark:bg-slate-900" onClick={() => setIsCommentsExpanded(!isCommentsExpanded)}>
+              <div className="px-4 md:px-6 py-2.5 md:py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between cursor-pointer bg-slate-50 dark:bg-slate-900" onClick={() => setIsCommentsExpanded(!isCommentsExpanded)}>
                 <div className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-blue-600" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Team Discussion</span>
@@ -1025,7 +1024,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                 </button>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
                 {isLoadingComments ? (
                   <div className="space-y-4 animate-pulse">
                      <div className="flex gap-3">
@@ -1049,8 +1048,8 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                     const isSystem = comment.user === 'System' || comment.role === '系统';
                     
                     return (
-                    <div key={comment.id} className={cn("flex gap-3", isMe && "flex-row-reverse")}>
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-xs overflow-hidden shrink-0 ${
+                    <div key={comment.id} className={cn("flex gap-2 md:gap-3", isMe && "flex-row-reverse")}>
+                      <div className={`w-7 h-7 md:w-8 md:h-8 rounded-xl flex items-center justify-center text-white font-black text-[10px] md:text-xs overflow-hidden shrink-0 ${
                         isSystem ? 'bg-white border border-slate-100 p-1' : 'bg-blue-600'
                       }`}>
                         {isSystem ? (
@@ -1064,35 +1063,35 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                         )}
                       </div>
                       <div className={cn(
-                        "flex-1 p-4 shadow-sm border border-slate-100 dark:border-slate-700",
+                        "flex-1 p-3 md:p-4 shadow-sm border border-slate-100 dark:border-slate-700",
                         isMe ? "bg-blue-50 dark:bg-blue-900/20 rounded-2xl rounded-tr-none" : "bg-white dark:bg-slate-800 rounded-2xl rounded-tl-none"
                       )}>
                         <div className={cn("flex items-center mb-1", isMe ? "justify-end" : "justify-between")}>
-                          <span className="text-[10px] font-black uppercase">{comment.user} <span className="text-slate-400 font-normal normal-case ml-1">({comment.role})</span></span>
-                          {!isMe && <span className="text-[9px] text-slate-300 ml-auto">{comment.time}</span>}
-                          {isMe && <span className="text-[9px] text-slate-300 mr-2 order-first">{comment.time}</span>}
+                          <span className="text-[9px] md:text-[10px] font-black uppercase truncate max-w-[120px] md:max-w-none">{comment.user} <span className="text-slate-400 font-normal normal-case ml-1">({comment.role})</span></span>
+                          {!isMe && <span className="text-[8px] md:text-[9px] text-slate-300 ml-auto">{comment.time}</span>}
+                          {isMe && <span className="text-[8px] md:text-[9px] text-slate-300 mr-2 order-first">{comment.time}</span>}
                         </div>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                        <p className="text-[11px] md:text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
                           {comment.content}
                         </p>
                       </div>
                     </div>
                   )})
                 ) : (
-                   <div className="text-center py-8">
-                      <p className="text-xs text-slate-400 italic">暂无讨论记录</p>
+                   <div className="text-center py-6 md:py-8">
+                      <p className="text-[10px] md:text-xs text-slate-400 italic">暂无讨论记录</p>
                    </div>
                 )}
                 <div ref={commentsEndRef} />
               </div>
 
-              <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 border border-slate-100 dark:border-slate-700">
-                  <AtSign className="w-4 h-4 text-slate-400" />
+              <div className="p-3 md:p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl px-3 md:px-4 py-2 md:py-3 border border-slate-100 dark:border-slate-700">
+                  <AtSign className="w-3.5 h-3.5 md:w-4 md:h-4 text-slate-400" />
                   <input 
                     type="text" 
                     placeholder="回复评论..." 
-                    className="flex-1 bg-transparent border-none text-xs outline-none focus:ring-0 font-medium"
+                    className="flex-1 bg-transparent border-none text-[11px] md:text-xs outline-none focus:ring-0 font-medium p-0"
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePostComment()}
@@ -1101,9 +1100,9 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   <button 
                     onClick={handlePostComment}
                     disabled={isPostingComment || !newComment.trim()}
-                    className="p-1.5 bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1 md:p-1.5 bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Send className="w-3.5 h-3.5" />
+                    <Send className="w-3 h-3 md:w-3.5 md:h-3.5" />
                   </button>
                 </div>
               </div>
