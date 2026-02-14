@@ -13,6 +13,7 @@ interface AppState {
   toggleSidebar: () => void;
   setUserRole: (role: Role) => void;
   setCurrentUser: (user: any) => void;
+  logout: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -24,16 +25,26 @@ export const useAppStore = create<AppState>()(
       currentUser: null,
       setIsLoggedIn: (status) => {
         if (status) {
-          Cookies.set('auth_token', 'true', { expires: 7 });
+          // 从 localStorage 获取 token 并设置到 Cookie
+          const token = localStorage.getItem('auth_token');
+          if (token) {
+            Cookies.set('auth_token', token, { expires: 7 });
+          }
         } else {
+          // 登出时清除 Cookie 和 localStorage
           Cookies.remove('auth_token');
-          set({ currentUser: null });
+          localStorage.removeItem('auth_token');
         }
-        set({ isLoggedIn: status });
+        set({ isLoggedIn: status, currentUser: null });
       },
       toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
       setUserRole: (role) => set({ userRole: role }),
       setCurrentUser: (user) => set({ currentUser: user }),
+      logout: () => {
+        Cookies.remove('auth_token');
+        localStorage.removeItem('auth_token');
+        set({ isLoggedIn: false, currentUser: null, userRole: 'admin' });
+      },
     }),
     {
       name: 'app-storage',

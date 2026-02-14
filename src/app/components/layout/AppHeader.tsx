@@ -152,9 +152,21 @@ export function AppHeader() {
   const currentPath = pathname?.split('/')[1] || 'dashboard';
   const currentLabel = navItems.find(item => item.id === currentPath)?.label || '工作台';
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      // 调用退出登录 API 清除服务端 Cookie
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error('Logout API error:', error);
+    } finally {
+      // 清除本地状态
+      setIsLoggedIn(false);
+      // 清除 localStorage 中的 token
+      localStorage.removeItem('auth_token');
+      router.push('/login');
+    }
   };
 
   return (
