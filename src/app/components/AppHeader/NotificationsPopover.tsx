@@ -133,11 +133,20 @@ export function NotificationsPopover() {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch(`/api/notifications?userId=${currentUser?.id || ''}`);
+      const userId = currentUser?.id || '';
+      const url = userId ? `/api/notifications?userId=${userId}` : '/api/notifications';
+      const res = await fetch(url);
+      if (!res.ok) {
+        // 如果 API 返回错误，使用初始数据作为后备
+        setNotifications(initialNotifications);
+        return;
+      }
       const data = await res.json();
       setNotifications(data);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
+      // 发生网络错误时使用初始数据作为后备
+      setNotifications(initialNotifications);
     } finally {
       setLoading(false);
     }

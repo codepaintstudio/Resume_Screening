@@ -5,8 +5,12 @@ import { MySql2Database } from 'drizzle-orm/mysql2';
 // 辅助函数：获取最后插入的 ID
 async function getLastInsertId(): Promise<number> {
   const result = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
-  // @ts-ignore - execute 返回的结果对象
-  const rows = result as unknown as { id: number }[];
+  // 使用类型断言处理 MySQL result 类型
+  const rows = (result as unknown as { rows: { id: number }[] }).rows;
+  // 安全检查：确保 rows 存在且有数据
+  if (!rows || rows.length === 0) {
+    return 0;
+  }
   return Number(rows[0]?.id || 0);
 }
 
@@ -28,8 +32,9 @@ export async function getUserByEmail(email: string) {
 export async function createUser(data: typeof schema.users.$inferInsert) {
   // 直接返回插入的结果，使用 returning 方式
   const result = await db.insert(schema.users).values(data);
-  // 通过 lastInsertId 获取插入的记录
-  const insertId = Number(result.lastInsertId);
+  // 通过 lastInsertId 获取插入的记录，使用类型断言处理
+  const insertResult = result as unknown as { lastInsertId: bigint | null };
+  const insertId = Number(insertResult.lastInsertId);
   if (!insertId) {
     throw new Error('Failed to get insertId');
   }
@@ -137,9 +142,61 @@ export async function getCommentsByStudentId(studentId: number) {
 }
 
 export async function createComment(data: typeof schema.comments.$inferInsert) {
-  await db.insert(schema.comments).values(data);
-  const insertId = await getLastInsertId();
-  return await db.select().from(schema.comments).where(eq(schema.comments.id, insertId));
+  // 保存 timestamp 用于后续查询
+  const timestamp = data.timestamp || new Date();
+  
+  console.log('createComment input data:', JSON.stringify(data));
+  // 记录插入前的时间点，用于后续查询
+  const beforeTime = new Date(timestamp.getTime() - 1000);
+  
+  try {
+    await db.insert(schema.comments).values({
+      ...data,
+      timestamp: timestamp,
+    });
+    console.log('Comment inserted successfully');
+  } catch (insertError) {
+    console.error('Comment insert error:', insertError);
+    throw insertError;
+  }
+  
+  // 直接通过 studentId + userId + content + timestamp 范围查询刚插入的记录
+  // 不使用 LAST_INSERT_ID()，因为它在连接池中可能不准确
+  console.log('Searching for comment with:', {
+    studentId: data.studentId,
+    userId: data.userId,
+    content: data.content,
+    beforeTime,
+    timestamp
+  });
+  
+  const result = await db.select()
+    .from(schema.comments)
+    .where(
+      sql`${schema.comments.studentId} = ${data.studentId} 
+      AND ${schema.comments.userId} = ${data.userId}
+      AND ${schema.comments.content} = ${data.content}
+      AND ${schema.comments.timestamp} >= ${beforeTime}
+      AND ${schema.comments.timestamp} <= ${timestamp}`
+    )
+    .orderBy(sql`${schema.comments.timestamp} DESC`)
+    .limit(1);
+  
+  console.log('Query result:', result);
+  
+  if (!result || result.length === 0) {
+    console.error('Failed to find inserted comment');
+    // 尝试仅用 studentId 查询最新的评论
+    const fallbackResult = await db.select()
+      .from(schema.comments)
+      .where(eq(schema.comments.studentId, data.studentId))
+      .orderBy(sql`${schema.comments.timestamp} DESC`)
+      .limit(1);
+    console.log('Fallback query result:', fallbackResult);
+    return fallbackResult || [];
+  }
+  
+  return result;
 }
 
 export async function deleteComment(id: number) {

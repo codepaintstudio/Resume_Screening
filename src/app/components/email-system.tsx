@@ -124,8 +124,10 @@ export function EmailSystem() {
   const fetchCandidates = async () => {
     try {
       const res = await fetch('/api/resumes');
-      const data = await res.json();
-      setCandidates(data);
+      const result = await res.json();
+      // 处理分页格式的响应
+      const candidatesData = Array.isArray(result) ? result : (result.data || []);
+      setCandidates(candidatesData);
     } catch (error) {
       console.error('Failed to fetch candidates', error);
     }

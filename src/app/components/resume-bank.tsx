@@ -103,8 +103,10 @@ export function ResumeBank() {
       ]);
 
       if (resumesRes.ok) {
-        const data = await resumesRes.json();
-        setStudents(data);
+        const result = await resumesRes.json();
+        // 处理分页格式的响应
+        const resumesData = Array.isArray(result) ? result : (result.data || []);
+        setStudents(resumesData);
       } else {
         throw new Error('Failed to fetch resumes');
       }

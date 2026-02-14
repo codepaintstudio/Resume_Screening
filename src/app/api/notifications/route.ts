@@ -144,9 +144,17 @@ let notifications = [
 ];
 
 export async function GET() {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return NextResponse.json(notifications);
+  try {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return NextResponse.json(notifications);
+  } catch (error) {
+    console.error('GET /api/notifications error:', error);
+    return NextResponse.json(
+      { success: false, message: '获取通知失败' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function PUT(request: Request) {

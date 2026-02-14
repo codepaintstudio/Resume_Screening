@@ -83,7 +83,9 @@ export function InterviewKanban() {
 
     fetch('/api/resumes')
       .then(res => res.json())
-      .then(data => {
+      .then(result => {
+        // 处理分页格式的响应
+        const data = Array.isArray(result) ? result : (result.data || []);
         // Map Student to InterviewTask
         // Note: The API returns Student[], we need to ensure InterviewTask properties exist or are defaulted
         const mappedTasks: InterviewTask[] = data.map((student: any) => ({

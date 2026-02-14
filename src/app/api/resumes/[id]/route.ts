@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { addActivity } from '@/data/activity-log';
+import { getStudentById, updateStudent, getUserById, createActivityLog } from '@/lib/db/queries';
+import { getCurrentUser } from '@/lib/auth';
 
 /**
  * @swagger
@@ -9,12 +10,14 @@ import { addActivity } from '@/data/activity-log';
  *       - Resumes
  *     summary: 获取简历详情
  *     description: 根据 ID 获取候选人的详细信息
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
- *           type: string
+ *           type: integer
  *         description: 候选人 ID
  *     responses:
  *       200:
@@ -23,24 +26,28 @@ import { addActivity } from '@/data/activity-log';
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Student'
+ *       401:
+ *         description: 未登录
+ *       404:
+ *         description: 简历不存在
  *       500:
  *         description: 服务器内部错误
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *   patch:
  *     tags:
  *       - Resumes
  *     summary: 更新简历状态
  *     description: 更新候选人的状态、备注或其他信息
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
- *           type: string
+ *           type: integer
+ *         description: 候选人 ID
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
@@ -49,106 +56,223 @@ import { addActivity } from '@/data/activity-log';
  *               status:
  *                 type: string
  *                 enum: [pending, to_be_scheduled, pending_interview, interviewing, passed, rejected]
- *               user:
- *                 $ref: '#/components/schemas/User'
+ *                 description: 候选人状态
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: 标签
+ *               aiScore:
+ *                 type: number
+ *                 description: AI评分
+ *               notes:
+ *                 type: string
+ *                 description: 备注
  *     responses:
  *       200:
  *         description: 更新成功
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Student'
+ *       401:
+ *         description: 未登录
+ *       404:
+ *         description: 简历不存在
+ *       500:
+ *         description: 服务器内部错误
  */
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = (await params).id;
+  try {
+    // 验证用户登录状态
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, message: '请先登录' },
+        { status: 401 }
+      );
+    }
 
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
+    const { id } = await params;
+    const studentId = parseInt(id);
 
-  // Mock data generation based on ID to be consistent
-  const studentIdNum = parseInt(id) || 123;
-  
-  const detailedStudent = {
-    id: id,
-    name: ['张子涵', '李思源', '王梦洁', '赵天宇'][studentIdNum % 4] || '张三',
-    studentId: `2021${(studentIdNum % 100).toString().padStart(3, '0')}`,
-    department: ['前端部', 'UI部', '办公室', '运维'][studentIdNum % 4],
-    major: ['软件工程', '视觉传达', '行政管理', '信息安全'][studentIdNum % 4],
-    class: `210${(studentIdNum % 3) + 1}班`,
-    gpa: (3.0 + (studentIdNum % 10) / 10).toFixed(1),
-    graduationYear: '2025',
-    status: 'pending', // Default, will be overridden by frontend state usually
-    tags: [['React', 'Three.js'], ['Figma', 'C4D'], ['文案策划'], ['Docker', 'K8s']][studentIdNum % 4],
-    aiScore: 80 + (studentIdNum % 15),
-    submissionDate: '2024-03-15',
-    email: `student${id}@example.com`,
-    phone: `138${id.toString().padStart(8, '0')}`,
-    skills: [
-      { name: 'React', level: 'master' },
-      { name: 'TypeScript', level: 'skilled' },
-      { name: 'Node.js', level: 'proficient' },
-    ],
-    experiences: [
-      {
-        id: '1',
-        startDate: '2023.09',
-        endDate: '2024.01',
-        title: '实验室官网开发项目',
-        description: '独立使用 Next.js 完成了官网的前端构建，集成了暗色模式与响应式设计。负责前端架构设计，使用 Tailwind CSS 进行样式开发。'
-      },
-      {
-        id: '2',
-        startDate: '2023.03',
-        endDate: '2023.08',
-        title: '校园二手交易平台',
-        description: '作为核心成员参与开发，负责商品列表页和详情页的实现。优化了图片加载速度，提升了用户体验。'
-      }
-    ],
-    summary: '热爱编程，对前端技术有浓厚兴趣。具备良好的自学能力和团队协作精神。希望能在贵实验室提升自己的技术水平。'
-  };
+    if (isNaN(studentId)) {
+      return NextResponse.json(
+        { success: false, message: '无效的简历ID' },
+        { status: 400 }
+      );
+    }
 
-  return NextResponse.json(detailedStudent);
+    const students = await getStudentById(studentId);
+
+    if (!students || students.length === 0) {
+      return NextResponse.json(
+        { success: false, message: '简历不存在' },
+        { status: 404 }
+      );
+    }
+
+    const student = students[0];
+
+    // 获取当前用户信息
+    const users = await getUserById(currentUser.id);
+    const user = users[0];
+
+    return NextResponse.json({
+      id: student.id,
+      name: student.name,
+      studentId: student.studentId,
+      department: student.department,
+      major: student.major,
+      className: student.className,
+      gpa: student.gpa,
+      graduationYear: student.graduationYear,
+      status: student.status,
+      tags: student.tags,
+      aiScore: student.aiScore,
+      submissionDate: student.submissionDate,
+      email: student.email,
+      phone: student.phone,
+      experiences: student.experiences,
+      avatar: user?.avatar || '',
+    });
+  } catch (error) {
+    console.error('Get resume detail error:', error);
+    return NextResponse.json(
+      { success: false, message: '获取简历详情失败' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = (await params).id;
-  const body = await request.json();
-  const { status, user } = body; // Expect user info in body
-
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  // Log activity if status changed
-  if (status) {
-    // Mapping status to readable text
-    const statusMap: Record<string, string> = {
-      'pending': '待筛选',
-      'pending_interview': '待面试',
-      'interviewing': '面试中',
-      'passed': '面试通过',
-      'rejected': '未通过'
-    };
-
-    addActivity({
-      user: user?.name || 'Admin',
-      action: `更新候选人状态为 [${statusMap[status] || status}]`,
-      role: user?.role || '管理员',
-      avatar: user?.avatar || ''
-    });
-  }
-
-  return NextResponse.json({
-    success: true,
-    message: 'Updated successfully',
-    data: {
-      id,
-      ...body
+  try {
+    // 验证用户登录状态
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, message: '请先登录' },
+        { status: 401 }
+      );
     }
-  });
+
+    const { id } = await params;
+    const studentId = parseInt(id);
+
+    if (isNaN(studentId)) {
+      return NextResponse.json(
+        { success: false, message: '无效的简历ID' },
+        { status: 400 }
+      );
+    }
+
+    // 检查简历是否存在
+    const existingStudents = await getStudentById(studentId);
+    if (!existingStudents || existingStudents.length === 0) {
+      return NextResponse.json(
+        { success: false, message: '简历不存在' },
+        { status: 404 }
+      );
+    }
+
+    const body = await request.json();
+    const { status, tags, aiScore, notes } = body;
+
+    // 构建更新数据
+    const updateData: any = {};
+
+    if (status !== undefined) {
+      updateData.status = status;
+    }
+
+    if (tags !== undefined) {
+      updateData.tags = tags;
+    }
+
+    if (aiScore !== undefined) {
+      updateData.aiScore = aiScore.toString();
+    }
+
+    if (notes !== undefined) {
+      updateData.notes = notes;
+    }
+
+    // 执行更新
+    const updatedStudents = await updateStudent(studentId, updateData);
+
+    if (!updatedStudents || updatedStudents.length === 0) {
+      return NextResponse.json(
+        { success: false, message: '更新失败' },
+        { status: 400 }
+      );
+    }
+
+    // 获取当前用户信息用于记录活动日志
+    const users = await getUserById(currentUser.id);
+    const user = users[0];
+
+    // 如果更新了状态，记录活动日志
+    if (status) {
+      const statusMap: Record<string, string> = {
+        'pending': '待筛选',
+        'to_be_scheduled': '待安排',
+        'pending_interview': '待面试',
+        'interviewing': '面试中',
+        'passed': '面试通过',
+        'rejected': '未通过'
+      };
+
+      await createActivityLog({
+        user: user?.name || currentUser.name,
+        action: `更新候选人 [${existingStudents[0].name}] 状态为 [${statusMap[status] || status}]`,
+        role: user?.role || currentUser.role,
+        avatar: user?.avatar || '',
+        timestamp: new Date(),
+        userId: currentUser.id,
+      });
+    }
+
+    const updatedStudent = updatedStudents[0];
+
+    return NextResponse.json({
+      success: true,
+      message: '更新成功',
+      data: {
+        id: updatedStudent.id,
+        name: updatedStudent.name,
+        studentId: updatedStudent.studentId,
+        department: updatedStudent.department,
+        major: updatedStudent.major,
+        className: updatedStudent.className,
+        gpa: updatedStudent.gpa,
+        graduationYear: updatedStudent.graduationYear,
+        status: updatedStudent.status,
+        tags: updatedStudent.tags,
+        aiScore: updatedStudent.aiScore,
+        submissionDate: updatedStudent.submissionDate,
+        email: updatedStudent.email,
+        phone: updatedStudent.phone,
+        experiences: updatedStudent.experiences,
+      },
+    });
+  } catch (error) {
+    console.error('Update resume error:', error);
+    return NextResponse.json(
+      { success: false, message: '更新简历失败' },
+      { status: 500 }
+    );
+  }
 }
