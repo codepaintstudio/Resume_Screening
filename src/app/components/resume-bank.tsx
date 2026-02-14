@@ -197,40 +197,58 @@ export function ResumeBank() {
   };
 
   const handleUpload = async (files: File[]) => {
-    const newStudents: Student[] = files.map((file, index) => ({
-      id: `new-${Date.now()}-${index}`,
-      name: file.name.replace(/\.[^/.]+$/, ""),
-      studentId: `2024${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-      department: DEPARTMENTS[Math.floor(Math.random() * (DEPARTMENTS.length - 1)) + 1],
-      submissionDate: new Date().toISOString().split('T')[0],
-      gpa: (Math.random() * 1.5 + 2.5).toFixed(1),
-      aiScore: Math.floor(Math.random() * 20) + 80,
-      status: 'pending' as const,
-      tags: ['新上传'],
-      email: 'candidate@example.com',
-      phone: '13800000000',
-      skills: [],
-      experience: []
-    }));
-    
     try {
-      const res = await fetch('/api/resumes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          students: newStudents,
-          user: currentUser
-        })
-      });
+      // 只处理第一个 PDF 文件（目前的 API 设计是批量创建但只支持一个 PDF）
+      const pdfFile = files.find(f => f.type === 'application/pdf');
+      
+      // 准备学生数据
+      const newStudents = files.map((file, index) => ({
+        name: file.name.replace(/\.[^/.]+$/, ""),
+        studentId: `2024${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+        department: DEPARTMENTS[Math.floor(Math.random() * (DEPARTMENTS.length - 1)) + 1],
+        gpa: (Math.random() * 1.5 + 2.5).toFixed(1),
+        status: 'pending' as const,
+        tags: ['新上传'],
+        email: 'candidate@example.com',
+        phone: '13800000000',
+      }));
+
+      let res: Response;
+      
+      if (pdfFile) {
+        // 使用 FormData 上传 PDF 文件
+        const formData = new FormData();
+        formData.append('data', JSON.stringify({ students: newStudents }));
+        formData.append('resume', pdfFile);
+
+        res = await fetch('/api/resumes', {
+          method: 'POST',
+          body: formData
+        });
+      } else {
+        // 如果没有 PDF，使用 JSON 上传
+        res = await fetch('/api/resumes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            students: newStudents
+          })
+        });
+      }
       
       if (res.ok) {
-        setStudents(prev => [...newStudents, ...prev]);
+        const result = await res.json();
+        // 将新创建的学生添加到列表
+        if (result.data && Array.isArray(result.data)) {
+          setStudents(prev => [...result.data, ...prev]);
+        }
         toast.success(`成功上传 ${files.length} 份简历`);
         setIsUploadOpen(false);
       } else {
         throw new Error('Upload failed');
       }
     } catch (error) {
+      console.error('Upload error:', error);
       toast.error('上传失败，请重试');
     }
   };

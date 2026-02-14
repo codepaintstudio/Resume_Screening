@@ -1,0 +1,1 @@
+ALTER TABLE `students` ADD `resume_pdf` varchar(500);

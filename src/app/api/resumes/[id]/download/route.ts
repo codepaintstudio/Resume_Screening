@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getStudentById } from '@/lib/db/queries';
 import { getCurrentUser } from '@/lib/auth';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 /**
  * @swagger
@@ -20,12 +23,17 @@ import { getCurrentUser } from '@/lib/auth';
  *           type: integer
  *         description: 候选人 ID
  *     responses:
- *       307:
- *         description: 临时重定向到文件地址
+ *       200:
+ *         description: 成功返回 PDF 文件
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
  *       401:
  *         description: 未登录
  *       404:
- *         description: 简历不存在
+ *         description: 简历不存在或没有上传简历
  *       500:
  *         description: 服务器内部错误
  */
@@ -64,15 +72,44 @@ export async function GET(
 
     const student = students[0];
 
-    // TODO: 实际应用中，这里应该返回实际存储的 PDF 文件
-    // 目前暂时重定向到示例 PDF
-    // 在生产环境中，可以使用云存储（OSS/AWS S3）或本地文件系统
+    // 检查是否有简历 PDF
+    if (!student.resumePdf) {
+      return NextResponse.json(
+        { success: false, message: '该候选人没有上传简历' },
+        { status: 404 }
+      );
+    }
+
+    // 获取文件路径
+    const resumePath = student.resumePdf;
     
-    // 示例 PDF 地址（可替换为实际文件存储路径）
-    const downloadUrl = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
-    
-    // 重定向到文件地址
-    return NextResponse.redirect(downloadUrl);
+    // 如果是外部 URL，直接重定向
+    if (resumePath.startsWith('http://') || resumePath.startsWith('https://')) {
+      return NextResponse.redirect(resumePath);
+    }
+
+    // 本地文件路径
+    const filePath = join(process.cwd(), 'public', resumePath);
+
+    // 检查文件是否存在
+    if (!existsSync(filePath)) {
+      console.error('Resume file not found:', filePath);
+      return NextResponse.json(
+        { success: false, message: '简历文件不存在' },
+        { status: 404 }
+      );
+    }
+
+    // 读取文件
+    const fileBuffer = await readFile(filePath);
+
+    // 返回文件
+    return new NextResponse(fileBuffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${student.name || 'resume'}.pdf"`,
+      },
+    });
   } catch (error) {
     console.error('Download resume error:', error);
     return NextResponse.json(

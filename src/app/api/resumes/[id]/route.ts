@@ -144,6 +144,7 @@ export async function GET(
       email: student.email,
       phone: student.phone,
       experiences: student.experiences,
+      resumePdf: student.resumePdf,
       avatar: user?.avatar || '',
     });
   } catch (error) {
@@ -189,7 +190,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, tags, aiScore, notes } = body;
+    const { status, tags, aiScore, notes, resumePdf } = body;
 
     // 构建更新数据
     const updateData: any = {};
@@ -208,6 +209,10 @@ export async function PATCH(
 
     if (notes !== undefined) {
       updateData.notes = notes;
+    }
+
+    if (resumePdf !== undefined) {
+      updateData.resumePdf = resumePdf;
     }
 
     // 执行更新
@@ -266,6 +271,7 @@ export async function PATCH(
         email: updatedStudent.email,
         phone: updatedStudent.phone,
         experiences: updatedStudent.experiences,
+        resumePdf: updatedStudent.resumePdf,
       },
     });
   } catch (error) {

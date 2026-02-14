@@ -111,6 +111,8 @@ export const students = mysqlTable('students', {
   submissionDate: date('submission_date'),
   email: varchar('email', { length: 255 }),
   phone: varchar('phone', { length: 50 }),
+  // 简历 PDF 文件路径
+  resumePdf: varchar('resume_pdf', { length: 500 }),
   // JSON 存储经历
   experiences: json('experiences').$type<{
     id?: string;

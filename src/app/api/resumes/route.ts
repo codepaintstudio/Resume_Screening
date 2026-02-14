@@ -3,6 +3,11 @@ import { getStudents, getStudentById, createStudent, createActivityLog, getUserB
 import { getCurrentUser } from '@/lib/auth';
 import { eq, like, and, or, desc } from 'drizzle-orm';
 import { schema } from '@/lib/db';
+import { writeFile, mkdir, unlink } from 'fs/promises';
+import { join } from 'path';
+
+// 简历 PDF 上传目录
+const RESUME_DIR = 'public/uploads/resumes';
 
 /**
  * @swagger
@@ -182,8 +187,9 @@ export async function GET(request: Request) {
     if (tags) {
       const tagList = tags.split(',').map(t => t.trim());
       filteredStudents = filteredStudents.filter(s => {
-        if (!s.tags) return false;
-        return tagList.some(tag => s.tags.includes(tag));
+        const studentTags = s.tags;
+        if (!studentTags || !Array.isArray(studentTags)) return false;
+        return tagList.some(tag => studentTags.includes(tag));
       });
     }
 
@@ -216,6 +222,7 @@ export async function GET(request: Request) {
       email: student.email,
       phone: student.phone,
       experiences: student.experiences,
+      resumePdf: student.resumePdf,
       avatar: user?.avatar || '',
     }));
 
@@ -248,8 +255,35 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
-    const { students } = body;
+    // 检查 Content-Type 判断是 JSON 还是 FormData
+    const contentType = request.headers.get('content-type') || '';
+    console.log('Content-Type:', contentType);
+    
+    let students: any[] = [];
+    let resumeFile: File | null = null;
+
+    if (contentType.includes('multipart/form-data')) {
+      // 处理 FormData 上传（包含文件和 JSON 数据）
+      const formData = await request.formData();
+      
+      console.log('FormData keys:', Array.from(formData.keys()));
+      
+      // 获取 JSON 数据
+      const jsonData = formData.get('data');
+      console.log('jsonData:', jsonData);
+      if (jsonData) {
+        const parsed = JSON.parse(jsonData.toString());
+        students = parsed.students || [];
+      }
+      
+      // 获取 PDF 文件
+      resumeFile = formData.get('resume') as File | null;
+      console.log('resumeFile:', resumeFile);
+    } else {
+      // 处理纯 JSON 上传
+      const body = await request.json();
+      students = body.students || [];
+    }
 
     if (!students || !Array.isArray(students) || students.length === 0) {
       return NextResponse.json(
@@ -264,7 +298,43 @@ export async function POST(request: Request) {
 
     // 批量创建简历
     const createdStudents = [];
-    const submissionDate = new Date().toISOString().split('T')[0];
+
+    // 处理 PDF 文件（如果有）
+    let resumePdfPath = '';
+    if (resumeFile) {
+      // 验证文件类型
+      if (resumeFile.type !== 'application/pdf') {
+        return NextResponse.json(
+          { success: false, message: '仅支持 PDF 格式的简历文件' },
+          { status: 400 }
+        );
+      }
+
+      // 验证文件大小（最大 10MB）
+      const maxSize = 10 * 1024 * 1024;
+      if (resumeFile.size > maxSize) {
+        return NextResponse.json(
+          { success: false, message: '简历文件大小不能超过 10MB' },
+          { status: 400 }
+        );
+      }
+
+      // 确保目录存在
+      const uploadDir = join(process.cwd(), RESUME_DIR);
+      try {
+        await mkdir(uploadDir, { recursive: true });
+      } catch (error) {
+        // 目录可能已存在
+      }
+
+      // 生成唯一文件名
+      const fileName = `resume_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`;
+      const fileBuffer = await resumeFile.arrayBuffer();
+      const filePath = join(uploadDir, fileName);
+      await writeFile(filePath, Buffer.from(fileBuffer));
+      
+      resumePdfPath = `/uploads/resumes/${fileName}`;
+    }
 
     for (const student of students) {
       const newStudent = await createStudent({
@@ -278,10 +348,12 @@ export async function POST(request: Request) {
         status: 'pending',
         tags: student.tags || [],
         aiScore: student.aiScore || '0',
-        submissionDate: submissionDate,
+        submissionDate: new Date(),
         email: student.email || '',
         phone: student.phone || '',
         experiences: student.experiences || [],
+        // 保存 PDF 路径
+        resumePdf: resumePdfPath || student.resumePdf || '',
       });
       
       if (newStudent.length > 0) {
@@ -293,7 +365,7 @@ export async function POST(request: Request) {
     if (createdStudents.length > 0) {
       await createActivityLog({
         user: user?.name || currentUser.name,
-        action: `上传了 ${createdStudents.length} 份新简历`,
+        action: `上传了 ${createdStudents.length} 份新简历${resumePdfPath ? '（含PDF）' : ''}`,
         role: user?.role || currentUser.role,
         avatar: user?.avatar || '',
         timestamp: new Date(),
