@@ -170,6 +170,17 @@ export function SettingsPage({ role }: SettingsPageProps) {
       setAi(a || { vision: {}, llm: {} });
       setNotifications(n || { triggers: {} });
       setResumeImport(r || {});
+      
+      // 同时加载到 imapConfig（收信箱使用）
+      if (r) {
+        setImapConfig({
+          host: r.imapServer || 'imap.qq.com',
+          port: r.port || '993',
+          user: r.account || '',
+          pass: '' // 不加载密码
+        });
+      }
+      
       setApiKeys(k || []);
       setGithub(g || { clientId: '', clientSecret: '', organization: '', personalAccessToken: '' });
       setEmailSending(e || { host: '', port: '', user: '', pass: '' });
@@ -183,11 +194,20 @@ export function SettingsPage({ role }: SettingsPageProps) {
   };
 
   const handleSave = async () => {
+    // 将 imapConfig 的值同步到 resumeImport
+    const updatedResumeImport = {
+      ...resumeImport,
+      imapServer: imapConfig.host,
+      port: imapConfig.port,
+      account: imapConfig.user,
+      password: imapConfig.pass || resumeImport.password
+    };
+    
     const promises = [
         fetch('/api/settings/platform', { method: 'PUT', body: JSON.stringify(platform) }),
         fetch('/api/settings/ai', { method: 'PUT', body: JSON.stringify(ai) }),
         fetch('/api/settings/notifications', { method: 'PUT', body: JSON.stringify(notifications) }),
-        fetch('/api/settings/resume-import', { method: 'PUT', body: JSON.stringify(resumeImport) }),
+        fetch('/api/settings/resume-import', { method: 'PUT', body: JSON.stringify(updatedResumeImport) }),
         fetch('/api/settings/keys', { method: 'PUT', body: JSON.stringify(apiKeys) }),
         fetch('/api/settings/github', { method: 'PUT', body: JSON.stringify(github) }),
         fetch('/api/settings/email-sending', { method: 'PUT', body: JSON.stringify(emailSending) })
@@ -202,8 +222,15 @@ export function SettingsPage({ role }: SettingsPageProps) {
 
   // 获取收件箱
   const fetchInbox = async () => {
-    if (!imapConfig.host || !imapConfig.user || !imapConfig.pass) {
-      setInboxError('请先填写完整的 IMAP 配置');
+    if (!imapConfig.host || !imapConfig.user) {
+      setInboxError('请先填写 IMAP 服务器和账号');
+      return;
+    }
+
+    // 从 resumeImport 获取密码（如果 imapConfig.pass 为空）
+    const pass = imapConfig.pass || resumeImport.password;
+    if (!pass) {
+      setInboxError('请先在"邮箱自动导入"中配置授权码');
       return;
     }
 
@@ -485,6 +512,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                     <button 
                       onClick={() => handleRemoveDepartment(dept)}
                       className="p-1.5 hover:bg-rose-100 dark:hover:bg-rose-900/30 rounded-lg text-rose-500 transition-colors"
+                      aria-label={`删除部门 ${dept}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -603,7 +631,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                          </div>
                       </div>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
                       <Command>
                         <CommandList>
                            {availableModels.length === 0 && <CommandEmpty>No models found.</CommandEmpty>}
@@ -940,16 +968,6 @@ export function SettingsPage({ role }: SettingsPageProps) {
                       className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">授权码</label>
-                    <input 
-                      type="password" 
-                      value={imapConfig.pass}
-                      onChange={(e) => setImapConfig({...imapConfig, pass: e.target.value})}
-                      placeholder="••••••••" 
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
-                    />
-                  </div>
                 </div>
 
                 {/* 获取收件箱按钮 */}
@@ -987,7 +1005,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                 {/* 错误提示 */}
                 {inboxError && (
                   <div className="flex items-center gap-2 p-4 text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <AlertCircle className="w-5 h-5 shrink-0" />
                     <span className="text-sm">{inboxError}</span>
                   </div>
                 )}
@@ -1004,7 +1022,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                           className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                           onClick={() => setExpandedMailUid(expandedMailUid === mail.uid ? null : mail.uid)}
                         >
-                          <div className="w-7 h-7 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-500 text-xs font-bold flex-shrink-0">
+                          <div className="w-7 h-7 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-500 text-xs font-bold shrink-0">
                             {(mail.fromName || mail.from || '?').charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -1122,6 +1140,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                         </code>
                         <button 
                           className="text-slate-400 hover:text-blue-500 transition-colors p-1"
+                          aria-label="复制 API 密钥"
                           onClick={() => {
                             navigator.clipboard.writeText(key.key);
                             toast.success('已复制到剪贴板');
