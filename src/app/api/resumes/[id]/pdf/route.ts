@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getStudentById } from '@/lib/db/queries';
 import { getCurrentUser } from '@/lib/auth';
+import fs from 'fs/promises';
+import path from 'path';
 
 /**
  * @swagger
@@ -20,12 +22,12 @@ import { getCurrentUser } from '@/lib/auth';
  *           type: integer
  *         description: 候选人 ID
  *     responses:
- *       307:
- *         description: 临时重定向到 PDF 预览地址
+ *       200:
+ *         description: 返回 PDF 文件流
  *       401:
  *         description: 未登录
  *       404:
- *         description: 简历不存在
+ *         description: 简历不存在或没有上传 PDF
  *       500:
  *         description: 服务器内部错误
  */
@@ -53,7 +55,7 @@ export async function GET(
       );
     }
 
-    // 检查简历是否存在
+    // 从数据库获取学生信息
     const students = await getStudentById(studentId);
     if (!students || students.length === 0) {
       return NextResponse.json(
@@ -62,12 +64,39 @@ export async function GET(
       );
     }
 
-    // TODO: 实际应用中，这里应该返回存储的 PDF 文件路径或生成 PDF
-    // 目前暂时重定向到示例 PDF
-    // 在生产环境中，可以使用云存储（OSS/AWS S3）或本地文件系统
-    
-    // 示例 PDF 地址（可替换为实际文件存储路径）
-    return NextResponse.redirect('https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf');
+    const student = students[0];
+
+    // 检查是否有简历 PDF
+    if (!student.resumePdf) {
+      return NextResponse.json(
+        { success: false, message: '该候选人没有上传简历' },
+        { status: 404 }
+      );
+    }
+
+    // 拼接成服务器上的绝对路径
+    const absolutePath = path.join(process.cwd(), 'public', student.resumePdf);
+
+    // 检查文件是否存在
+    try {
+      await fs.access(absolutePath);
+    } catch {
+      return NextResponse.json(
+        { success: false, message: '简历文件不存在' },
+        { status: 404 }
+      );
+    }
+
+    // 读取文件为 Buffer
+    const fileBuffer = await fs.readFile(absolutePath);
+
+    // 返回 PDF 文件流，使用 inline 模式预览
+    return new NextResponse(fileBuffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="resume_${studentId}.pdf"`,
+      },
+    });
   } catch (error) {
     console.error('Preview PDF error:', error);
     return NextResponse.json(

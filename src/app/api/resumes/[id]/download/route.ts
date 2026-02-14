@@ -1,46 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getStudentById } from '@/lib/db/queries';
 import { getCurrentUser } from '@/lib/auth';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import fs from 'fs/promises';
+import path from 'path';
 
-/**
- * @swagger
- * /api/resumes/{id}/download:
- *   get:
- *     tags:
- *       - Resumes
- *     summary: 下载简历
- *     description: 下载指定候选人的简历文件
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: 候选人 ID
- *     responses:
- *       200:
- *         description: 成功返回 PDF 文件
- *         content:
- *           application/pdf:
- *             schema:
- *               type: string
- *               format: binary
- *       401:
- *         description: 未登录
- *       404:
- *         description: 简历不存在或没有上传简历
- *       500:
- *         description: 服务器内部错误
- */
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     // 验证用户登录状态
     const currentUser = await getCurrentUser();
@@ -61,7 +25,7 @@ export async function GET(
       );
     }
 
-    // 检查简历是否存在
+    // 从数据库获取学生信息
     const students = await getStudentById(studentId);
     if (!students || students.length === 0) {
       return NextResponse.json(
@@ -80,41 +44,21 @@ export async function GET(
       );
     }
 
-    // 获取文件路径
-    const resumePath = student.resumePdf;
-    
-    // 如果是外部 URL，直接重定向
-    if (resumePath.startsWith('http://') || resumePath.startsWith('https://')) {
-      return NextResponse.redirect(resumePath);
-    }
+    // 拼接成服务器上的绝对路径
+    const absolutePath = path.join(process.cwd(), 'public', student.resumePdf);
 
-    // 本地文件路径
-    const filePath = join(process.cwd(), 'public', resumePath);
+    // 读取文件为 Buffer
+    const fileBuffer = await fs.readFile(absolutePath);
 
-    // 检查文件是否存在
-    if (!existsSync(filePath)) {
-      console.error('Resume file not found:', filePath);
-      return NextResponse.json(
-        { success: false, message: '简历文件不存在' },
-        { status: 404 }
-      );
-    }
-
-    // 读取文件
-    const fileBuffer = await readFile(filePath);
-
-    // 返回文件
+    // 返回正确的响应
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${student.name || 'resume'}.pdf"`,
+        'Content-Disposition': `attachment; filename="resume.pdf"`,
       },
     });
   } catch (error) {
-    console.error('Download resume error:', error);
-    return NextResponse.json(
-      { success: false, message: '下载简历失败' },
-      { status: 500 }
-    );
+    console.error('Download error:', error);
+    return NextResponse.json({ success: false, message: '下载失败' }, { status: 500 });
   }
 }
