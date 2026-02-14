@@ -17,7 +17,7 @@
     "vision": {
       "endpoint": "",
       "model": "vision-vk-v2",
-      "apiKey": "csocpwvnolzziiei"
+      "apiKey": ""
     },
     "llm": {
       "baseUrl": "https://api.openai.com/v1",
@@ -36,28 +36,21 @@
   "resumeImport": {
     "imapServer": "imap.qq.com",
     "port": "993",
-    "account": "1138563945@qq.com",
-    "password": "csocpwvnolzziiei",
+    "account": "",
+    "password": "",
     "ssl": true
   },
   "github": {
     "clientId": "",
-    "clientSecret": "csocpwvnolzziiei",
+    "clientSecret": "",
     "organization": "mahui-studio",
     "personalAccessToken": ""
   },
   "emailSending": {
     "host": "smtp.qq.com",
     "port": "465",
-    "user": "1138563945@qq.com",
-    "pass": "csocpwvnolzziiei"
+    "user": "",
+    "pass": ""
   },
-  "apiKeys": [
-    {
-      "id": "1",
-      "name": "HR Portal Integration",
-      "key": "sk_live_51M...",
-      "created": "2024-02-15"
-    }
-  ]
+  "apiKeys": []
 }

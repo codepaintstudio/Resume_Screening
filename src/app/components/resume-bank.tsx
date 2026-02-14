@@ -10,6 +10,7 @@ import { StudentTable } from './resume/StudentTable';
 import { CandidateDrawer } from './resume/CandidateDrawer';
 import { AIScreeningDialog } from './resume/AIScreeningDialog';
 import { UploadResumeDialog } from './resume/UploadResumeDialog';
+import { SyncMailDialog } from './resume/SyncMailDialog';
 
 export function ResumeBank() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -28,6 +29,9 @@ export function ResumeBank() {
     from: undefined,
     to: undefined,
   });
+
+  // 同步邮箱相关状态
+  const [isSyncMailOpen, setIsSyncMailOpen] = useState(false);
 
   const searchParams = useSearchParams();
   const { currentUser } = useAppStore();
@@ -266,6 +270,7 @@ export function ResumeBank() {
         setFilterDept={setFilterDept}
         onOpenScreening={() => setIsScreeningOpen(true)}
         onOpenUpload={() => setIsUploadOpen(true)}
+        onOpenSyncMail={() => setIsSyncMailOpen(true)}
         departments={departments}
         onRefresh={fetchData}
       />
@@ -298,6 +303,14 @@ export function ResumeBank() {
         open={isUploadOpen}
         onOpenChange={setIsUploadOpen}
         onUpload={handleUpload}
+      />
+
+      <SyncMailDialog
+        open={isSyncMailOpen}
+        onOpenChange={setIsSyncMailOpen}
+        onSuccess={() => {
+          fetchData(); // 同步成功后刷新列表
+        }}
       />
     </div>
   );

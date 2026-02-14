@@ -220,7 +220,8 @@ export function SettingsPage({ role }: SettingsPageProps) {
           port: imapConfig.port || 993,
           user: imapConfig.user,
           pass: imapConfig.pass,
-          limit: 10
+          limit: 10,
+          saveToDb: true
         })
       });
 
@@ -228,13 +229,40 @@ export function SettingsPage({ role }: SettingsPageProps) {
 
       if (data.success) {
         setInboxMails(data.mails || []);
-        toast.success(`成功获取 ${data.mails?.length || 0} 封邮件`);
+        toast.success(`成功获取 ${data.mails?.length || 0} 封邮件，已保存 ${data.saved || 0} 封到数据库`);
       } else {
         setInboxError(data.message || '获取收件箱失败');
       }
     } catch (err) {
       setInboxError('连接邮箱服务器失败');
       console.error('Inbox error:', err);
+    } finally {
+      setInboxLoading(false);
+    }
+  };
+
+  // 从数据库读取已保存的邮件
+  const loadSavedMails = async () => {
+    setInboxLoading(true);
+    setInboxError('');
+
+    try {
+      const res = await fetch('/api/get-inbox', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setInboxMails(data.mails || []);
+        toast.success(`已加载 ${data.mails?.length || 0} 封已保存的邮件`);
+      } else {
+        setInboxError(data.message || '加载邮件历史失败');
+      }
+    } catch (err) {
+      setInboxError('加载邮件历史失败');
+      console.error('Load saved mails error:', err);
     } finally {
       setInboxLoading(false);
     }
@@ -926,19 +954,34 @@ export function SettingsPage({ role }: SettingsPageProps) {
 
                 {/* 获取收件箱按钮 */}
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <span className="text-xs text-slate-500">测试 IMAP 连接并预览最新邮件</span>
-                  <Button
-                    onClick={fetchInbox}
-                    disabled={inboxLoading}
-                    className="gap-2"
-                  >
-                    {inboxLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <RefreshCcw className="w-4 h-4" />
-                    )}
-                    {inboxLoading ? '连接中...' : '获取收件箱'}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={fetchInbox}
+                      disabled={inboxLoading}
+                      className="gap-2"
+                    >
+                      {inboxLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                      {inboxLoading ? '同步中...' : '同步新邮件'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={loadSavedMails}
+                      disabled={inboxLoading}
+                      className="gap-2"
+                    >
+                      {inboxLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Inbox className="w-4 h-4" />
+                      )}
+                      查看已保存
+                    </Button>
+                  </div>
+                  <span className="text-xs text-slate-500">同步会保存到数据库</span>
                 </div>
 
                 {/* 错误提示 */}

@@ -2,6 +2,11 @@
 import fs from 'fs';
 import path from 'path';
 
+// 敏感配置从环境变量读取
+const getEnvOrDefault = (key: string, defaultValue: string): string => {
+  return process.env[key] || defaultValue;
+};
+
 // In-memory store for settings
 // In a real application, this would be a database or a file-based store
 // For this demo, we keep it in memory but separated from the route handlers
@@ -77,13 +82,13 @@ const defaultSettings: SettingsState = {
   },
   ai: {
     vision: {
-      endpoint: '',
+      endpoint: getEnvOrDefault('VISION_ENDPOINT', ''),
       model: 'vision-vk-v2',
-      apiKey: '',
+      apiKey: getEnvOrDefault('VISION_API_KEY', ''),
     },
     llm: {
-      baseUrl: 'https://api.openai.com/v1',
-      apiKey: '',
+      baseUrl: getEnvOrDefault('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
+      apiKey: getEnvOrDefault('OPENAI_API_KEY', ''),
       model: '',
     },
   },
@@ -92,31 +97,29 @@ const defaultSettings: SettingsState = {
     triggers: {
       'new_resume': true,
       'interview_reminder': true,
-      'offer_confirmed': true,
+      'offer_confirmed': true
     }
   },
   resumeImport: {
-    imapServer: 'imap.exmail.qq.com',
-    port: '993',
-    account: '',
-    password: '',
+    imapServer: getEnvOrDefault('IMAP_HOST', 'imap.exmail.qq.com'),
+    port: getEnvOrDefault('IMAP_PORT', '993'),
+    account: getEnvOrDefault('IMAP_USER', ''),
+    password: getEnvOrDefault('IMAP_PASS', ''),
     ssl: true,
   },
   github: {
-    clientId: '',
-    clientSecret: '',
+    clientId: getEnvOrDefault('GITHUB_CLIENT_ID', ''),
+    clientSecret: getEnvOrDefault('GITHUB_CLIENT_SECRET', ''),
     organization: 'mahui-studio',
     personalAccessToken: '',
   },
   emailSending: {
-    host: 'smtp.example.com',
-    port: '465',
-    user: 'hr@example.com',
-    pass: '',
+    host: getEnvOrDefault('SMTP_HOST', 'smtp.example.com'),
+    port: getEnvOrDefault('SMTP_PORT', '465'),
+    user: getEnvOrDefault('SMTP_USER', ''),
+    pass: getEnvOrDefault('SMTP_PASS', ''),
   },
-  apiKeys: [
-    { id: '1', name: 'HR Portal Integration', key: 'sk_live_51M...', created: '2024-02-15' }
-  ]
+  apiKeys: []
 };
 
 let settings: SettingsState = { ...defaultSettings };
