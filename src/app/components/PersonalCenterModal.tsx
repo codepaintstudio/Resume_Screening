@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   User, 
   Key, 
   Loader2,
   Save,
-  Camera
+  Camera,
+  Upload
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -23,8 +24,13 @@ interface PersonalCenterModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// 默认头像
+const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150";
+
 export function PersonalCenterModal({ open, onOpenChange }: PersonalCenterModalProps) {
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [personal, setPersonal] = useState({
     avatar: '',
     displayName: '',
@@ -51,7 +57,15 @@ export function PersonalCenterModal({ open, onOpenChange }: PersonalCenterModalP
     try {
       const res = await fetch('/api/settings/profile');
       const data = await res.json();
-      setPersonal(data || {});
+      
+      if (data.success !== false) {
+        setPersonal({
+          avatar: data.avatar || '',
+          displayName: data.name || '',
+          email: data.email || '',
+          department: data.department || ''
+        });
+      }
     } catch (error) {
       console.error('Failed to load profile:', error);
       toast.error('加载个人资料失败');
@@ -65,14 +79,19 @@ export function PersonalCenterModal({ open, onOpenChange }: PersonalCenterModalP
       const res = await fetch('/api/settings/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(personal)
+        body: JSON.stringify({
+          name: personal.displayName,
+          avatar: personal.avatar,
+          department: personal.department
+        })
       });
       
-      if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
         toast.success('个人资料已更新');
         onOpenChange(false);
       } else {
-        toast.error('保存失败');
+        toast.error(data.message || '保存失败');
       }
     } catch (error) {
       toast.error('保存失败');
@@ -108,6 +127,59 @@ export function PersonalCenterModal({ open, onOpenChange }: PersonalCenterModalP
     }
   };
 
+  // 处理头像点击
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // 处理文件选择
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 验证文件类型
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('不支持的图片格式，请上传 JPG、PNG、GIF 或 WebP 格式');
+      return;
+    }
+
+    // 验证文件大小（最大 2MB）
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('图片大小不能超过 2MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const res = await fetch('/api/settings/avatar', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setPersonal({ ...personal, avatar: data.avatarUrl });
+        toast.success('头像上传成功');
+      } else {
+        toast.error(data.message || '上传失败');
+      }
+    } catch (error) {
+      console.error('Upload avatar error:', error);
+      toast.error('上传头像失败');
+    } finally {
+      setUploading(false);
+      // 清空文件输入框，允许重复选择同一文件
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800">
@@ -130,16 +202,39 @@ export function PersonalCenterModal({ open, onOpenChange }: PersonalCenterModalP
         ) : (
           <div className="p-6 space-y-6">
             <div className="flex items-center gap-6">
+              {/* 隐藏的文件输入框 */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              
               <div className="relative group">
                 <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-slate-50 dark:border-slate-800 shadow-sm">
-                  <img 
-                    src={personal.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150"} 
-                    className="w-full h-full object-cover" 
-                    alt="Avatar" 
-                  />
+                  {uploading ? (
+                    <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                    </div>
+                  ) : (
+                    <img 
+                      src={personal.avatar || DEFAULT_AVATAR} 
+                      className="w-full h-full object-cover" 
+                      alt="Avatar" 
+                    />
+                  )}
                 </div>
-                <button className="absolute bottom-0 right-0 p-1.5 bg-blue-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110">
-                  <Camera className="w-3 h-3" />
+                <button 
+                  onClick={handleAvatarClick}
+                  disabled={uploading}
+                  className="absolute bottom-0 right-0 p-1.5 bg-blue-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {uploading ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Camera className="w-3 h-3" />
+                  )}
                 </button>
               </div>
               <div className="flex-1 space-y-1">

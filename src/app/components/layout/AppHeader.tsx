@@ -33,6 +33,9 @@ import { flushSync } from 'react-dom';
 
 import { useAppStore } from '@/store';
 
+// 默认头像
+const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100";
+
 export function AppHeader() {
   const { theme, setTheme } = useTheme();
   const { currentUser, userRole, setIsLoggedIn } = useAppStore();
@@ -44,7 +47,7 @@ export function AppHeader() {
   // Safe user display
   const displayName = currentUser?.name || '主理人';
   const displayRole = currentUser?.role || userRole || 'Admin';
-  const displayAvatar = currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100";
+  const displayAvatar = currentUser?.avatar || DEFAULT_AVATAR;
 
   useEffect(() => {
     setMounted(true);
