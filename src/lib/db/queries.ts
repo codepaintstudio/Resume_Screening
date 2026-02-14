@@ -1,5 +1,5 @@
 import { db, schema } from './index';
-import { eq, sql } from 'drizzle-orm';
+import { eq, and, sql, count, gt, lt, gte } from 'drizzle-orm';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 
 // 辅助函数：获取最后插入的 ID
@@ -110,21 +110,44 @@ export async function createOrUpdateEmailConfig(data: typeof schema.emailConfig.
 
 // ==================== 活动日志相关操作 ====================
 export async function getActivityLogs(page: number = 1, limit: number = 10) {
-  const offset = (page - 1) * limit;
-  const logs = await db.select()
-    .from(schema.activityLogs)
-    .orderBy(sql`${schema.activityLogs.timestamp} DESC`)
-    .limit(limit)
-    .offset(offset);
-  
-  const countResult = await db.select({ count: schema.activityLogs.id }).from(schema.activityLogs);
-  const total = countResult.length;
-  
-  return {
-    data: logs,
-    hasMore: offset + limit < total,
-    total
-  };
+  try {
+    const offset = (page - 1) * limit;
+    
+    // 检查 activity_logs 表是否存在并可查询
+    let logs: any[] = [];
+    let total = 0;
+    
+    try {
+      logs = await db.select()
+        .from(schema.activityLogs)
+        .orderBy(sql`${schema.activityLogs.timestamp} DESC`)
+        .limit(limit)
+        .offset(offset);
+      
+      // 使用 COUNT 函数正确获取总数
+      const countResult = await db.execute(sql`SELECT COUNT(*) as count FROM activity_logs`);
+      const rows = (countResult as unknown as { rows?: { count: bigint }[] })?.rows;
+      total = Number(rows?.[0]?.count || 0);
+    } catch (tableError) {
+      // 表可能不存在，返回空数据
+      console.warn('activity_logs table error:', tableError);
+      logs = [];
+      total = 0;
+    }
+    
+    return {
+      data: logs,
+      hasMore: offset + limit < total,
+      total
+    };
+  } catch (error) {
+    console.error('Error fetching activity logs:', error);
+    return {
+      data: [],
+      hasMore: false,
+      total: 0
+    };
+  }
 }
 
 export async function createActivityLog(data: typeof schema.activityLogs.$inferInsert) {
@@ -326,4 +349,303 @@ export async function batchUpdateStudentStatus(ids: number[], status: string) {
   return await db.update(schema.students)
     .set({ status: status as any })
     .where(sql`${schema.students.id} IN (${ids.join(',')})`);
+}
+
+// ==================== 部门分布统计 ====================
+export async function getDepartmentDistribution() {
+  // 使用 Drizzle ORM 的查询构建器
+  const result = await db
+    .select({
+      name: schema.students.department,
+      value: count(),
+    })
+    .from(schema.students)
+    .where(
+      sql`${schema.students.department} IS NOT NULL AND ${schema.students.department} != ''`
+    )
+    .groupBy(schema.students.department)
+    .orderBy(sql`COUNT(*) DESC`);
+  
+  // 定义颜色映射
+  const colorMap: Record<string, string> = {
+    '前端部': '#2563eb',
+    '后端部': '#8b5cf6',
+    'UI部': '#ec4899',
+    '设计部': '#f97316',
+    '产品部': '#14b8a6',
+    '运维部': '#64748b',
+    '测试部': '#84cc16',
+    '数据部': '#0ea5e9',
+    '算法部': '#a855f7',
+    '移动端': '#f43f5e',
+  };
+  
+  // 如果没有部门数据，返回默认分布
+  if (!result || result.length === 0) {
+    return [
+      { name: '前端部', value: 0, fill: '#2563eb' },
+      { name: 'UI部', value: 0, fill: '#8b5cf6' },
+      { name: '办公室', value: 0, fill: '#ec4899' },
+      { name: '运维', value: 0, fill: '#f97316' },
+    ];
+  }
+  
+  // 格式化返回数据
+  return result.map(row => ({
+    name: row.name || '',
+    value: row.value,
+    fill: colorMap[row.name || ''] || '#64748b'
+  }));
+}
+
+// ==================== 仪表盘综合统计 ====================
+export async function getDashboardStats() {
+  // 获取收件箱简历数量 (新投递的简历，状态为 pending)
+  const inboxResult = await db
+    .select({ count: count() })
+    .from(schema.students)
+    .where(eq(schema.students.status, 'pending'));
+  const inboxCount = inboxResult[0]?.count || 0;
+
+  // 获取待面试数量 (已安排面试但还未面试: to_be_scheduled + pending_interview)
+  const toBeScheduledResult = await db
+    .select({ count: count() })
+    .from(schema.students)
+    .where(eq(schema.students.status, 'to_be_scheduled'));
+  const pendingInterviewResult = await db
+    .select({ count: count() })
+    .from(schema.students)
+    .where(eq(schema.students.status, 'pending_interview'));
+  const pendingCount = (toBeScheduledResult[0]?.count || 0) + 
+                       (pendingInterviewResult[0]?.count || 0);
+
+  // 获取本周通过数量 (本周新增的通过数)
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay()); // 本周第一天(周日)
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const passedResult = await db
+    .select({ count: count() })
+    .from(schema.interviews)
+    .where(
+      and(
+        eq(schema.interviews.stage, 'passed'),
+        gte(schema.interviews.updatedAt, startOfWeek)
+      )
+    );
+  const passedCount = passedResult[0]?.count || 0;
+
+  // 获取面试官数量 (用户总数)
+  const usersResult = await db
+    .select({ count: count() })
+    .from(schema.users);
+  const userCount = usersResult[0]?.count || 0;
+
+  // 计算变化百分比（与上周同期对比）
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+  // 7天前的收件箱数量
+  const oldInboxResult = await db
+    .select({ count: count() })
+    .from(schema.students)
+    .where(
+      and(
+        eq(schema.students.status, 'pending'),
+        lt(schema.students.createdAt, sevenDaysAgo)
+      )
+    );
+  const oldInboxCount = oldInboxResult[0]?.count || 0;
+
+  // 7天前的待面试数量
+  const oldToBeScheduledResult = await db
+    .select({ count: count() })
+    .from(schema.students)
+    .where(
+      and(
+        eq(schema.students.status, 'to_be_scheduled'),
+        lt(schema.students.createdAt, sevenDaysAgo)
+      )
+    );
+  const oldPendingInterviewResult = await db
+    .select({ count: count() })
+    .from(schema.students)
+    .where(
+      and(
+        eq(schema.students.status, 'pending_interview'),
+        lt(schema.students.createdAt, sevenDaysAgo)
+      )
+    );
+  const oldPendingCount = (oldToBeScheduledResult[0]?.count || 0) + 
+                          (oldPendingInterviewResult[0]?.count || 0);
+
+  // 上周同期的通过数量
+  const oldPassedResult = await db
+    .select({ count: count() })
+    .from(schema.interviews)
+    .where(
+      and(
+        eq(schema.interviews.stage, 'passed'),
+        and(
+          gte(schema.interviews.updatedAt, fourteenDaysAgo),
+          lt(schema.interviews.updatedAt, sevenDaysAgo)
+        )
+      )
+    );
+  const oldPassedCount = oldPassedResult[0]?.count || 0;
+
+  // 7天前的面试官数量
+  const oldUsersResult = await db
+    .select({ count: count() })
+    .from(schema.users)
+    .where(lt(schema.users.createdAt, sevenDaysAgo));
+  const oldUserCount = oldUsersResult[0]?.count || 0;
+
+  // 计算变化百分比
+  const calcChange = (current: number, old: number): string => {
+    if (old === 0) return current > 0 ? '+100%' : '0%';
+    const change = ((current - old) / old) * 100;
+    const sign = change >= 0 ? '+' : '';
+    return `${sign}${change.toFixed(1)}%`;
+  };
+
+  const inboxChange = calcChange(inboxCount, oldInboxCount);
+  const pendingChange = calcChange(pendingCount, oldPendingCount);
+  const passedChange = calcChange(passedCount, oldPassedCount);
+  const interviewersChange = calcChange(userCount, oldUserCount);
+
+  return {
+    totalApplications: inboxCount,  // 收件箱 = 待处理的新简历
+    pending: pendingCount,            // 待面试
+    passed: passedCount,              // 本周通过
+    totalInterviewers: userCount,    // 面试官总数
+    totalChange: inboxChange,
+    pendingChange: pendingChange,
+    passedChange: passedChange,
+    interviewersChange: interviewersChange
+  };
+}
+
+// ==================== 趋势数据 ====================
+export async function getTrendData(days: number = 7) {
+  // 生成最近 days 天的日期列表
+  const dateList: string[] = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    dateList.push(`${month}-${day}`);
+  }
+
+  // 查询最近 days 天的投递数据
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - days + 1);
+  
+  // 使用 Drizzle ORM 查询
+  const result = await db
+    .select({
+      date: sql<string>`DATE_FORMAT(${schema.students.submissionDate}, '%m-%d')`,
+      count: count(),
+    })
+    .from(schema.students)
+    .where(gte(schema.students.submissionDate, startDate))
+    .groupBy(sql`DATE_FORMAT(${schema.students.submissionDate}, '%m-%d')`)
+    .orderBy(sql`DATE_FORMAT(${schema.students.submissionDate}, '%m-%d')`);
+  
+  // 创建日期到数量的映射
+  const countMap = new Map<string, number>();
+  for (const row of result) {
+    countMap.set(row.date || '', Number(row.count));
+  }
+
+  // 填充数据，缺少的日期值为0
+  return dateList.map(date => ({
+    name: date,
+    value: countMap.get(date) || 0
+  }));
+}
+
+// ==================== 部门列表 ====================
+export async function getDepartments() {
+  try {
+    // 从 students 表中获取不同的部门
+    let studentRows: { department: string | null }[] = [];
+    try {
+      const studentResult = await db
+        .selectDistinct({ department: schema.students.department })
+        .from(schema.students)
+        .where(
+          sql`${schema.students.department} IS NOT NULL AND ${schema.students.department} != ''`
+        )
+        .orderBy(schema.students.department);
+      studentResult.forEach(row => {
+        if (row.department) studentRows.push(row);
+      });
+    } catch (e) {
+      console.warn('students table query failed:', e);
+    }
+    
+    // 从 users 表中获取不同的部门
+    let userRows: { department: string | null }[] = [];
+    try {
+      const userResult = await db
+        .selectDistinct({ department: schema.users.department })
+        .from(schema.users)
+        .where(
+          sql`${schema.users.department} IS NOT NULL AND ${schema.users.department} != ''`
+        )
+        .orderBy(schema.users.department);
+      userResult.forEach(row => {
+        if (row.department) userRows.push(row);
+      });
+    } catch (e) {
+      console.warn('users table query failed:', e);
+    }
+    
+    // 从 interviews 表中获取不同的部门
+    let interviewRows: { department: string | null }[] = [];
+    try {
+      const interviewResult = await db
+        .selectDistinct({ department: schema.interviews.department })
+        .from(schema.interviews)
+        .where(
+          sql`${schema.interviews.department} IS NOT NULL AND ${schema.interviews.department} != ''`
+        )
+        .orderBy(schema.interviews.department);
+      interviewResult.forEach(row => {
+        if (row.department) interviewRows.push(row);
+      });
+    } catch (e) {
+      console.warn('interviews table query failed:', e);
+    }
+    
+    // Merge all departments and deduplicate
+    const departmentSet = new Set<string>();
+    
+    for (const row of studentRows) {
+      if (row.department) departmentSet.add(row.department);
+    }
+    for (const row of userRows) {
+      if (row.department) departmentSet.add(row.department);
+    }
+    for (const row of interviewRows) {
+      if (row.department) departmentSet.add(row.department);
+    }
+    
+    // If no data, return default department list
+    if (departmentSet.size === 0) {
+      return ['前端部', 'UI部', '运维', '办公室', '后端部', '产品部', '设计部', '测试部'];
+    }
+    
+    return Array.from(departmentSet).sort();
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    // 返回默认部门列表而不是抛出错误
+    return ['前端部', 'UI部', '运维', '办公室', '后端部', '产品部', '设计部', '测试部'];
+  }
 }

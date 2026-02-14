@@ -90,6 +90,7 @@ export function InterviewKanban() {
         // Note: The API returns Student[], we need to ensure InterviewTask properties exist or are defaulted
         const mappedTasks: InterviewTask[] = data.map((student: any) => ({
           ...student,
+          id: String(student.id), // 确保 id 是字符串类型
           time: student.time || '未安排',
           interviewers: student.interviewers || [],
           location: student.location || '待定',

@@ -15,8 +15,14 @@ import {
   Check,
   ChevronsUpDown,
   Loader2,
+  Users,
+  Github,
+  Inbox,
+  RefreshCw,
+  RefreshCcw,
+  AlertCircle,
   Lock,
-  Github
+  ChevronDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -113,6 +119,28 @@ export function SettingsPage({ role }: SettingsPageProps) {
     pass: ''
   });
 
+  // IMAP 收件箱配置
+  const [imapConfig, setImapConfig] = useState({
+    host: 'imap.qq.com',
+    port: '993',
+    user: '',
+    pass: ''
+  });
+
+  // 收件箱预览状态
+  const [inboxLoading, setInboxLoading] = useState(false);
+  const [inboxMails, setInboxMails] = useState<{
+    uid: number;
+    subject: string;
+    from: string;
+    fromName: string;
+    date: string | null;
+    body?: string;
+    hasBody?: boolean;
+  }[]>([]);
+  const [inboxError, setInboxError] = useState('');
+  const [expandedMailUid, setExpandedMailUid] = useState<number | null>(null);
+
   const [apiKeys, setApiKeys] = useState<{id: string, name: string, key: string, created: string, expiresAt?: string}[]>([]);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [openModelSelect, setOpenModelSelect] = useState(false);
@@ -123,11 +151,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
   const [apiKeyExpiration, setApiKeyExpiration] = useState('never');
   
   useEffect(() => {
-    if (role === 'admin') {
-      fetchSettings();
-    } else {
-      setLoading(false);
-    }
+    fetchSettings();
   }, [role]);
 
   const fetchSettings = async () => {
@@ -174,6 +198,46 @@ export function SettingsPage({ role }: SettingsPageProps) {
       success: '系统配置已更新',
       error: '保存失败'
     });
+  };
+
+  // 获取收件箱
+  const fetchInbox = async () => {
+    if (!imapConfig.host || !imapConfig.user || !imapConfig.pass) {
+      setInboxError('请先填写完整的 IMAP 配置');
+      return;
+    }
+
+    setInboxLoading(true);
+    setInboxError('');
+    setInboxMails([]);
+
+    try {
+      const res = await fetch('/api/get-inbox', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: imapConfig.host,
+          port: imapConfig.port || 993,
+          user: imapConfig.user,
+          pass: imapConfig.pass,
+          limit: 10
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setInboxMails(data.mails || []);
+        toast.success(`成功获取 ${data.mails?.length || 0} 封邮件`);
+      } else {
+        setInboxError(data.message || '获取收件箱失败');
+      }
+    } catch (err) {
+      setInboxError('连接邮箱服务器失败');
+      console.error('Inbox error:', err);
+    } finally {
+      setInboxLoading(false);
+    }
   };
 
   const generateApiKey = async () => {
@@ -265,20 +329,6 @@ export function SettingsPage({ role }: SettingsPageProps) {
         }
       });
   };
-
-  if (role !== 'admin') {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4">
-        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400">
-          <Lock className="w-8 h-8" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">访问受限</h2>
-          <p className="text-slate-500 mt-2">只有系统管理员可以访问此页面。</p>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -757,55 +807,199 @@ export function SettingsPage({ role }: SettingsPageProps) {
                 <Mail className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">SMTP 发信配置</h3>
-                <p className="text-sm text-slate-500">配置邮件发送服务器，用于发送通知和面试邀请</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">邮件配置</h3>
+                <p className="text-sm text-slate-500">配置邮件发送和接收服务器</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">SMTP 服务器</label>
-                  <input 
-                    type="text" 
-                    value={emailSending.host}
-                    onChange={(e) => setEmailSending({...emailSending, host: e.target.value})}
-                    placeholder="smtp.example.com" 
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
-                  />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* SMTP 发信配置 */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                  <div className="w-8 h-8 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center justify-center text-green-600">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">SMTP 发信配置</h4>
+                    <p className="text-xs text-slate-500">用于发送通知和面试邀请</p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">SMTP 端口</label>
-                  <input 
-                    type="text" 
-                    value={emailSending.port}
-                    onChange={(e) => setEmailSending({...emailSending, port: e.target.value})}
-                    placeholder="465" 
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">SMTP 服务器</label>
+                    <input 
+                      type="text" 
+                      value={emailSending.host}
+                      onChange={(e) => setEmailSending({...emailSending, host: e.target.value})}
+                      placeholder="smtp.example.com" 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">发信账号</label>
+                    <input 
+                      type="text" 
+                      value={emailSending.user}
+                      onChange={(e) => setEmailSending({...emailSending, user: e.target.value})}
+                      placeholder="hr@example.com" 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">SMTP 端口</label>
+                    <input 
+                      type="text" 
+                      value={emailSending.port}
+                      onChange={(e) => setEmailSending({...emailSending, port: e.target.value})}
+                      placeholder="465" 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">授权码</label>
+                    <input 
+                      type="password" 
+                      value={emailSending.pass}
+                      onChange={(e) => setEmailSending({...emailSending, pass: e.target.value})}
+                      placeholder="••••••••" 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">发信账号</label>
-                  <input 
-                    type="text" 
-                    value={emailSending.user}
-                    onChange={(e) => setEmailSending({...emailSending, user: e.target.value})}
-                    placeholder="hr@example.com" 
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
-                  />
+
+              {/* IMAP 收件箱配置 */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                  <div className="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center text-blue-600">
+                    <Inbox className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">IMAP 收件箱配置</h4>
+                    <p className="text-xs text-slate-500">用于接收邮件（简历投递）</p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">授权码/密码</label>
-                  <input 
-                    type="password" 
-                    value={emailSending.pass}
-                    onChange={(e) => setEmailSending({...emailSending, pass: e.target.value})}
-                    placeholder="••••••••" 
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">IMAP 服务器</label>
+                    <input 
+                      type="text" 
+                      value={imapConfig.host}
+                      onChange={(e) => setImapConfig({...imapConfig, host: e.target.value})}
+                      placeholder="imap.qq.com" 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">账号</label>
+                    <input 
+                      type="text" 
+                      value={imapConfig.user}
+                      onChange={(e) => setImapConfig({...imapConfig, user: e.target.value})}
+                      placeholder="2408224899@qq.com" 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">端口</label>
+                    <input 
+                      type="text" 
+                      value={imapConfig.port}
+                      onChange={(e) => setImapConfig({...imapConfig, port: e.target.value})}
+                      placeholder="993" 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">授权码</label>
+                    <input 
+                      type="password" 
+                      value={imapConfig.pass}
+                      onChange={(e) => setImapConfig({...imapConfig, pass: e.target.value})}
+                      placeholder="••••••••" 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
                 </div>
+
+                {/* 获取收件箱按钮 */}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <span className="text-xs text-slate-500">测试 IMAP 连接并预览最新邮件</span>
+                  <Button
+                    onClick={fetchInbox}
+                    disabled={inboxLoading}
+                    className="gap-2"
+                  >
+                    {inboxLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCcw className="w-4 h-4" />
+                    )}
+                    {inboxLoading ? '连接中...' : '获取收件箱'}
+                  </Button>
+                </div>
+
+                {/* 错误提示 */}
+                {inboxError && (
+                  <div className="flex items-center gap-2 p-4 text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-sm">{inboxError}</span>
+                  </div>
+                )}
+
+                {/* 邮件列表 */}
+                {inboxMails.length > 0 && (
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {inboxMails.map((mail) => (
+                      <div
+                        key={mail.uid}
+                        className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden"
+                      >
+                        <div 
+                          className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          onClick={() => setExpandedMailUid(expandedMailUid === mail.uid ? null : mail.uid)}
+                        >
+                          <div className="w-7 h-7 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-500 text-xs font-bold flex-shrink-0">
+                            {(mail.fromName || mail.from || '?').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                              {mail.subject}
+                            </p>
+                            <p className="text-xs text-slate-500 truncate">
+                              {mail.fromName || mail.from}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {mail.hasBody && (
+                              <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded">
+                                有正文
+                              </span>
+                            )}
+                            <div className="text-xs text-slate-400 whitespace-nowrap">
+                              {mail.date ? new Date(mail.date).toLocaleDateString('zh-CN', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              }) : ''}
+                            </div>
+                            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedMailUid === mail.uid ? 'rotate-180' : ''}`} />
+                          </div>
+                        </div>
+                        {expandedMailUid === mail.uid && mail.body && (
+                          <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+                            <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                              {mail.body}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>

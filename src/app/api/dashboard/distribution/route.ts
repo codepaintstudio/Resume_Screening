@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getDepartmentDistribution } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -35,15 +36,16 @@ import { NextResponse } from 'next/server';
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
+
 export async function GET() {
-  await new Promise(resolve => setTimeout(resolve, 700));
-
-  const data = [
-    { name: '前端部', value: Math.floor(Math.random() * 30) + 20, fill: '#2563eb' },
-    { name: 'UI部', value: Math.floor(Math.random() * 30) + 10, fill: '#8b5cf6' },
-    { name: '办公室', value: Math.floor(Math.random() * 20) + 5, fill: '#ec4899' },
-    { name: '运维', value: Math.floor(Math.random() * 20) + 5, fill: '#f97316' },
-  ];
-
-  return NextResponse.json(data);
+  try {
+    const data = await getDepartmentDistribution();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error fetching department distribution:', error);
+    return NextResponse.json(
+      { error: '获取部门分布数据失败' },
+      { status: 500 }
+    );
+  }
 }

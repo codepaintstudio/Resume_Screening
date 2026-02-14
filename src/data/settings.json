@@ -17,7 +17,7 @@
     "vision": {
       "endpoint": "",
       "model": "vision-vk-v2",
-      "apiKey": ""
+      "apiKey": "csocpwvnolzziiei"
     },
     "llm": {
       "baseUrl": "https://api.openai.com/v1",
@@ -34,23 +34,23 @@
     }
   },
   "resumeImport": {
-    "imapServer": "imap.exmail.qq.com",
+    "imapServer": "imap.qq.com",
     "port": "993",
-    "account": "",
-    "password": "",
+    "account": "1138563945@qq.com",
+    "password": "csocpwvnolzziiei",
     "ssl": true
   },
   "github": {
     "clientId": "",
-    "clientSecret": "",
+    "clientSecret": "csocpwvnolzziiei",
     "organization": "mahui-studio",
     "personalAccessToken": ""
   },
   "emailSending": {
-    "host": "smtp.example.com",
+    "host": "smtp.qq.com",
     "port": "465",
-    "user": "hr@example.com",
-    "pass": ""
+    "user": "1138563945@qq.com",
+    "pass": "csocpwvnolzziiei"
   },
   "apiKeys": [
     {

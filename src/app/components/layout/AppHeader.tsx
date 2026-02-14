@@ -256,12 +256,10 @@ export function AppHeader() {
               <User className="mr-2 h-4 w-4" />
               <span>个人中心</span>
             </DropdownMenuItem>
-            {(currentUser?.role === 'admin' || userRole === 'admin') && (
-              <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/settings')}>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>系统设置</span>
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/settings')}>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>系统设置</span>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/10" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
