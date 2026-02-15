@@ -41,8 +41,8 @@
     "ssl": true
   },
   "github": {
-    "clientId": "",
-    "clientSecret": "",
+    "clientId": "993",
+    "clientSecret": "csocpwvnolzziiei",
     "organization": "mahui-studio",
     "personalAccessToken": ""
   },
