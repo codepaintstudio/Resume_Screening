@@ -747,13 +747,16 @@ export function SettingsPage({ role }: SettingsPageProps) {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Account</label>
-                <input 
-                  type="text" 
-                  value={resumeImport.account || ''}
-                  onChange={(e) => setResumeImport({...resumeImport, account: e.target.value})}
-                  placeholder="hr@example.com" 
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
-                />
+                <div className="relative">
+                  <input 
+                    type="password" 
+                    value={resumeImport.account || ''}
+                    onChange={(e) => setResumeImport({...resumeImport, account: e.target.value})}
+                    placeholder="••••••••" 
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                  />
+                  <Lock className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Password</label>

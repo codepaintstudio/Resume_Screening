@@ -6,6 +6,7 @@ import {
   Users,
   Calendar as CalendarIcon,
   Clock,
+  MapPin,
   X,
   Check,
   RefreshCw
@@ -65,6 +66,7 @@ export function InterviewKanban() {
   const [selectedBatchCandidates, setSelectedBatchCandidates] = useState<string[]>([]);
   const [batchDate, setBatchDate] = useState<Date>();
   const [batchTime, setBatchTime] = useState('');
+  const [batchLocation, setBatchLocation] = useState('');
   const [batchInterviewers, setBatchInterviewers] = useState<string[]>([]);
   const [availableInterviewers, setAvailableInterviewers] = useState<string[]>([]);
 
@@ -81,22 +83,38 @@ export function InterviewKanban() {
       .then(data => setAvailableInterviewers(data))
       .catch(err => console.error("Failed to fetch interviewers", err));
 
-    fetch('/api/resumes')
-      .then(res => res.json())
-      .then(result => {
+    // 同时获取 students 和 interviews 数据
+    Promise.all([
+      fetch('/api/resumes').then(res => res.json()),
+      fetch('/api/interviews').then(res => res.json())
+    ])
+      .then(([resumesResult, interviewsResult]) => {
         // 处理分页格式的响应
-        const data = Array.isArray(result) ? result : (result.data || []);
-        // Map Student to InterviewTask
-        // Note: The API returns Student[], we need to ensure InterviewTask properties exist or are defaulted
-        const mappedTasks: InterviewTask[] = data.map((student: any) => ({
-          ...student,
-          id: String(student.id), // 确保 id 是字符串类型
-          time: student.time || '未安排',
-          interviewers: student.interviewers || [],
-          location: student.location || '待定',
-          priority: student.priority || 'medium',
-          stage: student.status // Ensure status maps to stage
-        }));
+        const studentsData = Array.isArray(resumesResult) ? resumesResult : (resumesResult.data || []);
+        const interviewsData = Array.isArray(interviewsResult) ? interviewsResult : (interviewsResult.data || []);
+        
+        // 建立 studentId -> interview 映射
+        const interviewMap = new Map();
+        interviewsData.forEach((interview: any) => {
+          interviewMap.set(interview.studentId, interview);
+        });
+        
+        // Map Student to InterviewTask，合并面试数据
+        const mappedTasks: InterviewTask[] = studentsData.map((student: any) => {
+          const interview = interviewMap.get(student.id);
+          return {
+            ...student,
+            id: String(student.id), // 确保 id 是字符串类型
+            // 优先使用 interviews 表中的数据，如果没有则使用默认值
+            time: interview?.time || student.time || '未安排',
+            interviewers: interview?.interviewers || student.interviewers || [],
+            location: interview?.location || student.location || '待定',
+            priority: interview?.priority || student.priority || 'medium',
+            date: interview?.date || student.date,
+            // 使用 interviews 表的 stage，如果没有则使用 students 表的 status
+            stage: interview?.stage || student.status
+          };
+        });
         setTasks(mappedTasks);
         setIsLoading(false);
       })
@@ -122,7 +140,7 @@ export function InterviewKanban() {
     }
   }, [searchParams, tasks]);
 
-  const pendingTasks = tasks.filter(t => t.stage === 'to_be_scheduled');
+  const pendingTasks = tasks.filter(t => t.stage === 'to_be_scheduled' || t.stage === 'pending');
 
   const filteredTasks = tasks.filter(t => {
     // Show only interview-related stages on the board
@@ -318,7 +336,8 @@ export function InterviewKanban() {
         candidateIds: selectedBatchCandidates,
         time: newTime,
         date: formattedISODate,
-        interviewers: batchInterviewers
+        interviewers: batchInterviewers,
+        location: batchLocation
       }),
     })
     .then(res => res.json())
@@ -331,6 +350,7 @@ export function InterviewKanban() {
                 time: newTime, 
                 date: formattedISODate,
                 interviewers: batchInterviewers,
+                location: batchLocation || '待定',
                 stage: 'pending_interview' as Stage 
             };
           }
@@ -341,6 +361,7 @@ export function InterviewKanban() {
         setSelectedBatchCandidates([]);
         setBatchDate(undefined);
         setBatchTime('');
+        setBatchLocation('');
         setBatchInterviewers([]);
         return data.message;
       } else {
@@ -517,6 +538,16 @@ export function InterviewKanban() {
                       value={batchTime}
                       onChange={(e) => setBatchTime(e.target.value)}
                       className="w-full bg-transparent text-sm font-bold border-none focus:ring-0 p-0 text-slate-700 dark:text-slate-300"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <MapPin className="w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="输入面试地点"
+                      value={batchLocation}
+                      onChange={(e) => setBatchLocation(e.target.value)}
+                      className="w-full bg-transparent text-sm font-bold border-none focus:ring-0 p-0 text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
                     />
                   </div>
                 </div>

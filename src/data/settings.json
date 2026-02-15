@@ -37,7 +37,7 @@
     "imapServer": "imap.qq.com",
     "port": "993",
     "account": "",
-    "password": "",
+    "password": "csocpwvnolzziiei",
     "ssl": true
   },
   "github": {
@@ -49,8 +49,8 @@
   "emailSending": {
     "host": "smtp.qq.com",
     "port": "465",
-    "user": "",
-    "pass": ""
+    "user": "1138563945@qq.com",
+    "pass": "csocpwvnolzziiei"
   },
   "apiKeys": []
 }

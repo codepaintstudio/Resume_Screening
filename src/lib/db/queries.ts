@@ -1,5 +1,5 @@
 import { db, schema } from './index';
-import { eq, and, sql, count, gt, lt, gte } from 'drizzle-orm';
+import { eq, and, sql, count, gt, lt, gte, or, asc, like, isNotNull } from 'drizzle-orm';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 
 // 辅助函数：获取最后插入的 ID
@@ -49,6 +49,25 @@ export async function updateUser(id: number, data: Partial<typeof schema.users.$
 
 export async function deleteUser(id: number) {
   return await db.delete(schema.users).where(eq(schema.users.id, id));
+}
+
+// ==================== 面试官相关操作 ====================
+// 获取所有面试官（role 为 interviewer 或 member 的用户）
+export async function getInterviewers() {
+  const result = await db.select({
+    id: schema.users.id,
+    name: schema.users.name,
+    email: schema.users.email,
+    role: schema.users.role,
+    avatar: schema.users.avatar,
+    department: schema.users.department,
+  }).from(schema.users).where(
+    or(
+      eq(schema.users.role, 'interviewer'),
+      eq(schema.users.role, 'member')
+    )
+  );
+  return result;
 }
 
 // ==================== 邮件模板相关操作 ====================
@@ -259,8 +278,54 @@ export async function deleteStudent(id: number) {
 }
 
 // ==================== 面试相关操作 ====================
+// 获取所有面试
 export async function getInterviews() {
   return await db.select().from(schema.interviews);
+}
+
+// 获取近期面试（已安排但未开始的面试）
+export async function getUpcomingInterviews(limit: number = 10) {
+  // 获取状态为 pending_interview 或 interviewing，且有日期的面试
+  // 按日期升序排列
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const result = await db.select()
+    .from(schema.interviews)
+    .where(
+      and(
+        or(
+          eq(schema.interviews.stage, 'pending_interview'),
+          eq(schema.interviews.stage, 'interviewing')
+        ),
+        isNotNull(schema.interviews.date)
+      )
+    )
+    .orderBy(asc(schema.interviews.date), asc(schema.interviews.time))
+    .limit(limit);
+    
+  return result;
+}
+
+// 获取今日面试
+export async function getTodayInterviews() {
+  const today = new Date();
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  
+  const result = await db.select()
+    .from(schema.interviews)
+    .where(
+      and(
+        eq(schema.interviews.date, todayDate),
+        or(
+          eq(schema.interviews.stage, 'pending_interview'),
+          eq(schema.interviews.stage, 'interviewing')
+        )
+      )
+    )
+    .orderBy(asc(schema.interviews.time));
+    
+  return result;
 }
 
 export async function getInterviewById(id: number) {
