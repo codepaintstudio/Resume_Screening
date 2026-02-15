@@ -822,3 +822,453 @@ export async function addNotification(notification: typeof schema.notifications.
     return null;
   }
 }
+
+// ==================== AI Settings 相关操作 ====================
+
+/**
+ * 获取 AI 设置
+ */
+export async function getAiSettings() {
+  try {
+    const settings = await db.select().from(schema.aiSettings).limit(1);
+    if (settings.length === 0) {
+      // 如果没有设置，返回默认空值
+      return {
+        vision: {
+          endpoint: '',
+          model: 'vision-vk-v2',
+          apiKey: ''
+        },
+        llm: {
+          baseUrl: 'https://api.openai.com/v1',
+          apiKey: '',
+          model: ''
+        }
+      };
+    }
+    const s = settings[0];
+    return {
+      vision: {
+        endpoint: s.visionEndpoint || '',
+        model: s.visionModel || 'vision-vk-v2',
+        apiKey: s.visionApiKey || ''
+      },
+      llm: {
+        baseUrl: s.llmBaseUrl || 'https://api.openai.com/v1',
+        apiKey: s.llmApiKey || '',
+        model: s.llmModel || ''
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching AI settings:', error);
+    return {
+      vision: {
+        endpoint: '',
+        model: 'vision-vk-v2',
+        apiKey: ''
+      },
+      llm: {
+        baseUrl: 'https://api.openai.com/v1',
+        apiKey: '',
+        model: ''
+      }
+    };
+  }
+}
+
+/**
+ * 创建或更新 AI 设置
+ */
+export async function createOrUpdateAiSettings(data: {
+  vision?: {
+    endpoint?: string;
+    model?: string;
+    apiKey?: string;
+  };
+  llm?: {
+    baseUrl?: string;
+    apiKey?: string;
+    model?: string;
+  };
+}) {
+  try {
+    // 先获取现有设置
+    const existing = await db.select().from(schema.aiSettings).limit(1);
+    
+    const updateData: Partial<typeof schema.aiSettings.$inferInsert> = {};
+    
+    if (data.vision) {
+      if (data.vision.endpoint !== undefined) updateData.visionEndpoint = data.vision.endpoint;
+      if (data.vision.model !== undefined) updateData.visionModel = data.vision.model;
+      if (data.vision.apiKey !== undefined) updateData.visionApiKey = data.vision.apiKey;
+    }
+    
+    if (data.llm) {
+      if (data.llm.baseUrl !== undefined) updateData.llmBaseUrl = data.llm.baseUrl;
+      if (data.llm.apiKey !== undefined) updateData.llmApiKey = data.llm.apiKey;
+      if (data.llm.model !== undefined) updateData.llmModel = data.llm.model;
+    }
+    
+    if (existing.length === 0) {
+      // 如果没有记录，插入新记录
+      await db.insert(schema.aiSettings).values(updateData);
+    } else {
+      // 如果有记录，更新现有记录
+      await db.update(schema.aiSettings).set(updateData).where(eq(schema.aiSettings.id, existing[0].id));
+    }
+    
+    // 返回更新后的设置
+    return await getAiSettings();
+  } catch (error) {
+    console.error('Error updating AI settings:', error);
+    throw error;
+  }
+}
+
+// ==================== GitHub Settings 相关操作 ====================
+
+/**
+ * 获取 GitHub 设置
+ */
+export async function getGithubSettings() {
+  try {
+    const settings = await db.select().from(schema.githubSettings).limit(1);
+    if (settings.length === 0) {
+      // 如果没有设置，返回默认空值
+      return {
+        clientId: '',
+        clientSecret: '',
+        organization: '',
+        personalAccessToken: ''
+      };
+    }
+    const s = settings[0];
+    return {
+      clientId: s.clientId || '',
+      clientSecret: s.clientSecret || '',
+      organization: s.organization || '',
+      personalAccessToken: s.personalAccessToken || ''
+    };
+  } catch (error) {
+    console.error('Error fetching GitHub settings:', error);
+    return {
+      clientId: '',
+      clientSecret: '',
+      organization: '',
+      personalAccessToken: ''
+    };
+  }
+}
+
+/**
+ * 创建或更新 GitHub 设置
+ */
+export async function createOrUpdateGithubSettings(data: {
+  clientId?: string;
+  clientSecret?: string;
+  organization?: string;
+  personalAccessToken?: string;
+}) {
+  try {
+    // 先获取现有设置
+    const existing = await db.select().from(schema.githubSettings).limit(1);
+    
+    const updateData: Partial<typeof schema.githubSettings.$inferInsert> = {};
+    
+    if (data.clientId !== undefined) updateData.clientId = data.clientId;
+    if (data.clientSecret !== undefined) updateData.clientSecret = data.clientSecret;
+    if (data.organization !== undefined) updateData.organization = data.organization;
+    if (data.personalAccessToken !== undefined) updateData.personalAccessToken = data.personalAccessToken;
+    
+    if (existing.length === 0) {
+      // 如果没有记录，插入新记录
+      await db.insert(schema.githubSettings).values(updateData);
+    } else {
+      // 如果有记录，更新现有记录
+      await db.update(schema.githubSettings).set(updateData).where(eq(schema.githubSettings.id, existing[0].id));
+    }
+    
+    // 返回更新后的设置
+    return await getGithubSettings();
+  } catch (error) {
+    console.error('Error updating GitHub settings:', error);
+    throw error;
+  }
+}
+
+// ==================== API Keys 相关操作 ====================
+
+/**
+ * 获取所有 API 密钥
+ */
+export async function getApiKeys() {
+  try {
+    return await db.select().from(schema.apiKeys);
+  } catch (error) {
+    console.error('Error fetching API keys:', error);
+    return [];
+  }
+}
+
+/**
+ * 创建 API 密钥
+ */
+export async function createApiKey(data: typeof schema.apiKeys.$inferInsert) {
+  try {
+    await db.insert(schema.apiKeys).values(data);
+    const keys = await db.select().from(schema.apiKeys).where(eq(schema.apiKeys.id, data.id));
+    return keys[0] || null;
+  } catch (error) {
+    console.error('Error creating API key:', error);
+    throw error;
+  }
+}
+
+/**
+ * 删除 API 密钥
+ */
+export async function deleteApiKey(id: string) {
+  try {
+    await db.delete(schema.apiKeys).where(eq(schema.apiKeys.id, id));
+    return true;
+  } catch (error) {
+    console.error('Error deleting API key:', error);
+    return false;
+  }
+}
+
+/**
+ * 替换所有 API 密钥
+ */
+export async function replaceApiKeys(keys: typeof schema.apiKeys.$inferInsert[]) {
+  try {
+    // 先删除所有现有密钥
+    await db.delete(schema.apiKeys);
+    
+    // 如果有新密钥，批量插入
+    if (keys.length > 0) {
+      await db.insert(schema.apiKeys).values(keys);
+    }
+    
+    return await getApiKeys();
+  } catch (error) {
+    console.error('Error replacing API keys:', error);
+    throw error;
+  }
+}
+
+// ==================== Notification Settings 相关操作 ====================
+
+/**
+ * 获取通知设置
+ */
+export async function getNotificationSettings() {
+  try {
+    const settings = await db.select().from(schema.notificationSettings).limit(1);
+    if (settings.length === 0) {
+      // 如果没有设置，返回默认值
+      return {
+        webhookUrl: '',
+        triggers: {
+          new_resume: true,
+          interview_reminder: true,
+          offer_confirmed: true
+        }
+      };
+    }
+    const s = settings[0];
+    return {
+      webhookUrl: s.webhookUrl || '',
+      triggers: {
+        new_resume: s.triggerNewResume === '1',
+        interview_reminder: s.triggerInterviewReminder === '1',
+        offer_confirmed: s.triggerOfferConfirmed === '1'
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching notification settings:', error);
+    return {
+      webhookUrl: '',
+      triggers: {
+        new_resume: true,
+        interview_reminder: true,
+        offer_confirmed: true
+      }
+    };
+  }
+}
+
+/**
+ * 创建或更新通知设置
+ */
+export async function createOrUpdateNotificationSettings(data: {
+  webhookUrl?: string;
+  triggers?: {
+    new_resume?: boolean;
+    interview_reminder?: boolean;
+    offer_confirmed?: boolean;
+  };
+}) {
+  try {
+    // 先获取现有设置
+    const existing = await db.select().from(schema.notificationSettings).limit(1);
+    
+    const updateData: Partial<typeof schema.notificationSettings.$inferInsert> = {};
+    
+    if (data.webhookUrl !== undefined) updateData.webhookUrl = data.webhookUrl;
+    if (data.triggers) {
+      if (data.triggers.new_resume !== undefined) {
+        updateData.triggerNewResume = data.triggers.new_resume ? '1' : '0';
+      }
+      if (data.triggers.interview_reminder !== undefined) {
+        updateData.triggerInterviewReminder = data.triggers.interview_reminder ? '1' : '0';
+      }
+      if (data.triggers.offer_confirmed !== undefined) {
+        updateData.triggerOfferConfirmed = data.triggers.offer_confirmed ? '1' : '0';
+      }
+    }
+    
+    if (existing.length === 0) {
+      // 如果没有记录，插入新记录
+      await db.insert(schema.notificationSettings).values(updateData);
+    } else {
+      // 如果有记录，更新现有记录
+      await db.update(schema.notificationSettings).set(updateData).where(eq(schema.notificationSettings.id, existing[0].id));
+    }
+    
+    // 返回更新后的设置
+    return await getNotificationSettings();
+  } catch (error) {
+    console.error('Error updating notification settings:', error);
+    throw error;
+  }
+}
+
+// ==================== Platform Settings 相关操作 ====================
+
+/**
+ * 获取平台设置
+ */
+export async function getPlatformSettings() {
+  try {
+    const settings = await db.select().from(schema.platformSettings).limit(1);
+    if (settings.length === 0) {
+      // 如果没有设置，返回默认值
+      return {
+        departments: []
+      };
+    }
+    const s = settings[0];
+    return {
+      departments: s.departments ? JSON.parse(s.departments) : []
+    };
+  } catch (error) {
+    console.error('Error fetching platform settings:', error);
+    return {
+      departments: []
+    };
+  }
+}
+
+/**
+ * 创建或更新平台设置
+ */
+export async function createOrUpdatePlatformSettings(data: {
+  departments?: string[];
+}) {
+  try {
+    // 先获取现有设置
+    const existing = await db.select().from(schema.platformSettings).limit(1);
+    
+    const updateData: Partial<typeof schema.platformSettings.$inferInsert> = {};
+    
+    if (data.departments !== undefined) {
+      updateData.departments = JSON.stringify(data.departments);
+    }
+    
+    if (existing.length === 0) {
+      // 如果没有记录，插入新记录
+      await db.insert(schema.platformSettings).values(updateData);
+    } else {
+      // 如果有记录，更新现有记录
+      await db.update(schema.platformSettings).set(updateData).where(eq(schema.platformSettings.id, existing[0].id));
+    }
+    
+    // 返回更新后的设置
+    return await getPlatformSettings();
+  } catch (error) {
+    console.error('Error updating platform settings:', error);
+    throw error;
+  }
+}
+
+// ==================== Resume Import Settings 相关操作 ====================
+
+/**
+ * 获取简历导入设置
+ */
+export async function getResumeImportSettings() {
+  try {
+    const settings = await db.select().from(schema.resumeImportSettings).limit(1);
+    if (settings.length === 0) {
+      // 如果没有设置，返回默认值
+      return {
+        imapServer: '',
+        port: '',
+        account: '',
+        password: ''
+      };
+    }
+    const s = settings[0];
+    return {
+      imapServer: s.imapServer || '',
+      port: s.port || '',
+      account: s.account || '',
+      password: s.password || ''
+    };
+  } catch (error) {
+    console.error('Error fetching resume import settings:', error);
+    return {
+      imapServer: '',
+      port: '',
+      account: '',
+      password: ''
+    };
+  }
+}
+
+/**
+ * 创建或更新简历导入设置
+ */
+export async function createOrUpdateResumeImportSettings(data: {
+  imapServer?: string;
+  port?: string;
+  account?: string;
+  password?: string;
+}) {
+  try {
+    // 先获取现有设置
+    const existing = await db.select().from(schema.resumeImportSettings).limit(1);
+    
+    const updateData: Partial<typeof schema.resumeImportSettings.$inferInsert> = {};
+    
+    if (data.imapServer !== undefined) updateData.imapServer = data.imapServer;
+    if (data.port !== undefined) updateData.port = data.port;
+    if (data.account !== undefined) updateData.account = data.account;
+    if (data.password !== undefined) updateData.password = data.password;
+    
+    if (existing.length === 0) {
+      // 如果没有记录，插入新记录
+      await db.insert(schema.resumeImportSettings).values(updateData);
+    } else {
+      // 如果有记录，更新现有记录
+      await db.update(schema.resumeImportSettings).set(updateData).where(eq(schema.resumeImportSettings.id, existing[0].id));
+    }
+    
+    // 返回更新后的设置
+    return await getResumeImportSettings();
+  } catch (error) {
+    console.error('Error updating resume import settings:', error);
+    throw error;
+  }
+}

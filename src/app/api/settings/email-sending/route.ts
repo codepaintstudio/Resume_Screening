@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSettings, updateSection } from '@/lib/settings-store';
+import { getEmailConfig, createOrUpdateEmailConfig } from '@/lib/db/queries';
 import { getCurrentUser } from '@/lib/auth';
 
 /**
@@ -56,9 +56,24 @@ export async function GET() {
       );
     }
 
-    const settings = getSettings();
-    return NextResponse.json(settings.emailSending);
+    const config = await getEmailConfig();
+    if (!config) {
+      // 如果没有配置，返回空值
+      return NextResponse.json({
+        host: '',
+        port: '',
+        user: '',
+        pass: ''
+      });
+    }
+    return NextResponse.json({
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      pass: config.pass
+    });
   } catch (error) {
+    console.error('Error fetching email config:', error);
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
   }
 }
@@ -76,9 +91,15 @@ export async function PUT(request: Request) {
 
     const data = await request.json();
     
-    const updated = updateSection('emailSending', data);
-    return NextResponse.json(updated);
+    await createOrUpdateEmailConfig({
+      host: data.host || '',
+      port: data.port || '',
+      user: data.user || '',
+      pass: data.pass || ''
+    });
+    return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Error updating email config:', error);
     return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
   }
 }

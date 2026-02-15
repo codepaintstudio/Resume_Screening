@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSettings, updateSettings } from '@/lib/settings-store';
+import { getGithubSettings, createOrUpdateGithubSettings } from '@/lib/db/queries';
 import { authenticateUser } from '@/data/user-mock';
 
 /**
@@ -55,8 +55,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const settings = getSettings();
-  return NextResponse.json(settings.github);
+  try {
+    const settings = await getGithubSettings();
+    return NextResponse.json(settings);
+  } catch (error) {
+    console.error('Error fetching GitHub settings:', error);
+    return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
+  }
 }
 
 export async function PUT(request: Request) {
@@ -67,17 +72,16 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json();
     
-    // Validate body if needed
-    
-    updateSettings({
-      github: {
-        ...getSettings().github,
-        ...body
-      }
+    const settings = await createOrUpdateGithubSettings({
+      clientId: body.clientId,
+      clientSecret: body.clientSecret,
+      organization: body.organization,
+      personalAccessToken: body.personalAccessToken
     });
 
-    return NextResponse.json(getSettings().github);
+    return NextResponse.json(settings);
   } catch (error) {
+    console.error('Error updating GitHub settings:', error);
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 }

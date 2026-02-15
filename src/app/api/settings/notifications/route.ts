@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSettings, updateSection } from '@/lib/settings-store';
+import { getNotificationSettings, createOrUpdateNotificationSettings } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -62,16 +62,22 @@ import { getSettings, updateSection } from '@/lib/settings-store';
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
-  const settings = getSettings();
-  return NextResponse.json(settings.notifications);
+  try {
+    const settings = await getNotificationSettings();
+    return NextResponse.json(settings);
+  } catch (error) {
+    console.error('Error fetching notification settings:', error);
+    return NextResponse.json({ success: false, message: 'Failed to fetch notification settings' }, { status: 500 });
+  }
 }
 
 export async function PUT(request: Request) {
   try {
     const data = await request.json();
-    updateSection('notifications', data);
+    await createOrUpdateNotificationSettings(data);
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Error updating notification settings:', error);
     return NextResponse.json({ success: false, message: 'Failed to update notification settings' }, { status: 500 });
   }
 }

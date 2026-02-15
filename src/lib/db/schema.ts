@@ -75,6 +75,21 @@ export const activityLogs = mysqlTable('activity_logs', {
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 
+// ==================== AI Settings 表 ====================
+export const aiSettings = mysqlTable('ai_settings', {
+  id: serial('id').primaryKey(),
+  visionEndpoint: varchar('vision_endpoint', { length: 500 }),
+  visionModel: varchar('vision_model', { length: 100 }),
+  visionApiKey: varchar('vision_api_key', { length: 500 }),
+  llmBaseUrl: varchar('llm_base_url', { length: 500 }),
+  llmApiKey: varchar('llm_api_key', { length: 500 }),
+  llmModel: varchar('llm_model', { length: 100 }),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export type AiSettings = typeof aiSettings.$inferSelect;
+export type NewAiSettings = typeof aiSettings.$inferInsert;
+
 // ==================== Notifications 表 ====================
 export const notifications = mysqlTable('notifications', {
   id: serial('id').primaryKey(),
@@ -95,6 +110,67 @@ export const notifications = mysqlTable('notifications', {
 
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
+
+// ==================== GitHub Settings 表 ====================
+export const githubSettings = mysqlTable('github_settings', {
+  id: serial('id').primaryKey(),
+  clientId: varchar('client_id', { length: 255 }),
+  clientSecret: varchar('client_secret', { length: 255 }),
+  organization: varchar('organization', { length: 255 }),
+  personalAccessToken: varchar('personal_access_token', { length: 500 }),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export type GithubSettings = typeof githubSettings.$inferSelect;
+export type NewGithubSettings = typeof githubSettings.$inferInsert;
+
+// ==================== API Keys 表 ====================
+export const apiKeys = mysqlTable('api_keys', {
+  id: varchar('id', { length: 50 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  key: varchar('key', { length: 255 }).notNull(),
+  created: varchar('created', { length: 20 }).notNull(),
+  expiresAt: varchar('expires_at', { length: 20 }),
+});
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type NewApiKey = typeof apiKeys.$inferInsert;
+
+// ==================== Notification Settings 表 ====================
+export const notificationSettings = mysqlTable('notification_settings', {
+  id: serial('id').primaryKey(),
+  webhookUrl: varchar('webhook_url', { length: 500 }),
+  triggerNewResume: mysqlEnum('trigger_new_resume', ['0', '1']).default('1'),
+  triggerInterviewReminder: mysqlEnum('trigger_interview_reminder', ['0', '1']).default('1'),
+  triggerOfferConfirmed: mysqlEnum('trigger_offer_confirmed', ['0', '1']).default('1'),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export type NotificationSettings = typeof notificationSettings.$inferSelect;
+export type NewNotificationSettings = typeof notificationSettings.$inferInsert;
+
+// ==================== Platform Settings 表 ====================
+export const platformSettings = mysqlTable('platform_settings', {
+  id: serial('id').primaryKey(),
+  departments: text('departments'), // JSON 数组存储
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export type PlatformSettings = typeof platformSettings.$inferSelect;
+export type NewPlatformSettings = typeof platformSettings.$inferInsert;
+
+// ==================== Resume Import Settings 表 ====================
+export const resumeImportSettings = mysqlTable('resume_import_settings', {
+  id: serial('id').primaryKey(),
+  imapServer: varchar('imap_server', { length: 255 }),
+  port: varchar('port', { length: 10 }),
+  account: varchar('account', { length: 255 }),
+  password: varchar('password', { length: 255 }), // 建议加密存储
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export type ResumeImportSettings = typeof resumeImportSettings.$inferSelect;
+export type NewResumeImportSettings = typeof resumeImportSettings.$inferInsert;
 
 // ==================== Comments 表 ====================
 export const comments = mysqlTable('comments', {
