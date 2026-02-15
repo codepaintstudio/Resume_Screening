@@ -54,7 +54,9 @@ export function GlobalSearch() {
       setLoading(true);
       fetch('/api/resumes')
         .then(res => res.json())
-        .then(data => {
+        .then(result => {
+          // 处理分页格式的响应
+          const data = Array.isArray(result) ? result : (result.data || []);
           if (Array.isArray(data)) {
             setCandidates(data);
           }

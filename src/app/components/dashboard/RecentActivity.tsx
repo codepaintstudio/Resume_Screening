@@ -13,11 +13,20 @@ export function RecentActivity() {
       fetch('/api/dashboard/activities?page=1&limit=5')
         .then(res => res.json())
         .then(data => {
-          setActivities(data.data);
+          // 检查是否返回错误或数据为空
+          if (data.error) {
+            console.error('API error:', data.error);
+            setActivities([]);
+          } else if (Array.isArray(data.data)) {
+            setActivities(data.data);
+          } else {
+            setActivities([]);
+          }
           setLoading(false);
         })
         .catch(err => {
           console.error('Failed to load activities:', err);
+          setActivities([]);
           setLoading(false);
         });
     };
@@ -63,9 +72,15 @@ export function RecentActivity() {
           </button>
         </div>
         <div className="space-y-5 overflow-y-auto pr-2 custom-scrollbar flex-1">
-          {activities.map((activity, idx) => (
-            <ActivityItem key={idx} {...activity} />
-          ))}
+          {activities.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-slate-400">
+              <p className="text-sm">暂无活动记录</p>
+            </div>
+          ) : (
+            activities.map((activity, idx) => (
+              <ActivityItem key={idx} {...activity} />
+            ))
+          )}
         </div>
       </div>
 

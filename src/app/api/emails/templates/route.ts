@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { getTemplates, addTemplate, EmailTemplate } from '@/data/email-mock';
+import { getEmailTemplates, createEmailTemplate } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -21,7 +21,7 @@ import { getTemplates, addTemplate, EmailTemplate } from '@/data/email-mock';
  *                 type: object
  *                 properties:
  *                   id:
- *                     type: string
+ *                     type: integer
  *                   name:
  *                     type: string
  *                   subject:
@@ -75,7 +75,13 @@ import { getTemplates, addTemplate, EmailTemplate } from '@/data/email-mock';
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
-  return NextResponse.json(getTemplates());
+  try {
+    const templates = await getEmailTemplates();
+    return NextResponse.json(templates);
+  } catch (error) {
+    console.error('Failed to fetch email templates:', error);
+    return NextResponse.json({ success: false, message: 'Failed to fetch templates' }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
@@ -87,17 +93,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 });
     }
 
-    const newTemplate: EmailTemplate = {
-      id: Date.now().toString(),
+    const newTemplate = await createEmailTemplate({
       name,
       subject,
       content,
-      category: category || '通用'
-    };
-
-    addTemplate(newTemplate);
-    return NextResponse.json({ success: true, data: newTemplate });
+      category: category || '通用',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    
+    return NextResponse.json({ success: true, data: newTemplate[0] });
   } catch (error) {
+    console.error('Failed to create email template:', error);
     return NextResponse.json({ success: false, message: 'Failed to create template' }, { status: 500 });
   }
 }

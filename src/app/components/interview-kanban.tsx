@@ -6,6 +6,7 @@ import {
   Users,
   Calendar as CalendarIcon,
   Clock,
+  MapPin,
   X,
   Check,
   RefreshCw
@@ -66,6 +67,7 @@ export function InterviewKanban() {
   const [selectedBatchCandidates, setSelectedBatchCandidates] = useState<string[]>([]);
   const [batchDate, setBatchDate] = useState<Date>();
   const [batchTime, setBatchTime] = useState('');
+  const [batchLocation, setBatchLocation] = useState('');
   const [batchInterviewers, setBatchInterviewers] = useState<string[]>([]);
   const [availableInterviewers, setAvailableInterviewers] = useState<string[]>([]);
 
@@ -104,6 +106,7 @@ export function InterviewKanban() {
       .then(data => setAvailableInterviewers(data))
       .catch(err => console.error("Failed to fetch interviewers", err));
 
+<<<<<<< HEAD
     fetch('/api/resumes')
       .then(res => res.json())
       .then(data => {
@@ -115,6 +118,40 @@ export function InterviewKanban() {
           priority: student.priority || 'medium',
           stage: student.status
         }));
+=======
+    // 同时获取 students 和 interviews 数据
+    Promise.all([
+      fetch('/api/resumes').then(res => res.json()),
+      fetch('/api/interviews').then(res => res.json())
+    ])
+      .then(([resumesResult, interviewsResult]) => {
+        // 处理分页格式的响应
+        const studentsData = Array.isArray(resumesResult) ? resumesResult : (resumesResult.data || []);
+        const interviewsData = Array.isArray(interviewsResult) ? interviewsResult : (interviewsResult.data || []);
+        
+        // 建立 studentId -> interview 映射
+        const interviewMap = new Map();
+        interviewsData.forEach((interview: any) => {
+          interviewMap.set(interview.studentId, interview);
+        });
+        
+        // Map Student to InterviewTask，合并面试数据
+        const mappedTasks: InterviewTask[] = studentsData.map((student: any) => {
+          const interview = interviewMap.get(student.id);
+          return {
+            ...student,
+            id: String(student.id), // 确保 id 是字符串类型
+            // 优先使用 interviews 表中的数据，如果没有则使用默认值
+            time: interview?.time || student.time || '未安排',
+            interviewers: interview?.interviewers || student.interviewers || [],
+            location: interview?.location || student.location || '待定',
+            priority: interview?.priority || student.priority || 'medium',
+            date: interview?.date || student.date,
+            // 使用 interviews 表的 stage，如果没有则使用 students 表的 status
+            stage: interview?.stage || student.status
+          };
+        });
+>>>>>>> liyang
         setTasks(mappedTasks);
         setIsLoading(false);
       })
@@ -139,7 +176,7 @@ export function InterviewKanban() {
     }
   }, [searchParams, tasks]);
 
-  const pendingTasks = tasks.filter(t => t.stage === 'to_be_scheduled');
+  const pendingTasks = tasks.filter(t => t.stage === 'to_be_scheduled' || t.stage === 'pending');
 
   const filteredTasks = tasks.filter(t => {
     const isBoardStage = ['pending_interview', 'interviewing', 'passed', 'rejected'].includes(t.stage);
@@ -277,7 +314,8 @@ export function InterviewKanban() {
         candidateIds: selectedBatchCandidates,
         time: newTime,
         date: formattedISODate,
-        interviewers: batchInterviewers
+        interviewers: batchInterviewers,
+        location: batchLocation
       }),
     })
     .then(res => res.json())
@@ -286,11 +324,20 @@ export function InterviewKanban() {
         setTasks(prev => prev.map(t => {
           if (selectedBatchCandidates.includes(t.id)) {
             return { 
+<<<<<<< HEAD
               ...t, 
               time: newTime, 
               date: formattedISODate,
               interviewers: batchInterviewers,
               stage: 'pending_interview' as Stage 
+=======
+                ...t, 
+                time: newTime, 
+                date: formattedISODate,
+                interviewers: batchInterviewers,
+                location: batchLocation || '待定',
+                stage: 'pending_interview' as Stage 
+>>>>>>> liyang
             };
           }
           return t;
@@ -299,6 +346,7 @@ export function InterviewKanban() {
         setSelectedBatchCandidates([]);
         setBatchDate(undefined);
         setBatchTime('');
+        setBatchLocation('');
         setBatchInterviewers([]);
         return data.message;
       } else {
@@ -761,6 +809,7 @@ export function InterviewKanban() {
           </span>
         </div>
 
+<<<<<<< HEAD
         <CandidateDrawer 
           student={selectedTask}
           onClose={() => setSelectedTask(null)}
@@ -774,6 +823,136 @@ export function InterviewKanban() {
           }}
           type="interview"
         />
+=======
+        <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
+          <DialogContent className="sm:max-w-5xl w-full">
+            <DialogHeader>
+              <DialogTitle>批量安排面试</DialogTitle>
+            </DialogHeader>
+            <div className="flex gap-6 py-4">
+              {/* Left: Candidate List */}
+              <div className="w-1/3 border-r border-slate-100 dark:border-slate-800 pr-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">待安排候选人 ({pendingTasks.length})</h4>
+                  <button 
+                    onClick={selectAllBatchCandidates}
+                    className="text-xs text-blue-600 font-bold hover:underline"
+                  >
+                    {selectedBatchCandidates.length === pendingTasks.length ? '取消全选' : '全选'}
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  {pendingTasks.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 text-sm">暂无待安排候选人</div>
+                  ) : (
+                    pendingTasks.map(task => (
+                      <div 
+                        key={task.id}
+                        onClick={() => toggleBatchCandidate(task.id)}
+                        className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                          selectedBatchCandidates.includes(task.id)
+                            ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                            : 'bg-white border-slate-100 dark:bg-slate-900 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-800'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                              selectedBatchCandidates.includes(task.id)
+                                ? 'bg-blue-600 border-blue-600'
+                                : 'border-slate-300 dark:border-slate-600'
+                            }`}>
+                              {selectedBatchCandidates.includes(task.id) && <Plus className="w-3 h-3 text-white" />}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-900 dark:text-white">{task.name}</p>
+                              <p className="text-xs text-slate-500">{task.department} • {task.major}</p>
+                            </div>
+                          </div>
+                          <span className="text-xs font-bold text-slate-400">{task.studentId}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Middle: Date & Time */}
+              <div className="w-1/3 border-r border-slate-100 dark:border-slate-800 px-6">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">设置时间</h4>
+                <div className="space-y-4">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 flex justify-center">
+                    <Calendar
+                      mode="single"
+                      selected={batchDate}
+                      onSelect={setBatchDate}
+                      className="rounded-md border bg-white dark:bg-slate-950 shadow-sm"
+                      locale={zhCN}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <Clock className="w-4 h-4 text-slate-400" />
+                    <input 
+                      type="time" 
+                      value={batchTime}
+                      onChange={(e) => setBatchTime(e.target.value)}
+                      className="w-full bg-transparent text-sm font-bold border-none focus:ring-0 p-0 text-slate-700 dark:text-slate-300"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <MapPin className="w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="输入面试地点"
+                      value={batchLocation}
+                      onChange={(e) => setBatchLocation(e.target.value)}
+                      className="w-full bg-transparent text-sm font-bold border-none focus:ring-0 p-0 text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Right: Interviewers */}
+              <div className="w-1/3 pl-2 flex flex-col">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">选择面试官</h4>
+                <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-2 custom-scrollbar">
+                    {availableInterviewers.map(interviewer => (
+                        <div 
+                            key={interviewer}
+                            onClick={() => toggleBatchInterviewer(interviewer)}
+                            className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                                batchInterviewers.includes(interviewer)
+                                    ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                                    : 'bg-white border-slate-100 dark:bg-slate-900 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-800'
+                            }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    batchInterviewers.includes(interviewer) ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'
+                                }`}>
+                                    {interviewer.slice(0, 1)}
+                                </div>
+                                <span className="text-sm font-bold text-slate-900 dark:text-white">{interviewer}</span>
+                            </div>
+                            {batchInterviewers.includes(interviewer) && <Check className="w-4 h-4 text-blue-600" />}
+                        </div>
+                    ))}
+                </div>
+                
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto">
+                    <button 
+                      onClick={handleBatchSchedule}
+                      disabled={selectedBatchCandidates.length === 0 || !batchDate || !batchTime || batchInterviewers.length === 0}
+                      className="w-full py-3 bg-blue-600 text-white text-sm font-black uppercase tracking-wider rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20 transition-all"
+                    >
+                      确认安排 ({selectedBatchCandidates.length})
+                    </button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+>>>>>>> liyang
       </div>
     </DragDropContext>
   );

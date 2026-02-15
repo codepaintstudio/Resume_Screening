@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSettings, updateSection } from '@/lib/settings-store';
+import { createApiKey } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   try {
     const { expiration } = await request.json();
     
-    let expiresAt = undefined;
+    let expiresAt: string | undefined = undefined;
     if (expiration && expiration !== 'never') {
       const days = parseInt(expiration);
       const date = new Date();
@@ -59,12 +59,10 @@ export async function POST(request: Request) {
       expiresAt
     };
 
-    const settings = getSettings();
-    const updatedKeys = [...settings.apiKeys, newKey];
-    updateSection('apiKeys', updatedKeys);
-
-    return NextResponse.json(newKey);
+    const created = await createApiKey(newKey);
+    return NextResponse.json(created);
   } catch (error) {
+    console.error('Error generating API key:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to generate API key' },
       { status: 500 }

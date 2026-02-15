@@ -61,10 +61,10 @@ export const getApiDocs = async () => {
               id: { type: 'string', example: '1' },
               email: { type: 'string', format: 'email', example: 'admin@mahui.com' },
               name: { type: 'string', example: 'Admin User' },
-              role: { 
-                type: 'string', 
+              role: {
+                type: 'string',
                 enum: ['admin', 'member', 'teacher', 'hr'],
-                example: 'admin' 
+                example: 'admin'
               },
               avatar: { type: 'string', example: 'https://example.com/avatar.jpg' },
               department: { type: 'string', example: '办公室' },
@@ -81,16 +81,16 @@ export const getApiDocs = async () => {
               class: { type: 'string', example: '2101班' },
               gpa: { type: 'string', example: '3.8/4.0' },
               graduationYear: { type: 'string', example: '2025' },
-              status: { 
-                type: 'string', 
+              status: {
+                type: 'string',
                 enum: ['pending', 'to_be_scheduled', 'pending_interview', 'interviewing', 'passed', 'rejected'],
-                example: 'pending' 
+                example: 'pending'
               },
               aiScore: { type: 'number', example: 85 },
-              tags: { 
-                type: 'array', 
+              tags: {
+                type: 'array',
                 items: { type: 'string' },
-                example: ['Java', 'React', '竞赛获奖'] 
+                example: ['Java', 'React', '竞赛获奖']
               },
               submissionDate: { type: 'string', format: 'date-time' },
             },
@@ -100,23 +100,23 @@ export const getApiDocs = async () => {
             properties: {
               id: { type: 'string', example: 'int_123' },
               name: { type: 'string', description: 'Candidate Name', example: '张三' },
-              interviewers: { 
-                type: 'array', 
+              interviewers: {
+                type: 'array',
                 items: { type: 'string' },
-                example: ['李面试官', '王面试官'] 
+                example: ['李面试官', '王面试官']
               },
               time: { type: 'string', example: '14:00' },
               date: { type: 'string', format: 'date', example: '2023-10-20' },
               location: { type: 'string', example: '会议室A' },
-              priority: { 
-                type: 'string', 
+              priority: {
+                type: 'string',
                 enum: ['low', 'medium', 'high'],
-                example: 'high' 
+                example: 'high'
               },
-              stage: { 
-                type: 'string', 
+              stage: {
+                type: 'string',
                 enum: ['pending', 'to_be_scheduled', 'pending_interview', 'interviewing', 'passed', 'rejected'],
-                example: 'interviewing' 
+                example: 'interviewing'
               },
             },
           },
@@ -124,10 +124,10 @@ export const getApiDocs = async () => {
             type: 'object',
             properties: {
               id: { type: 'string', example: 'notif_1' },
-              type: { 
-                type: 'string', 
+              type: {
+                type: 'string',
                 enum: ['interview', 'resume', 'system'],
-                example: 'interview' 
+                example: 'interview'
               },
               title: { type: 'string', example: '面试提醒' },
               description: { type: 'string', example: '您有一场即将开始的面试' },

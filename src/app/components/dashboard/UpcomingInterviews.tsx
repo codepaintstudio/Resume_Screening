@@ -18,12 +18,14 @@ export function UpcomingInterviews() {
     // Reuse existing resumes API and filter for interviewing candidates
     fetch('/api/resumes')
       .then(res => res.json())
-      .then((data: any[]) => {
+      .then((result: any) => {
+        // 处理分页格式的响应
+        const data = Array.isArray(result) ? result : (result.data || []);
         // Filter students who are in interviewing status
         const upcoming = data
-          .filter(s => s.status === 'interviewing')
+          .filter((s: any) => s.status === 'interviewing')
           .slice(0, 3)
-          .map(s => ({
+          .map((s: any) => ({
             student: s.name,
             time: '待定', // In a real app, this would be from a scheduled_at field
             dept: s.department,

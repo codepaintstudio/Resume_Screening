@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSettings, updateSection } from '@/lib/settings-store';
-import { useAppStore } from '@/store';
+import { getEmailConfig, createOrUpdateEmailConfig } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -13,6 +12,8 @@ import { useAppStore } from '@/store';
  *     responses:
  *       200:
  *         description: Email sending settings
+ *       500:
+ *         description: Server error
  *   put:
  *     tags:
  *       - Settings
@@ -36,26 +37,44 @@ import { useAppStore } from '@/store';
  *     responses:
  *       200:
  *         description: Updated email sending settings
+ *       500:
+ *         description: Server error
  */
 export async function GET() {
   try {
-    const settings = getSettings();
-    return NextResponse.json(settings.emailSending);
+    const config = await getEmailConfig();
+    if (!config) {
+      return NextResponse.json({
+        host: '',
+        port: '',
+        user: '',
+        pass: ''
+      });
+    }
+    return NextResponse.json({
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      pass: config.pass
+    });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
+    console.error('Error fetching email config:', error);
+    return NextResponse.json({ success: false, message: 'Failed to fetch email config' }, { status: 500 });
   }
 }
 
 export async function PUT(request: Request) {
   try {
     const data = await request.json();
-    
-    // In a real app, we would validate admin permissions here
-    // For this demo, we assume the middleware or client-side check is sufficient
-    
-    const updated = updateSection('emailSending', data);
-    return NextResponse.json(updated);
+    await createOrUpdateEmailConfig({
+      host: data.host || '',
+      port: data.port || '',
+      user: data.user || '',
+      pass: data.pass || ''
+    });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
+    console.error('Error updating email config:', error);
+    return NextResponse.json({ success: false, message: 'Failed to update email config' }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSettings, updateSection } from '@/lib/settings-store';
+import { getResumeImportSettings, createOrUpdateResumeImportSettings } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -22,7 +22,7 @@ import { getSettings, updateSection } from '@/lib/settings-store';
  *                   type: string
  *                 account:
  *                   type: string
- *                 password:
+ *                 authCode:
  *                   type: string
  *       500:
  *         description: 服务器内部错误
@@ -46,7 +46,7 @@ import { getSettings, updateSection } from '@/lib/settings-store';
  *                 type: string
  *               account:
  *                 type: string
- *               password:
+ *               authCode:
  *                 type: string
  *     responses:
  *       200:
@@ -63,16 +63,22 @@ import { getSettings, updateSection } from '@/lib/settings-store';
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
-  const settings = getSettings();
-  return NextResponse.json(settings.resumeImport);
+  try {
+    const settings = await getResumeImportSettings();
+    return NextResponse.json(settings);
+  } catch (error) {
+    console.error('Error fetching resume import settings:', error);
+    return NextResponse.json({ success: false, message: 'Failed to fetch resume import settings' }, { status: 500 });
+  }
 }
 
 export async function PUT(request: Request) {
   try {
     const data = await request.json();
-    updateSection('resumeImport', data);
+    await createOrUpdateResumeImportSettings(data);
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Error updating resume import settings:', error);
     return NextResponse.json({ success: false, message: 'Failed to update resume import settings' }, { status: 500 });
   }
 }
