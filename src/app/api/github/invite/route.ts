@@ -83,7 +83,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const { personalAccessToken, organization } = getSettings().github;
+    const settings = await getSettings();
+    const { personalAccessToken, organization } = settings.github;
 
     if (!personalAccessToken || !organization) {
       return NextResponse.json(

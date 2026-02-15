@@ -18,7 +18,8 @@ import { getMembers } from '@/lib/github-store';
  */
 export async function GET() {
   try {
-    const { personalAccessToken, organization } = getSettings().github;
+    const settings = await getSettings();
+    const { personalAccessToken, organization } = settings.github;
 
     // Check configuration only if we want to simulate the "Not Configured" state
     if (!personalAccessToken || !organization) {
