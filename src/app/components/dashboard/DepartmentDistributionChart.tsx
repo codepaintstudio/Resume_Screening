@@ -33,7 +33,13 @@ export function DepartmentDistributionChart() {
     fetch('/api/dashboard/distribution')
       .then(res => res.json())
       .then(data => {
-        setData(data);
+        // 确保 data 是数组
+        if (Array.isArray(data)) {
+          setData(data);
+        } else {
+          console.warn('API returned non-array data:', data);
+          setData([]);
+        }
         setLoading(false);
       })
       .catch(err => {
@@ -58,7 +64,9 @@ export function DepartmentDistributionChart() {
     );
   }
 
-  const total = data.reduce((acc, curr) => acc + curr.value, 0);
+  // 确保 data 是数组
+  const chartData = Array.isArray(data) ? data : [];
+  const total = chartData.reduce((acc, curr) => acc + (curr.value || 0), 0);
 
   return (
     <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -84,7 +92,7 @@ export function DepartmentDistributionChart() {
         </div>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
-        {data.map((item, idx) => (
+        {chartData.map((item, idx) => (
           <div key={idx} className="flex items-center gap-2 text-xs p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }}></div>
             <span className="text-slate-500 font-bold flex-1">{item.name}</span>

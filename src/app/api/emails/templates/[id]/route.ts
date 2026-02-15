@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { deleteTemplate, updateTemplate } from '@/data/email-mock';
+import { getEmailTemplateById, updateEmailTemplate, deleteEmailTemplate } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -15,7 +15,7 @@ import { deleteTemplate, updateTemplate } from '@/data/email-mock';
  *         name: id
  *         required: true
  *         schema:
- *           type: string
+ *           type: integer
  *         description: 模板 ID
  *     requestBody:
  *       required: true
@@ -57,7 +57,7 @@ import { deleteTemplate, updateTemplate } from '@/data/email-mock';
  *         name: id
  *         required: true
  *         schema:
- *           type: string
+ *           type: integer
  *         description: 模板 ID
  *     responses:
  *       200:
@@ -78,16 +78,31 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = (await params).id;
+    const id = parseInt((await params).id);
+    if (isNaN(id)) {
+      return NextResponse.json({ success: false, message: 'Invalid template ID' }, { status: 400 });
+    }
+
     const body = await request.json();
-    const updated = updateTemplate(id, body);
-    
-    if (updated) {
-      return NextResponse.json({ success: true, data: updated });
-    } else {
+    const { name, subject, content, category } = body;
+
+    // Check if template exists
+    const existing = await getEmailTemplateById(id);
+    if (!existing || existing.length === 0) {
       return NextResponse.json({ success: false, message: 'Template not found' }, { status: 404 });
     }
+
+    const updated = await updateEmailTemplate(id, {
+      ...(name && { name }),
+      ...(subject && { subject }),
+      ...(content && { content }),
+      ...(category && { category }),
+      updatedAt: new Date()
+    });
+
+    return NextResponse.json({ success: true, data: updated[0] });
   } catch (error) {
+    console.error('Failed to update template:', error);
     return NextResponse.json({ success: false, message: 'Failed to update template' }, { status: 500 });
   }
 }
@@ -96,7 +111,22 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = (await params).id;
-  deleteTemplate(id);
-  return NextResponse.json({ success: true });
+  try {
+    const id = parseInt((await params).id);
+    if (isNaN(id)) {
+      return NextResponse.json({ success: false, message: 'Invalid template ID' }, { status: 400 });
+    }
+
+    // Check if template exists
+    const existing = await getEmailTemplateById(id);
+    if (!existing || existing.length === 0) {
+      return NextResponse.json({ success: false, message: 'Template not found' }, { status: 404 });
+    }
+
+    await deleteEmailTemplate(id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete template:', error);
+    return NextResponse.json({ success: false, message: 'Failed to delete template' }, { status: 500 });
+  }
 }

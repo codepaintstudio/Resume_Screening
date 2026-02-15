@@ -38,7 +38,6 @@ import {
 } from "@/app/components/ui/popover";
 import { InterviewTask, Stage } from '@/types';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { AVAILABLE_INTERVIEWERS } from '@/config/constants';
 import { toast } from "sonner";
 
 interface InterviewDetailDrawerProps {
@@ -60,6 +59,19 @@ export function InterviewDetailDrawer({
   const [formData, setFormData] = useState<any>({});
   const [selectedInterviewers, setSelectedInterviewers] = useState<string[]>([]);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [availableInterviewers, setAvailableInterviewers] = useState<string[]>([]);
+
+  // Fetch interviewers from API
+  useEffect(() => {
+    fetch('/api/interviewers')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAvailableInterviewers(data);
+        }
+      })
+      .catch(err => console.error("Failed to fetch interviewers", err));
+  }, []);
 
   const toggleInterviewer = (interviewer: string) => {
     setSelectedInterviewers(prev => 

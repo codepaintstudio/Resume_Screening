@@ -82,12 +82,20 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
         } else {
           toast.error(data.message || '注册失败');
         }
-      } else {
-        // Mock forgot password
-        setTimeout(() => {
-            toast.success('重置连接已发送');
-            handleModeChange('login');
-        }, 800);
+      } else if (mode === 'forgot') {
+        const res = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          toast.success(data.message || '重置链接已发送到您的邮箱');
+          handleModeChange('login');
+        } else {
+          toast.error(data.message || '发送失败');
+        }
       }
     } catch (error) {
       toast.error('请求出错');
@@ -255,8 +263,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    onLogin();
-                    toast.success('GitHub 登录成功');
+                    window.location.href = '/api/auth/github';
                   }}
                   className="w-full py-3.5 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 active:scale-95"
                 >

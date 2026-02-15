@@ -12,9 +12,12 @@ import {
   Clock,
   RefreshCw,
   GitCommit,
-  Activity
+  Activity,
+  Settings,
+  AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 import { Button } from '@/app/components/ui/button';
 import {
   Dialog,
@@ -46,6 +49,7 @@ export default function GithubPage() {
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
   const [organization, setOrganization] = useState('');
+  const [configMissing, setConfigMissing] = useState(false);
   
   // Invite State
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
@@ -60,10 +64,30 @@ export default function GithubPage() {
     try {
       const res = await fetch('/api/github/members');
       const data = await res.json();
-      setMembers(data.members);
-      setOrganization(data.organization);
-    } catch (error) {
-      toast.error('获取成员列表失败');
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to fetch members');
+      }
+      
+      if (Array.isArray(data.members)) {
+        setMembers(data.members);
+      } else {
+        setMembers([]);
+      }
+      
+      if (data.organization) {
+        setOrganization(data.organization);
+      }
+      setConfigMissing(false);
+    } catch (error: any) {
+      console.error('Fetch members error:', error);
+      if (error.message?.includes('configuration missing') || error.message?.includes('GitHub configuration missing')) {
+        setConfigMissing(true);
+        // Don't toast here, the UI will show the state
+      } else {
+        toast.error('获取成员列表失败，请检查网络或设置');
+      }
+      setMembers([]);
     } finally {
       setLoading(false);
     }
@@ -314,8 +338,30 @@ export default function GithubPage() {
           ))}
           
           {members.length === 0 && (
-            <div className="p-12 text-center text-slate-400">
-              暂无成员，请点击右上角邀请成员。
+            <div className="p-12 text-center">
+              {configMissing ? (
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400">
+                    <AlertCircle className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">未配置 GitHub 集成</h3>
+                    <p className="text-slate-500 mt-2 max-w-sm mx-auto">
+                      请前往系统设置配置 GitHub Organization 和 Personal Access Token 以启用团队管理功能。
+                    </p>
+                  </div>
+                  <Link href="/settings?tab=github">
+                    <Button className="mt-2 font-bold">
+                      <Settings className="w-4 h-4 mr-2" />
+                      前往配置
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="text-slate-400">
+                  暂无成员，请点击右上角邀请成员。
+                </div>
+              )}
             </div>
           )}
         </div>

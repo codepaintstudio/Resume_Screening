@@ -15,7 +15,14 @@ import {
   Check,
   ChevronsUpDown,
   Loader2,
-  Lock
+  Users,
+  Github,
+  Inbox,
+  RefreshCw,
+  RefreshCcw,
+  AlertCircle,
+  Lock,
+  ChevronDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -57,6 +64,7 @@ import {
 import { Button } from "@/app/components/ui/button";
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { Switch } from "@/app/components/ui/switch";
+import { useSearchParams } from 'next/navigation';
 
 interface SettingsPageProps {
   role: 'admin' | 'teacher' | 'hr';
@@ -64,6 +72,15 @@ interface SettingsPageProps {
 
 export function SettingsPage({ role }: SettingsPageProps) {
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState('platform');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
   
   // State for settings
   const [platform, setPlatform] = useState({
@@ -84,9 +101,45 @@ export function SettingsPage({ role }: SettingsPageProps) {
     imapServer: '',
     port: '',
     account: '',
-    password: '',
+    authCode: '',
     ssl: true
   });
+
+  const [github, setGithub] = useState({
+    clientId: '',
+    clientSecret: '',
+    organization: '',
+    personalAccessToken: ''
+  });
+
+  const [emailSending, setEmailSending] = useState({
+    host: '',
+    port: '',
+    user: '',
+    pass: ''
+  });
+
+  // IMAP 收件箱配置
+  const [imapConfig, setImapConfig] = useState({
+    host: 'imap.qq.com',
+    port: '993',
+    user: '',
+    pass: ''
+  });
+
+  // 收件箱预览状态
+  const [inboxLoading, setInboxLoading] = useState(false);
+  const [inboxMails, setInboxMails] = useState<{
+    uid: number;
+    subject: string;
+    from: string;
+    fromName: string;
+    date: string | null;
+    body?: string;
+    hasBody?: boolean;
+  }[]>([]);
+  const [inboxError, setInboxError] = useState('');
+  const [expandedMailUid, setExpandedMailUid] = useState<number | null>(null);
 
   const [apiKeys, setApiKeys] = useState<{id: string, name: string, key: string, created: string, expiresAt?: string}[]>([]);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
@@ -98,28 +151,48 @@ export function SettingsPage({ role }: SettingsPageProps) {
   const [apiKeyExpiration, setApiKeyExpiration] = useState('never');
   
   useEffect(() => {
-    if (role === 'admin') {
-      fetchSettings();
-    } else {
-      setLoading(false);
-    }
+    fetchSettings();
   }, [role]);
 
   const fetchSettings = async () => {
     try {
-      const [pl, a, n, r, k] = await Promise.all([
+      const [pl, a, n, r, k, g, e] = await Promise.all([
         fetch('/api/settings/platform').then(res => res.json()),
         fetch('/api/settings/ai').then(res => res.json()),
         fetch('/api/settings/notifications').then(res => res.json()),
         fetch('/api/settings/resume-import').then(res => res.json()),
-        fetch('/api/settings/keys').then(res => res.json())
+        fetch('/api/settings/keys').then(res => res.json()),
+      
+        fetch('/api/settings/email-sending').then(res => res.json()),
+        fetch('/api/settings/github').then(res => res.json()),
       ]);
       
       setPlatform(pl || { departments: [] });
       setAi(a || { vision: {}, llm: {} });
       setNotifications(n || { triggers: {} });
       setResumeImport(r || {});
+      
+      // 同时加载到 imapConfig（收信箱使用）
+      if (r) {
+        setImapConfig({
+          host: r.imapServer || 'imap.qq.com',
+          port: r.port || '993',
+          user: r.account || '',
+          pass: '' // 不加载授权码
+        });
+      }
+      
       setApiKeys(k || []);
+      setGithub(g || { clientId: '', clientSecret: '', organization: '', personalAccessToken: '' });
+      // 调试日志
+      console.log('Email-sending API 返回:', e);
+      // SMTP 配置：加载所有保存的配置
+      setEmailSending({
+        host: g?.host || '',
+        port: g?.port || '',
+        user: g?.user || '',
+        pass: g?.pass || '' 
+      });
       
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -130,19 +203,126 @@ export function SettingsPage({ role }: SettingsPageProps) {
   };
 
   const handleSave = async () => {
-    const promises = [
-        fetch('/api/settings/platform', { method: 'PUT', body: JSON.stringify(platform) }),
-        fetch('/api/settings/ai', { method: 'PUT', body: JSON.stringify(ai) }),
-        fetch('/api/settings/notifications', { method: 'PUT', body: JSON.stringify(notifications) }),
-        fetch('/api/settings/resume-import', { method: 'PUT', body: JSON.stringify(resumeImport) }),
-        fetch('/api/settings/keys', { method: 'PUT', body: JSON.stringify(apiKeys) })
-    ];
+    // 直接使用前端输入的简历导入配置
+    const updatedResumeImport = {
+      ...resumeImport,
+      imapServer: resumeImport.imapServer,
+      port: resumeImport.port,
+      account: resumeImport.account,
+      authCode: resumeImport.authCode
+    };
 
-    toast.promise(Promise.all(promises), {
-      loading: '正在保存配置...',
-      success: '系统配置已更新',
-      error: '保存失败'
-    });
+    // 创建一个检查响应状态的函数
+    const checkResponse = async (response: Response, endpoint: string) => {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `保存 ${endpoint} 失败`);
+      }
+      return response.json();
+    };
+
+    // 依次保存各项配置
+    try {
+      toast.promise(async () => {
+        await checkResponse(await fetch('/api/settings/platform', { method: 'PUT', body: JSON.stringify(platform) }), '平台设置');
+        await checkResponse(await fetch('/api/settings/ai', { method: 'PUT', body: JSON.stringify(ai) }), 'AI设置');
+        await checkResponse(await fetch('/api/settings/notifications', { method: 'PUT', body: JSON.stringify(notifications) }), '通知设置');
+        await checkResponse(await fetch('/api/settings/resume-import', { method: 'PUT', body: JSON.stringify(updatedResumeImport) }), '简历导入设置');
+        await checkResponse(await fetch('/api/settings/keys', { method: 'PUT', body: JSON.stringify(apiKeys) }), 'API密钥');
+
+        await checkResponse(await fetch('/api/settings/email-sending', { 
+          method: 'PUT', 
+          body: JSON.stringify({
+            host: emailSending.host,
+            port: emailSending.port,
+            user: emailSending.user,
+            pass: emailSending.pass
+          }) 
+        }), '邮件发送设置');
+        await checkResponse(await fetch('/api/settings/github', { method: 'PUT', body: JSON.stringify(github) }), 'GitHub设置');
+      }, {
+        loading: '正在保存配置...',
+        success: '系统配置已更新',
+        error: '保存失败'
+      });
+    } catch (error) {
+      console.error('保存配置失败:', error);
+    }
+  };
+
+  // 获取收件箱
+  const fetchInbox = async () => {
+    if (!imapConfig.host || !imapConfig.user) {
+      setInboxError('请先填写 IMAP 服务器和账号');
+      return;
+    }
+
+    // 从 resumeImport 获取授权码（如果 imapConfig.pass 为空）
+    const pass = imapConfig.pass || resumeImport.authCode;
+    if (!pass) {
+      setInboxError('请先在"邮箱自动导入"中配置授权码');
+      return;
+    }
+
+    setInboxLoading(true);
+    setInboxError('');
+    setInboxMails([]);
+
+    try {
+      const res = await fetch('/api/get-inbox', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: imapConfig.host,
+          port: imapConfig.port || 993,
+          user: imapConfig.user,
+          pass: imapConfig.pass,
+          limit: 10,
+          saveToDb: true
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setInboxMails(data.mails || []);
+        toast.success(`成功获取 ${data.mails?.length || 0} 封邮件，已保存 ${data.saved || 0} 封到数据库`);
+      } else {
+        setInboxError(data.message || '获取收件箱失败');
+      }
+    } catch (err) {
+      setInboxError('连接邮箱服务器失败');
+      console.error('Inbox error:', err);
+    } finally {
+      setInboxLoading(false);
+    }
+  };
+
+  // 从数据库读取已保存的邮件
+  const loadSavedMails = async () => {
+    setInboxLoading(true);
+    setInboxError('');
+
+    try {
+      const res = await fetch('/api/get-inbox', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setInboxMails(data.mails || []);
+        toast.success(`已加载 ${data.mails?.length || 0} 封已保存的邮件`);
+      } else {
+        setInboxError(data.message || '加载邮件历史失败');
+      }
+    } catch (err) {
+      setInboxError('加载邮件历史失败');
+      console.error('Load saved mails error:', err);
+    } finally {
+      setInboxLoading(false);
+    }
   };
 
   const generateApiKey = async () => {
@@ -235,20 +415,6 @@ export function SettingsPage({ role }: SettingsPageProps) {
       });
   };
 
-  if (role !== 'admin') {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4">
-        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400">
-          <Lock className="w-8 h-8" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">访问受限</h2>
-          <p className="text-slate-500 mt-2">只有系统管理员可以访问此页面。</p>
-        </div>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
@@ -288,7 +454,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
         </Button>
       </div>
 
-      <Tabs defaultValue="platform" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full justify-start h-auto p-1 bg-slate-100/50 dark:bg-slate-800/50 rounded-xl mb-6 overflow-x-auto no-scrollbar">
           <TabsTrigger value="platform" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm font-bold text-slate-500">
             <Layout className="w-4 h-4 mr-2" />
@@ -305,6 +471,14 @@ export function SettingsPage({ role }: SettingsPageProps) {
           <TabsTrigger value="resume-import" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm font-bold text-slate-500">
             <Mail className="w-4 h-4 mr-2" />
             简历获取
+          </TabsTrigger>
+          <TabsTrigger value="github" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm font-bold text-slate-500">
+            <Github className="w-4 h-4 mr-2" />
+            GitHub
+          </TabsTrigger>
+          <TabsTrigger value="email-sending" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm font-bold text-slate-500">
+            <Mail className="w-4 h-4 mr-2" />
+            发信设置
           </TabsTrigger>
           <TabsTrigger value="keys" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm font-bold text-slate-500">
             <Key className="w-4 h-4 mr-2" />
@@ -368,6 +542,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                     <button 
                       onClick={() => handleRemoveDepartment(dept)}
                       className="p-1.5 hover:bg-rose-100 dark:hover:bg-rose-900/30 rounded-lg text-rose-500 transition-colors"
+                      aria-label={`删除部门 ${dept}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -486,7 +661,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                          </div>
                       </div>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
                       <Command>
                         <CommandList>
                            {availableModels.length === 0 && <CommandEmpty>No models found.</CommandEmpty>}
@@ -603,34 +778,188 @@ export function SettingsPage({ role }: SettingsPageProps) {
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Account</label>
                 <input 
-                  type="email" 
+                  type="text" 
                   value={resumeImport.account || ''}
                   onChange={(e) => setResumeImport({...resumeImport, account: e.target.value})}
-                  placeholder="hr@company.com" 
+                  placeholder="your-email@example.com" 
                   className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Password / App Token</label>
-                <input 
-                  type="password" 
-                  value={resumeImport.password || ''}
-                  onChange={(e) => setResumeImport({...resumeImport, password: e.target.value})}
-                  placeholder="••••••••" 
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Authorization Code</label>
+                <div className="relative">
+                  <input 
+                    type="password" 
+                    value={resumeImport.authCode || ''}
+                    onChange={(e) => setResumeImport({...resumeImport, authCode: e.target.value})}
+                    placeholder="请输入授权码" 
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                  />
+                  <Lock className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
+                </div>
+                <p className="text-xs text-slate-500">
+                  提示：QQ邮箱需要使用授权码登录，而非QQ密码。获取方式：邮箱设置 → 账户 → 开启 IMAP/SMTP服务 → 生成授权码
+                </p>
+              </div>
+              <div className="flex items-center space-x-2 md:col-span-2">
+                <Switch 
+                  id="ssl-mode" 
+                  checked={resumeImport.ssl !== false}
+                  onCheckedChange={(checked) => setResumeImport({...resumeImport, ssl: checked})}
                 />
+                <label htmlFor="ssl-mode" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  启用 SSL 安全连接
+                </label>
               </div>
             </div>
-            
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-              <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-slate-400" />
-                <span className="text-sm font-bold text-slate-600 dark:text-slate-300">启用 SSL/TLS 安全连接</span>
+          </TabsContent>
+
+          <TabsContent value="github" className="mt-0 space-y-8">
+            <div className="flex items-center gap-4 pb-6 border-b border-slate-50 dark:border-slate-800">
+              <div className="w-12 h-12 bg-slate-900 dark:bg-white/10 rounded-xl flex items-center justify-center text-white dark:text-white">
+                <Github className="w-6 h-6" />
               </div>
-              <Switch 
-                checked={resumeImport.ssl !== false}
-                onCheckedChange={(checked) => setResumeImport({...resumeImport, ssl: checked})}
-              />
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">GitHub 集成</h3>
+                <p className="text-sm text-slate-500">配置 GitHub OAuth 登录和组织成员管理功能</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-100 dark:border-slate-700">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-slate-500" />
+                  OAuth 应用配置
+                </h4>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Client ID</label>
+                    <input 
+                      type="text" 
+                      value={github.clientId || ''}
+                      onChange={(e) => setGithub({...github, clientId: e.target.value})}
+                      placeholder="Iv1..." 
+                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Client Secret</label>
+                    <div className="relative">
+                      <input 
+                        type="password" 
+                        value={github.clientSecret || ''}
+                        onChange={(e) => setGithub({...github, clientSecret: e.target.value})}
+                        placeholder="••••••••" 
+                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-100 dark:border-slate-700">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+                  <Layout className="w-4 h-4 text-slate-500" />
+                  组织管理配置
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Organization Name</label>
+                    <input 
+                      type="text" 
+                      value={github.organization || ''}
+                      onChange={(e) => setGithub({...github, organization: e.target.value})}
+                      placeholder="mahui-studio" 
+                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Personal Access Token</label>
+                    <div className="relative">
+                      <input 
+                        type="password" 
+                        value={github.personalAccessToken || ''}
+                        onChange={(e) => setGithub({...github, personalAccessToken: e.target.value})}
+                        placeholder="ghp_..." 
+                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="email-sending" className="mt-0 space-y-8">
+            <div className="flex items-center gap-4 pb-6 border-b border-slate-50 dark:border-slate-800">
+              <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-500">
+                <Mail className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">邮件配置</h3>
+                <p className="text-sm text-slate-500">配置邮件发送服务器，用于发送通知和面试邀请</p>
+              </div>
+            </div>
+
+            <div className="max-w-2xl">
+              {/* SMTP 发信配置 */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                  <div className="w-8 h-8 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center justify-center text-green-600">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">SMTP 发信配置</h4>
+                    <p className="text-xs text-slate-500">用于发送通知和面试邀请</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">SMTP 服务器</label>
+                    <input 
+                      type="text" 
+                      value={emailSending.host}
+                      onChange={(e) => setEmailSending({...emailSending, host: e.target.value})}
+                      placeholder="smtp.example.com" 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">发信账号</label>
+                    <input 
+                      type="text" 
+                      value={emailSending.user}
+                      onChange={(e) => setEmailSending({...emailSending, user: e.target.value})}
+                      placeholder="hr@example.com" 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">SMTP 端口</label>
+                    <input 
+                      type="text" 
+                      value={emailSending.port}
+                      onChange={(e) => { console.log('port 输入:', e.target.value); setEmailSending({...emailSending, port: e.target.value})}}
+                      placeholder="465" 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">授权码</label>
+                    <input 
+                      type="password" 
+                      value={emailSending.pass}
+                      onChange={(e) => setEmailSending({...emailSending, pass: e.target.value})}
+                      placeholder="请输入授权码" 
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    />
+                    <p className="text-xs text-slate-500">
+                      提示：QQ邮箱需要使用授权码登录，而非QQ密码。获取方式：邮箱设置 → 账户 → 开启 POP3/SMTP服务 → 生成授权码
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
@@ -709,6 +1038,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                         </code>
                         <button 
                           className="text-slate-400 hover:text-blue-500 transition-colors p-1"
+                          aria-label="复制 API 密钥"
                           onClick={() => {
                             navigator.clipboard.writeText(key.key);
                             toast.success('已复制到剪贴板');

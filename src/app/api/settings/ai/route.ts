@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSettings, updateSection } from '@/lib/settings-store';
+import { getAiSettings, createOrUpdateAiSettings } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -69,16 +69,22 @@ import { getSettings, updateSection } from '@/lib/settings-store';
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
-  const settings = getSettings();
-  return NextResponse.json(settings.ai);
+  try {
+    const settings = await getAiSettings();
+    return NextResponse.json(settings);
+  } catch (error) {
+    console.error('Error fetching AI settings:', error);
+    return NextResponse.json({ success: false, message: 'Failed to fetch AI settings' }, { status: 500 });
+  }
 }
 
 export async function PUT(request: Request) {
   try {
     const data = await request.json();
-    updateSection('ai', data);
+    await createOrUpdateAiSettings(data);
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Error updating AI settings:', error);
     return NextResponse.json({ success: false, message: 'Failed to update AI settings' }, { status: 500 });
   }
 }

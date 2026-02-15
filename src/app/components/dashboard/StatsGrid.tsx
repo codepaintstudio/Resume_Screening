@@ -31,7 +31,7 @@ export function StatsGrid() {
 
   useEffect(() => {
     const loadStats = () => {
-      fetch('/api/stats')
+      fetch('/api/dashboard/stats')
         .then(res => res.json())
         .then(data => {
           setStats(data);

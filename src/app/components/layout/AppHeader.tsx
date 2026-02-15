@@ -1,5 +1,4 @@
 import { 
-  Search, 
   Bell, 
   Sun,
   Moon,
@@ -7,6 +6,7 @@ import {
   LogOut,
   User,
   Settings,
+  ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -22,44 +22,59 @@ import {
   Sheet,
   SheetContent,
   SheetTrigger,
+  SheetTitle,
+  SheetDescription,
 } from "@/app/components/ui/sheet";
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { navItems } from '@/config/nav';
 import { NotificationsPopover } from '../AppHeader/NotificationsPopover';
-import { MemberResume } from '../AppHeader/MemberResume';
 import { PersonalCenterModal } from '../PersonalCenterModal';
+import { GlobalSearch } from './GlobalSearch';
 import { useTheme } from 'next-themes';
 import React, { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
+import { motion, AnimatePresence } from 'motion/react';
 
 import { useAppStore } from '@/store';
+
+// 默认头像
+const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100";
 
 export function AppHeader() {
   const { theme, setTheme } = useTheme();
   const { currentUser, userRole, setIsLoggedIn } = useAppStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showResume, setShowResume] = useState(false);
   const [showPersonalCenter, setShowPersonalCenter] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const pathname = usePathname();
+
+  // Handle auto-expansion of active items with sub-items
+  useEffect(() => {
+    navItems.forEach(item => {
+      if ('subItems' in item && item.subItems) {
+        if (pathname.startsWith(`/${item.id}`) && !expandedItems.includes(item.id)) {
+          setExpandedItems(prev => [...prev, item.id]);
+        }
+      }
+    });
+  }, [pathname]);
+
+  const toggleExpand = (id: string) => {
+    setExpandedItems(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
 
   // Safe user display
   const displayName = currentUser?.name || '主理人';
   const displayRole = currentUser?.role || userRole || 'Admin';
-  const displayAvatar = currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100";
+  const displayAvatar = currentUser?.avatar || DEFAULT_AVATAR;
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.nativeEvent.isComposing) return;
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      e.preventDefault();
-      setShowResume(true);
-    }
-  };
 
   const toggleTheme = (event: React.MouseEvent) => {
     const isDark = theme === 'dark';
@@ -163,9 +178,21 @@ export function AppHeader() {
   const currentPath = pathname?.split('/')[1] || 'dashboard';
   const currentLabel = navItems.find(item => item.id === currentPath)?.label || '工作台';
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      // 调用退出登录 API 清除服务端 Cookie
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error('Logout API error:', error);
+    } finally {
+      // 清除本地状态
+      setIsLoggedIn(false);
+      // 清除 localStorage 中的 token
+      localStorage.removeItem('auth_token');
+      router.push('/login');
+    }
   };
 
   return (
@@ -178,10 +205,13 @@ export function AppHeader() {
             </button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[240px] p-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <SheetTitle className="sr-only">导航菜单</SheetTitle>
+            <SheetDescription className="sr-only">移动端导航菜单</SheetDescription>
             <div className="flex items-center h-16 px-6 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3 whitespace-nowrap">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-lg">M</span>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <img src="/logo.png" alt="Logo" className="w-full h-full object-cover dark:hidden" />
+                  <img src="/logo-dark.png" alt="Logo" className="w-full h-full object-cover hidden dark:block" />
                 </div>
                 <span className="font-bold text-lg tracking-tight">码绘工作室</span>
               </div>
@@ -190,6 +220,59 @@ export function AppHeader() {
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname.startsWith(`/${item.id}`);
+                const hasSubItems = 'subItems' in item && (item as any).subItems;
+                const isExpanded = expandedItems.includes(item.id);
+
+                if (hasSubItems) {
+                  return (
+                    <div key={item.id} className="space-y-1">
+                      <button
+                        onClick={() => toggleExpand(item.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative group",
+                          isActive 
+                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold' 
+                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+                        )}
+                      >
+                        <Icon className={cn("w-5 h-5 flex-shrink-0", isActive ? 'scale-110' : '')} />
+                        <span className="whitespace-nowrap flex-1 text-left">{item.label}</span>
+                        <ChevronDown className={cn("w-4 h-4 transition-transform", isExpanded ? "rotate-180" : "")} />
+                      </button>
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pl-11 pr-2 space-y-1 pb-1">
+                              {(item as any).subItems.map((sub: any) => {
+                                 const isSubActive = pathname === '/emails' && searchParams.get('tab') === sub.id;
+                                 return (
+                                  <Link
+                                    key={sub.id}
+                                    href={sub.href}
+                                    className={cn(
+                                      "block w-full text-sm py-2 px-3 rounded-lg transition-colors",
+                                      isSubActive
+                                        ? "text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 font-medium"
+                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                    )}
+                                  >
+                                    {sub.label}
+                                  </Link>
+                                 );
+                              })}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                }
+
                 return (
                   <Link
                     key={item.id}
@@ -215,26 +298,9 @@ export function AppHeader() {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden md:flex relative mr-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="搜索成员、简历..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={handleSearchKeyDown}
-            className={cn(
-              "pl-10 pr-4 py-1.5 bg-slate-50 dark:bg-slate-800 border-none rounded-full text-sm transition-all outline-none focus:ring-2 focus:ring-blue-500/20",
-              searchQuery ? "w-64" : "w-48 focus:w-64"
-            )}
-          />
+        <div className="hidden md:block mr-2">
+          <GlobalSearch />
         </div>
-
-        <MemberResume 
-          url="mock-resume" 
-          open={showResume} 
-          onOpenChange={setShowResume} 
-        />
         
         <button 
           onClick={toggleTheme}
@@ -269,12 +335,10 @@ export function AppHeader() {
               <User className="mr-2 h-4 w-4" />
               <span>个人中心</span>
             </DropdownMenuItem>
-            {(currentUser?.role === 'admin' || userRole === 'admin') && (
-              <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/settings')}>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>系统设置</span>
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/settings')}>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>系统设置</span>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/10" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />

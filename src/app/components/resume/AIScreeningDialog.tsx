@@ -52,9 +52,20 @@ export function AIScreeningDialog({
   setPromptConfig,
   onStartScreening
 }: AIScreeningDialogProps) {
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800">
+      <DialogContent className="w-[95vw] sm:max-w-[425px] bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 rounded-2xl md:rounded-3xl">
         <DialogHeader>
           <DialogTitle className="font-black tracking-tight">AI 批量筛选</DialogTitle>
           <DialogDescription>
@@ -63,7 +74,7 @@ export function AIScreeningDialog({
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="date-range" className="text-xs font-black uppercase tracking-widest text-slate-500">
+            <Label htmlFor="date-range" className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500">
               投递时间范围
             </Label>
             <div className={cn("grid gap-2")}>
@@ -73,7 +84,7 @@ export function AIScreeningDialog({
                     id="date"
                     variant={"outline"}
                     className={cn(
-                      "w-full justify-start text-left font-normal bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800",
+                      "w-full justify-start text-left font-bold text-xs md:text-sm bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl",
                       !dateRange && "text-muted-foreground"
                     )}
                   >
@@ -92,14 +103,14 @@ export function AIScreeningDialog({
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0 z-[1002]" align="start">
                   <Calendar
                     initialFocus
                     mode="range"
                     defaultMonth={dateRange?.from}
                     selected={dateRange}
                     onSelect={(range: any) => setDateRange(range || { from: undefined, to: undefined })}
-                    numberOfMonths={2}
+                    numberOfMonths={isMobile ? 1 : 2}
                     locale={zhCN}
                   />
                 </PopoverContent>
@@ -108,14 +119,14 @@ export function AIScreeningDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="dept-scope" className="text-xs font-black uppercase tracking-widest text-slate-500">
+            <Label htmlFor="dept-scope" className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500">
               部门范围
             </Label>
             <Select value={screeningDept} onValueChange={setScreeningDept}>
-              <SelectTrigger id="dept-scope" className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+              <SelectTrigger id="dept-scope" className="w-full bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-bold text-xs md:text-sm">
                 <SelectValue placeholder="选择部门" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[1002]">
                 <SelectItem value="all">所有部门</SelectItem>
                 {DEPARTMENTS.slice(1).map((dept) => (
                   <SelectItem key={dept} value={dept}>
@@ -127,21 +138,21 @@ export function AIScreeningDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="prompt-config" className="text-xs font-black uppercase tracking-widest text-slate-500">
+            <Label htmlFor="prompt-config" className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500">
               提示词配置 (可选)
             </Label>
             <Textarea
               id="prompt-config"
               placeholder="例如：重点关注有 React 开发经验的候选人..."
-              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 h-24 resize-none"
+              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 h-24 resize-none rounded-xl text-xs md:text-sm"
               value={promptConfig}
               onChange={(e) => setPromptConfig(e.target.value)}
             />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="font-bold">取消</Button>
-          <Button onClick={onStartScreening} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">开始筛选</Button>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="font-bold rounded-xl flex-1 sm:flex-none">取消</Button>
+          <Button onClick={onStartScreening} className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex-1 sm:flex-none">开始筛选</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

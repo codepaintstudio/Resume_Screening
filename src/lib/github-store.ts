@@ -1,5 +1,8 @@
 
-export interface GitHubMember {
+// GitHub Members store - 使用内存存储
+// 成员数据从 GitHub API 获取，不需要持久化
+
+export interface Member {
   id: string;
   username: string;
   avatar: string;
@@ -12,62 +15,29 @@ export interface GitHubMember {
   };
 }
 
-interface GitHubState {
-  organization: string;
-  members: GitHubMember[];
-}
+// 内存中的成员列表
+let members: Member[] = [];
 
-let githubState: GitHubState = {
-  organization: 'mahui-studio',
-  members: [
-    {
-      id: '1',
-      username: 'shadcn',
-      avatar: 'https://github.com/shadcn.png',
-      role: 'owner',
-      joinedAt: '2024-01-01',
-      status: 'active',
-      contributions: {
-        commits: 128,
-        lastActive: '2h ago'
-      }
-    },
-    {
-      id: '2',
-      username: 'vercel',
-      avatar: 'https://github.com/vercel.png',
-      role: 'member',
-      joinedAt: '2024-01-15',
-      status: 'active',
-      contributions: {
-        commits: 856,
-        lastActive: '5m ago'
-      }
-    }
-  ]
+export const getMembers = (): Member[] => {
+  return [...members];
 };
 
-export function getGitHubState() {
-  return githubState;
-}
+export const setMembers = (newMembers: Member[]): void => {
+  members = newMembers;
+};
 
-export function addMember(username: string) {
-  const newMember: GitHubMember = {
-    id: Date.now().toString(),
-    username,
-    avatar: `https://github.com/${username}.png`,
-    role: 'member',
-    joinedAt: new Date().toISOString().split('T')[0],
-    status: 'invited',
-    contributions: {
-      commits: 0,
-      lastActive: 'Never'
-    }
-  };
-  githubState.members = [...githubState.members, newMember];
-  return newMember;
-}
+export const addMembers = (newMembers: Member[]): Member[] => {
+  // 根据 username 去重
+  const existingUsernames = new Set(members.map(m => m.username.toLowerCase()));
+  const uniqueNewMembers = newMembers.filter(m => !existingUsernames.has(m.username.toLowerCase()));
+  
+  if (uniqueNewMembers.length > 0) {
+    members = [...members, ...uniqueNewMembers];
+  }
+  
+  return uniqueNewMembers;
+};
 
-export function removeMember(id: string) {
-  githubState.members = githubState.members.filter(m => m.id !== id);
-}
+export const clearMembers = (): void => {
+  members = [];
+};

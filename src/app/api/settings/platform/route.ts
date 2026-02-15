@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSettings, updateSection } from '@/lib/settings-store';
+import { getPlatformSettings, createOrUpdatePlatformSettings } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -55,16 +55,22 @@ import { getSettings, updateSection } from '@/lib/settings-store';
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
-  const settings = getSettings();
-  return NextResponse.json(settings.platform);
+  try {
+    const settings = await getPlatformSettings();
+    return NextResponse.json(settings);
+  } catch (error) {
+    console.error('Error fetching platform settings:', error);
+    return NextResponse.json({ success: false, message: 'Failed to fetch platform settings' }, { status: 500 });
+  }
 }
 
 export async function PUT(request: Request) {
   try {
     const data = await request.json();
-    updateSection('platform', data);
+    await createOrUpdatePlatformSettings(data);
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Error updating platform settings:', error);
     return NextResponse.json({ success: false, message: 'Failed to update platform settings' }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSettings, updateSection } from '@/lib/settings-store';
+import { getApiKeys, replaceApiKeys } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -71,16 +71,22 @@ import { getSettings, updateSection } from '@/lib/settings-store';
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
-  const settings = getSettings();
-  return NextResponse.json(settings.apiKeys);
+  try {
+    const keys = await getApiKeys();
+    return NextResponse.json(keys);
+  } catch (error) {
+    console.error('Error fetching API keys:', error);
+    return NextResponse.json({ success: false, message: 'Failed to fetch API keys' }, { status: 500 });
+  }
 }
 
 export async function PUT(request: Request) {
   try {
     const data = await request.json();
-    updateSection('apiKeys', data);
+    await replaceApiKeys(data);
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Error updating API keys:', error);
     return NextResponse.json({ success: false, message: 'Failed to update API keys' }, { status: 500 });
   }
 }

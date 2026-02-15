@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authenticateUser } from '@/data/user-mock';
+import { getUserByEmail } from '@/lib/db/queries';
+import { verifyPassword, generateToken, setAuthCookie } from '@/lib/auth';
 
 /**
  * @swagger
@@ -44,8 +45,7 @@ import { authenticateUser } from '@/data/user-mock';
  *                   $ref: '#/components/schemas/User'
  *                 token:
  *                   type: string
- *                   description: Mock JWT token
- *                   example: 'mock-jwt-token-1'
+ *                   description: JWT token
  *       400:
  *         description: 请求参数错误
  *         content:
@@ -77,22 +77,54 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = authenticateUser(email, password);
-
-    if (user) {
-      // In a real app, we would set a session cookie here
-      return NextResponse.json({
-        success: true,
-        user,
-        token: 'mock-jwt-token-' + user.id // Mock token
-      });
-    } else {
+    // 从数据库查询用户
+    const users = await getUserByEmail(email);
+    
+    if (!users || users.length === 0) {
       return NextResponse.json(
         { success: false, message: '邮箱或密码错误' },
         { status: 401 }
       );
     }
+
+    const user = users[0];
+
+    // 验证密码
+    const isValidPassword = await verifyPassword(password, user.password);
+
+    if (!isValidPassword) {
+      return NextResponse.json(
+        { success: false, message: '邮箱或密码错误' },
+        { status: 401 }
+      );
+    }
+
+    // 生成 JWT Token
+    const token = await generateToken({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
+
+    // 设置认证 Cookie
+    await setAuthCookie(token);
+
+    // 返回用户信息（不包含密码）和 token
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        avatar: user.avatar,
+        department: user.department,
+      },
+      token,
+    });
   } catch (error) {
+    console.error('Login error:', error);
     return NextResponse.json(
       { success: false, message: '登录服务异常' },
       { status: 500 }

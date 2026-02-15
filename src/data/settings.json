@@ -1,0 +1,63 @@
+{
+  "personal": {
+    "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+    "displayName": "张老师",
+    "email": "admin@mahui.com",
+    "department": "技术部"
+  },
+  "platform": {
+    "departments": [
+      "前端部",
+      "UI部",
+      "办公室",
+      "运维"
+    ]
+  },
+  "ai": {
+    "vision": {
+      "endpoint": "",
+      "model": "vision-vk-v2",
+      "apiKey": ""
+    },
+    "llm": {
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKey": "",
+      "model": ""
+    }
+  },
+  "notifications": {
+    "webhookUrl": "",
+    "triggers": {
+      "new_resume": true,
+      "interview_reminder": true,
+      "offer_confirmed": true
+    }
+  },
+  "resumeImport": {
+    "imapServer": "imap.exmail.qq.com",
+    "port": "993",
+    "account": "",
+    "password": "",
+    "ssl": true
+  },
+  "github": {
+    "clientId": "",
+    "clientSecret": "",
+    "organization": "mahui-studio",
+    "personalAccessToken": ""
+  },
+  "emailSending": {
+    "host": "smtp.example.com",
+    "port": "465",
+    "user": "hr@example.com",
+    "pass": ""
+  },
+  "apiKeys": [
+    {
+      "id": "1",
+      "name": "HR Portal Integration",
+      "key": "sk_live_51M...",
+      "created": "2024-02-15"
+    }
+  ]
+}
