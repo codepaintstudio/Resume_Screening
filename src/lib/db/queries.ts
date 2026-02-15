@@ -1,5 +1,5 @@
 import { db, schema } from './index';
-import { eq, and, sql, count, gt, lt, gte, or, asc, like, isNotNull } from 'drizzle-orm';
+import { eq, and, sql, count, gt, lt, gte, or, asc, like, isNotNull, desc, isNull } from 'drizzle-orm';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 
 // 辅助函数：获取最后插入的 ID
@@ -712,5 +712,113 @@ export async function getDepartments() {
     console.error('Error fetching departments:', error);
     // 返回默认部门列表而不是抛出错误
     return ['前端部', 'UI部', '运维', '办公室', '后端部', '产品部', '设计部', '测试部'];
+  }
+}
+
+// ==================== Notifications 通知 ====================
+
+/**
+ * 获取通知列表
+ */
+export async function getNotifications(userId?: number, limit = 20) {
+  try {
+    let query = db.select().from(schema.notifications);
+    
+    if (userId !== undefined) {
+      // 获取指定用户或全局通知（userId 为 null）
+      return await query
+        .where(or(eq(schema.notifications.userId, userId), isNull(schema.notifications.userId)))
+        .orderBy(desc(schema.notifications.timestamp))
+        .limit(limit);
+    }
+    
+    // 获取所有通知
+    return await query
+      .orderBy(desc(schema.notifications.timestamp))
+      .limit(limit);
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    return [];
+  }
+}
+
+/**
+ * 获取未读通知数量
+ */
+export async function getUnreadNotificationCount(userId?: number) {
+  try {
+    if (userId !== undefined) {
+      const result = await db.select({ count: count() })
+        .from(schema.notifications)
+        .where(
+          and(
+            eq(schema.notifications.unread, '1'),
+            or(eq(schema.notifications.userId, userId), isNull(schema.notifications.userId))
+          )
+        );
+      return result[0]?.count || 0;
+    } else {
+      const result = await db.select({ count: count() })
+        .from(schema.notifications)
+        .where(eq(schema.notifications.unread, '1'));
+      return result[0]?.count || 0;
+    }
+  } catch (error) {
+    console.error('Error fetching unread notification count:', error);
+    return 0;
+  }
+}
+
+/**
+ * 标记通知为已读
+ */
+export async function markNotificationAsRead(id: number) {
+  try {
+    await db.update(schema.notifications)
+      .set({ unread: '0' })
+      .where(eq(schema.notifications.id, id));
+    return true;
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    return false;
+  }
+}
+
+/**
+ * 标记所有通知为已读
+ */
+export async function markAllNotificationsAsRead(userId?: number) {
+  try {
+    if (userId !== undefined) {
+      await db.update(schema.notifications)
+        .set({ unread: '0' })
+        .where(
+          and(
+            eq(schema.notifications.unread, '1'),
+            or(eq(schema.notifications.userId, userId), isNull(schema.notifications.userId))
+          )
+        );
+    } else {
+      await db.update(schema.notifications)
+        .set({ unread: '0' })
+        .where(eq(schema.notifications.unread, '1'));
+    }
+    return true;
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    return false;
+  }
+}
+
+/**
+ * 添加通知
+ */
+export async function addNotification(notification: typeof schema.notifications.$inferInsert) {
+  try {
+    const result = await db.insert(schema.notifications).values(notification);
+    return result;
+  } catch (error) {
+    console.error('Error adding notification:', error);
+    return null;
   }
 }

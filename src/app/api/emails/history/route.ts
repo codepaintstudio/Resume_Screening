@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { getHistory } from '@/data/email-mock';
+import { getEmailHistory } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -21,17 +21,32 @@ import { getHistory } from '@/data/email-mock';
  *                 type: object
  *                 properties:
  *                   id:
- *                     type: string
+ *                     type: integer
  *                   templateName:
  *                     type: string
  *                   subject:
  *                     type: string
- *                   sentAt:
+ *                   content:
  *                     type: string
- *                   status:
- *                     type: string
+ *                   recipients:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         status:
+ *                           type: string
  *                   recipientCount:
  *                     type: integer
+ *                   status:
+ *                     type: string
+ *                     enum: [success, failed, partial]
+ *                   sentAt:
+ *                     type: string
+ *                     format: date-time
  *       500:
  *         description: 服务器内部错误
  *         content:
@@ -40,5 +55,11 @@ import { getHistory } from '@/data/email-mock';
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET() {
-  return NextResponse.json(getHistory());
+  try {
+    const history = await getEmailHistory();
+    return NextResponse.json(history);
+  } catch (error) {
+    console.error('Error fetching email history:', error);
+    return NextResponse.json({ success: false, message: 'Failed to fetch history' }, { status: 500 });
+  }
 }

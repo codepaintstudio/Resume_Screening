@@ -75,6 +75,27 @@ export const activityLogs = mysqlTable('activity_logs', {
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 
+// ==================== Notifications 表 ====================
+export const notifications = mysqlTable('notifications', {
+  id: serial('id').primaryKey(),
+  userId: int('user_id'), // 关联用户，不指定则为全局通知
+  type: varchar('type', { length: 50 }).notNull(), // interview, resume, system
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  time: varchar('time', { length: 50 }), // 显示用时间字符串
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  unread: mysqlEnum('unread', ['0', '1']).notNull().default('1'),
+}, (table) => {
+  return {
+    userIdIdx: index('user_id_idx').on(table.userId),
+    timestampIdx: index('timestamp_idx').on(table.timestamp),
+    unreadIdx: index('unread_idx').on(table.unread),
+  };
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;
+
 // ==================== Comments 表 ====================
 export const comments = mysqlTable('comments', {
   id: serial('id').primaryKey(),

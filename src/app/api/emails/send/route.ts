@@ -1,9 +1,9 @@
 
 import { NextResponse } from 'next/server';
-import { addHistory, getTemplates } from '@/data/email-mock';
-import { addActivity } from '@/data/activity-log';
-import { format } from 'date-fns';
 import { getSettings } from '@/lib/settings-store';
+import { createEmailHistory, getEmailTemplates, createActivityLog } from '@/lib/db/queries';
+import { schema } from '@/lib/db';
+import { format } from 'date-fns';
 
 /**
  * @swagger
@@ -62,42 +62,47 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { templateId, recipients, customSubject, customContent, user } = body;
 
-    // In a real app, you would fetch recipients and send emails here.
-    // We simulate a delay and success.
+    // Simulate email sending delay
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const templates = getTemplates();
-    const template = templates.find(t => t.id === templateId);
+    // Get templates from database
+    const templates = await getEmailTemplates();
+    const template = templates.find(t => t.id === Number(templateId));
     
     // Process recipients to store in history
-    // recipients is expected to be an array of objects from the frontend
     const recipientList = Array.isArray(recipients) 
         ? recipients.map((r: any) => ({ name: r.name, email: r.email, status: 'sent' }))
         : [];
     
     const count = recipientList.length || 0;
 
-    addHistory({
-      id: Date.now().toString(),
-      templateName: template ? template.name : 'Custom Email',
-      subject: customSubject || (template ? template.subject : 'No Subject'),
-      content: customContent || (template ? template.content : 'No Content'),
+    // Store email history in database
+    const templateName = template ? template.name : 'Custom Email';
+    const subject = customSubject || (template ? template.subject : 'No Subject');
+    const content = customContent || (template ? template.content : 'No Content');
+
+    await createEmailHistory({
+      templateName,
+      subject,
+      content,
       recipients: recipientList,
       recipientCount: count,
       status: 'success',
-      sentAt: format(new Date(), 'yyyy-MM-dd HH:mm')
+      sentAt: new Date()
     });
 
-    // Log Activity
-    addActivity({
+    // Log activity to database
+    await createActivityLog({
       user: user?.name || 'Admin',
       action: `发送了 ${count} 封邮件`,
       role: user?.role || '管理员',
-      avatar: user?.avatar || ''
+      avatar: user?.avatar || '',
+      timestamp: new Date()
     });
 
     return NextResponse.json({ success: true, message: 'Emails sent successfully' });
   } catch (error) {
+    console.error('Failed to send emails:', error);
     return NextResponse.json({ success: false, message: 'Failed to send emails' }, { status: 500 });
   }
 }

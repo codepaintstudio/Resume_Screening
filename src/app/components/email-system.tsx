@@ -54,7 +54,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 interface Template {
-  id: string;
+  id: number | string;
   name: string;
   subject: string;
   content: string;
@@ -174,9 +174,16 @@ export function EmailSystem() {
     try {
       const res = await fetch('/api/emails/templates');
       const data = await res.json();
-      setTemplates(data);
+      // 确保 ID 转换为字符串以保持兼容性
+      const templatesWithStringId = (Array.isArray(data) ? data : []).map((t: any) => ({
+        ...t,
+        id: String(t.id)
+      }));
+      setTemplates(templatesWithStringId);
     } catch (error) {
       console.error('Failed to fetch templates', error);
+      // 如果 API 失败，使用 mock 数据
+      setTemplates(mockTemplates);
     }
   };
 

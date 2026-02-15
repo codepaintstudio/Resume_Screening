@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { addActivity } from '@/data/activity-log';
+import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -59,95 +60,25 @@ import { addActivity } from '@/data/activity-log';
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 
-// Mock database
-let notifications = [
-  {
-    id: '1',
-    type: 'interview',
-    title: '面试提醒',
-    description: '待处理面试：前端工程师 - 张三 (14:00)',
-    time: '10分钟前',
-    unread: true,
-  },
-  {
-    id: '2',
-    type: 'resume',
-    title: '新简历接收',
-    description: '收到 3 份新的高级产品经理简历',
-    time: '30分钟前',
-    unread: true,
-  },
-  {
-    id: '3',
-    type: 'interview',
-    title: '面试反馈待填写',
-    description: '请填写昨日李四的面试评估报告',
-    time: '2小时前',
-    unread: true,
-  },
-  {
-    id: '4',
-    type: 'system',
-    title: '系统更新',
-    description: '系统将于今晚 02:00 进行例行维护',
-    time: '5小时前',
-    unread: true,
-  },
-  {
-    id: '5',
-    type: 'resume',
-    title: '简历筛选',
-    description: '设计部门已完成初步简历筛选',
-    time: '1天前',
-    unread: true,
-  },
-  {
-    id: '6',
-    type: 'resume',
-    title: '简历筛选',
-    description: '设计部门已完成初步简历筛选',
-    time: '1天前',
-    unread: false,
-  },
-  {
-    id: '7',
-    type: 'resume',
-    title: '简历筛选',
-    description: '设计部门已完成初步简历筛选',
-    time: '1天前',
-    unread: false,
-  },
-  {
-    id: '8',
-    type: 'system',
-    title: '安全警告',
-    description: '检测到异地登录尝试，请确认账号安全',
-    time: '2天前',
-    unread: false,
-  },
-  {
-    id: '9',
-    type: 'interview',
-    title: '面试安排确认',
-    description: '下周一上午10点的面试已确认',
-    time: '2天前',
-    unread: false,
-  },
-  {
-    id: '10',
-    type: 'resume',
-    title: '人才库更新',
-    description: '本月人才库新增 150 份简历',
-    time: '3天前',
-    unread: false,
-  },
-];
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return NextResponse.json(notifications);
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    const limit = parseInt(searchParams.get('limit') || '20', 10);
+    
+    const notifications = await getNumbers(userId ? parseInt(userId, 10) : undefined, limit);
+    
+    // 格式化返回数据
+    const formattedNotifications = notifications.map(n => ({
+      id: String(n.id),
+      type: n.type,
+      title: n.title,
+      description: n.description,
+      time: n.time || formatTimeAgo(n.timestamp),
+      unread: n.unread === '1',
+    }));
+    
+    return NextResponse.json(formattedNotifications);
   } catch (error) {
     console.error('GET /api/notifications error:', error);
     return NextResponse.json(
@@ -163,7 +94,8 @@ export async function PUT(request: Request) {
     const { id, markAll, user } = body;
 
     if (markAll) {
-      notifications = notifications.map(n => ({ ...n, unread: false }));
+      const userId = user?.id ? parseInt(user.id, 10) : undefined;
+      await markAllNotificationsAsRead(userId);
       
       // Log Activity for Mark All Read
       if (user) {
@@ -175,13 +107,31 @@ export async function PUT(request: Request) {
         });
       }
     } else if (id) {
-      notifications = notifications.map(n => 
-        n.id === id ? { ...n, unread: false } : n
-      );
+      await markNotificationAsRead(parseInt(id, 10));
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ success: false, message: 'Failed to update notifications' }, { status: 500 });
   }
+}
+
+// 辅助函数：格式化时间为"xx分钟前"
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - new Date(date).getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffMinutes < 1) return '刚刚';
+  if (diffMinutes < 60) return `${diffMinutes}分钟前`;
+  if (diffHours < 24) return `${diffHours}小时前`;
+  if (diffDays < 30) return `${diffDays}天前`;
+  return `${Math.floor(diffDays / 30)}个月前`;
+}
+
+// 修正函数名
+async function getNumbers(userId?: number, limit?: number) {
+  return await getNotifications(userId, limit);
 }
