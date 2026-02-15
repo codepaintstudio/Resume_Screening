@@ -106,19 +106,6 @@ export function InterviewKanban() {
       .then(data => setAvailableInterviewers(data))
       .catch(err => console.error("Failed to fetch interviewers", err));
 
-<<<<<<< HEAD
-    fetch('/api/resumes')
-      .then(res => res.json())
-      .then(data => {
-        const mappedTasks: InterviewTask[] = data.map((student: any) => ({
-          ...student,
-          time: student.time || '未安排',
-          interviewers: student.interviewers || [],
-          location: student.location || '待定',
-          priority: student.priority || 'medium',
-          stage: student.status
-        }));
-=======
     // 同时获取 students 和 interviews 数据
     Promise.all([
       fetch('/api/resumes').then(res => res.json()),
@@ -151,7 +138,6 @@ export function InterviewKanban() {
             stage: interview?.stage || student.status
           };
         });
->>>>>>> liyang
         setTasks(mappedTasks);
         setIsLoading(false);
       })
@@ -324,20 +310,12 @@ export function InterviewKanban() {
         setTasks(prev => prev.map(t => {
           if (selectedBatchCandidates.includes(t.id)) {
             return { 
-<<<<<<< HEAD
               ...t, 
               time: newTime, 
               date: formattedISODate,
               interviewers: batchInterviewers,
+              location: batchLocation || '待定',
               stage: 'pending_interview' as Stage 
-=======
-                ...t, 
-                time: newTime, 
-                date: formattedISODate,
-                interviewers: batchInterviewers,
-                location: batchLocation || '待定',
-                stage: 'pending_interview' as Stage 
->>>>>>> liyang
             };
           }
           return t;
@@ -809,7 +787,6 @@ export function InterviewKanban() {
           </span>
         </div>
 
-<<<<<<< HEAD
         <CandidateDrawer 
           student={selectedTask}
           onClose={() => setSelectedTask(null)}
@@ -823,7 +800,7 @@ export function InterviewKanban() {
           }}
           type="interview"
         />
-=======
+
         <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
           <DialogContent className="sm:max-w-5xl w-full">
             <DialogHeader>
@@ -952,7 +929,6 @@ export function InterviewKanban() {
             </div>
           </DialogContent>
         </Dialog>
->>>>>>> liyang
       </div>
     </DragDropContext>
   );

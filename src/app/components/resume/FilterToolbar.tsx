@@ -132,8 +132,6 @@ export function FilterToolbar({
           </SelectContent>
         </Select>
       </div>
-<<<<<<< HEAD
-=======
       <div className="flex items-center gap-3 w-full sm:w-auto">
         {onOpenSyncMail && (
           <button 
@@ -144,22 +142,7 @@ export function FilterToolbar({
             同步邮箱
           </button>
         )}
-        <button 
-          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-wider hover:opacity-90 shadow-lg shadow-black/10 transition-all"
-          onClick={onOpenScreening}
-        >
-          <BrainCircuit className="w-4 h-4" />
-          AI 批量筛选
-        </button>
-        <button 
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all" 
-          onClick={onOpenUpload}
-        >
-          <Upload className="w-4 h-4" />
-          上传简历
-        </button>
       </div>
->>>>>>> liyang
     </div>
   );
 }
