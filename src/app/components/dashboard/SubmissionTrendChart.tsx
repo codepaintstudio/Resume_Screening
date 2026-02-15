@@ -18,6 +18,7 @@ const chartConfig = {
 export function SubmissionTrendChart() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     fetch('/api/dashboard/trend')
@@ -32,28 +33,36 @@ export function SubmissionTrendChart() {
       });
   }, []);
 
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
   if (loading) {
     return (
-      <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm h-[400px]">
-        <div className="flex items-center justify-between mb-8">
+      <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm h-[360px] md:h-[400px]">
+        <div className="flex items-center justify-between mb-6 md:mb-8">
           <div>
             <Skeleton className="h-6 w-32 mb-2" />
             <Skeleton className="h-4 w-48" />
           </div>
           <Skeleton className="h-6 w-20" />
         </div>
-        <Skeleton className="h-[300px] w-full rounded-xl" />
+        <Skeleton className="h-[260px] md:h-[300px] w-full rounded-xl" />
       </div>
     );
   }
 
   // Dynamic interval calculation to show roughly 7-8 ticks max
   const tickInterval = data.length > 8 ? Math.ceil(data.length / 8) - 1 : 0;
+  const barSize = isMobile ? 24 : 40;
 
   return (
-    <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+    <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 md:mb-8">
           <div>
             <h3 className="text-lg font-black tracking-tight">最近投递</h3>
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Daily Resume Submissions</p>
@@ -64,7 +73,7 @@ export function SubmissionTrendChart() {
           </div>
         </div>
         <div className="flex-1 min-h-0">
-          <ChartContainer config={chartConfig} className="max-h-[300px] w-full">
+          <ChartContainer config={chartConfig} className="aspect-[4/3] md:aspect-video max-h-[280px] md:max-h-[340px] w-full">
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
               <XAxis 
@@ -84,7 +93,7 @@ export function SubmissionTrendChart() {
                 cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }}
                 content={<ChartTooltipContent />}
               />
-              <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} barSize={40} />
+              <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} barSize={barSize} />
             </BarChart>
           </ChartContainer>
         </div>

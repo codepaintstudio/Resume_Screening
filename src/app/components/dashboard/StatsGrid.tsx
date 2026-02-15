@@ -51,9 +51,9 @@ export function StatsGrid() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+          <div key={i} className="bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
             <div className="flex justify-between items-start mb-4">
               <Skeleton className="h-9 w-9 rounded-xl" />
               <Skeleton className="h-4 w-12 rounded-full" />
@@ -73,11 +73,11 @@ export function StatsGrid() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       {stats.map((stat, idx) => {
         const Icon = ICON_MAP[stat.iconKey] || FileText;
         return (
-        <div key={idx} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div key={idx} className="bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <div className="flex justify-between items-start">
             <div className={`p-2 rounded-xl bg-slate-50 dark:bg-slate-800`}>
               <Icon className={`w-5 h-5 text-${stat.color}-600 dark:text-${stat.color}-400`} />

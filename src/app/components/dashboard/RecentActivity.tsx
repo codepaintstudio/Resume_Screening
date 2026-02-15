@@ -30,8 +30,8 @@ export function RecentActivity() {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm h-[420px]">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm h-[360px] md:h-[420px]">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
           <h3 className="text-lg font-black tracking-tight">最新动态</h3>
           <Skeleton className="h-4 w-16" />
         </div>
@@ -52,8 +52,8 @@ export function RecentActivity() {
 
   return (
     <>
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm h-[420px] flex flex-col">
-        <div className="flex items-center justify-between mb-6 shrink-0">
+      <div className="bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm h-[360px] md:h-[420px] flex flex-col">
+        <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
           <h3 className="text-lg font-black tracking-tight">最新动态</h3>
           <button 
             onClick={() => setIsViewAllOpen(true)}
