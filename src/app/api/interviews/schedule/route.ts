@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addActivity } from '@/data/activity-log';
-import { updateInterview, getInterviewsByStudentId, updateStudent, getStudentById } from '@/lib/db/queries';
+import { updateInterview, getInterviewsByStudentId, updateStudent, getStudentById, createActivityLog } from '@/lib/db/queries';
 import { eq } from 'drizzle-orm';
 import { schema, db } from '@/lib/db';
 
@@ -140,11 +139,12 @@ export async function POST(request: Request) {
     }
 
     // 记录活动日志
-    addActivity({
+    await createActivityLog({
       user: user?.name || 'Admin',
       action: `安排了 ${updatedCount} 场面试`,
       role: user?.role || '管理员',
-      avatar: user?.avatar || ''
+      avatar: user?.avatar || '',
+      userId: user?.id ? parseInt(user.id, 10) : undefined
     });
 
     if (failedIds.length > 0) {

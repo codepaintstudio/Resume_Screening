@@ -9,7 +9,7 @@ import { getMembers } from '@/lib/github-store';
  *     tags:
  *       - GitHub
  *     summary: List organization members
- *     description: Retrieves a list of members in the GitHub organization (Mock Data)
+ *     description: Retrieves a list of members in the GitHub organization from local cache
  *     responses:
  *       200:
  *         description: List of members

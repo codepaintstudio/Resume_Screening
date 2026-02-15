@@ -1,16 +1,19 @@
 
-import fs from 'fs';
-import path from 'path';
-
-// 敏感配置从环境变量读取
-const getEnvOrDefault = (key: string, defaultValue: string): string => {
-  return process.env[key] || defaultValue;
-};
-
-// In-memory store for settings
-// In a real application, this would be a database or a file-based store
-// For this demo, we keep it in memory but separated from the route handlers
-// to ensure consistency across different endpoints if needed.
+import { 
+  getPlatformSettings, 
+  getAiSettings, 
+  getNotificationSettings, 
+  getGithubSettings, 
+  getResumeImportSettings, 
+  getEmailConfig,
+  getApiKeys,
+  createOrUpdatePlatformSettings,
+  createOrUpdateAiSettings,
+  createOrUpdateNotificationSettings,
+  createOrUpdateGithubSettings,
+  createOrUpdateResumeImportSettings,
+  createOrUpdateEmailConfig
+} from '@/lib/db/queries';
 
 export interface SettingsState {
   personal: {
@@ -46,7 +49,7 @@ export interface SettingsState {
     imapServer: string;
     port: string;
     account: string;
-    password: string;
+    authCode: string;
     ssl?: boolean;
   };
   github: {
@@ -70,152 +73,158 @@ export interface SettingsState {
   }[];
 }
 
-const defaultSettings: SettingsState = {
-  personal: {
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-    displayName: '张老师',
-    email: 'admin@mahui.com',
-    department: '技术部',
-  },
-  platform: {
-    departments: ['前端部', 'UI部', '办公室', '运维'],
-  },
-  ai: {
-    vision: {
-      endpoint: getEnvOrDefault('VISION_ENDPOINT', ''),
-      model: 'vision-vk-v2',
-      apiKey: getEnvOrDefault('VISION_API_KEY', ''),
-    },
-    llm: {
-      baseUrl: getEnvOrDefault('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
-      apiKey: getEnvOrDefault('OPENAI_API_KEY', ''),
-      model: '',
-    },
-  },
-  notifications: {
-    webhookUrl: '',
-    triggers: {
-      'new_resume': true,
-      'interview_reminder': true,
-      'offer_confirmed': true
-    }
-  },
-  resumeImport: {
-    imapServer: getEnvOrDefault('IMAP_HOST', 'imap.exmail.qq.com'),
-    port: getEnvOrDefault('IMAP_PORT', '993'),
-    account: getEnvOrDefault('IMAP_USER', ''),
-    password: getEnvOrDefault('IMAP_PASS', ''),
-    ssl: true,
-  },
-  github: {
-    clientId: getEnvOrDefault('GITHUB_CLIENT_ID', ''),
-    clientSecret: getEnvOrDefault('GITHUB_CLIENT_SECRET', ''),
-    organization: 'mahui-studio',
-    personalAccessToken: '',
-  },
-  emailSending: {
-    host: getEnvOrDefault('SMTP_HOST', 'smtp.example.com'),
-    port: getEnvOrDefault('SMTP_PORT', '465'),
-    user: getEnvOrDefault('SMTP_USER', ''),
-    pass: getEnvOrDefault('SMTP_PASS', ''),
-  },
-  apiKeys: []
-};
 
-let settings: SettingsState = { ...defaultSettings };
+// 缓存设置以减少数据库查询
+let cachedSettings: SettingsState | null = null;
+let lastFetchTime: number = 0;
+const CACHE_DURATION = 5000; // 5秒缓存
 
-// Simple file-based persistence
-const DATA_DIR = path.join(process.cwd(), 'src', 'data');
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+export const getSettings = async (): Promise<SettingsState> => {
+  const now = Date.now();
+  
+  // 如果缓存有效，直接返回缓存
+  if (cachedSettings && (now - lastFetchTime) < CACHE_DURATION) {
+    return cachedSettings;
+  }
 
-const loadSettings = () => {
   try {
-    if (fs.existsSync(SETTINGS_FILE)) {
-      const data = fs.readFileSync(SETTINGS_FILE, 'utf-8');
-      const loaded = JSON.parse(data);
-      // Deep merge with defaults to ensure new fields are present
-      settings = {
-        ...defaultSettings,
-        ...loaded,
-        // Ensure nested objects are merged correctly
-        personal: { ...defaultSettings.personal, ...loaded.personal },
-        platform: { ...defaultSettings.platform, ...loaded.platform },
-        ai: { 
-            ...defaultSettings.ai, 
-            ...loaded.ai,
-            vision: { ...defaultSettings.ai.vision, ...loaded.ai?.vision },
-            llm: { ...defaultSettings.ai.llm, ...loaded.ai?.llm }
+    // 并行获取所有设置
+    const [platformSettings, aiSettings, notificationSettings, githubSettings, resumeImportSettings, emailConfig, apiKeys] = await Promise.all([
+      getPlatformSettings(),
+      getAiSettings(),
+      getNotificationSettings(),
+      getGithubSettings(),
+      getResumeImportSettings(),
+      getEmailConfig(),
+      getApiKeys()
+    ]);
+
+    cachedSettings = {
+      personal: {
+        avatar: '',
+        displayName: '',
+        email: '',
+        department: ''
+      },
+      platform: {
+        departments: platformSettings?.departments || []
+      },
+      ai: {
+        vision: {
+          endpoint: aiSettings?.visionEndpoint || '',
+          model: aiSettings?.visionModel || '',
+          apiKey: aiSettings?.visionApiKey || ''
         },
-        notifications: { 
-            ...defaultSettings.notifications, 
-            ...loaded.notifications,
-            triggers: { ...defaultSettings.notifications.triggers, ...loaded.notifications?.triggers }
-        },
-        resumeImport: { ...defaultSettings.resumeImport, ...loaded.resumeImport },
-        github: { ...defaultSettings.github, ...loaded.github },
-        emailSending: { ...defaultSettings.emailSending, ...loaded.emailSending },
-        apiKeys: loaded.apiKeys || defaultSettings.apiKeys
-      };
-      console.log('Settings loaded from', SETTINGS_FILE);
-    }
+        llm: {
+          baseUrl: aiSettings?.llmBaseUrl || '',
+          apiKey: aiSettings?.llmApiKey || '',
+          model: aiSettings?.llmModel || ''
+        }
+      },
+      notifications: {
+        webhookUrl: notificationSettings?.webhookUrl || '',
+        triggers: {
+          new_resume: notificationSettings?.triggerNewResume ?? true,
+          interview_reminder: notificationSettings?.triggerInterviewReminder ?? true,
+          offer_confirmed: notificationSettings?.triggerOfferConfirmed ?? true
+        }
+      },
+      resumeImport: {
+        imapServer: resumeImportSettings?.imapServer || '',
+        port: resumeImportSettings?.port || '',
+        account: resumeImportSettings?.account || '',
+        authCode: resumeImportSettings?.authCode || '',
+        ssl: resumeImportSettings?.ssl ?? true
+      },
+      github: {
+        clientId: githubSettings?.clientId || '',
+        clientSecret: githubSettings?.clientSecret || '',
+        organization: githubSettings?.organization || '',
+        personalAccessToken: githubSettings?.personalAccessToken || ''
+      },
+      emailSending: {
+        host: emailConfig?.host || '',
+        port: emailConfig?.port || '',
+        user: emailConfig?.user || '',
+        pass: emailConfig?.pass || ''
+      },
+      apiKeys: apiKeys || []
+    };
+
+    lastFetchTime = now;
+    return cachedSettings;
   } catch (error) {
-    console.error('Failed to load settings:', error);
+    console.error('Failed to load settings from database:', error);
+    throw error;
   }
 };
 
-const saveSettings = () => {
+export const updateSettings = async (updates: Partial<SettingsState>): Promise<SettingsState> => {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    // 更新各个设置到数据库
+    if (updates.platform) {
+      await createOrUpdatePlatformSettings(updates.platform);
     }
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
-    console.log('Settings saved to', SETTINGS_FILE);
+    if (updates.ai) {
+      await createOrUpdateAiSettings(updates.ai);
+    }
+    if (updates.notifications) {
+      await createOrUpdateNotificationSettings(updates.notifications);
+    }
+    if (updates.github) {
+      await createOrUpdateGithubSettings(updates.github);
+    }
+    if (updates.resumeImport) {
+      await createOrUpdateResumeImportSettings(updates.resumeImport);
+    }
+    if (updates.emailSending) {
+      await createOrUpdateEmailConfig(updates.emailSending);
+    }
+
+    // 清除缓存，强制重新加载
+    cachedSettings = null;
+    lastFetchTime = 0;
+
+    return await getSettings();
   } catch (error) {
-    console.error('Failed to save settings:', error);
+    console.error('Failed to update settings:', error);
+    throw error;
   }
 };
 
-// Load initially
-loadSettings();
+export const updateSection = async <K extends keyof SettingsState>(section: K, data: Partial<SettingsState[K]>): Promise<SettingsState[section]> => {
+  try {
+    switch (section) {
+      case 'platform':
+        await createOrUpdatePlatformSettings(data as any);
+        break;
+      case 'ai':
+        await createOrUpdateAiSettings(data as any);
+        break;
+      case 'notifications':
+        await createOrUpdateNotificationSettings(data as any);
+        break;
+      case 'github':
+        await createOrUpdateGithubSettings(data as any);
+        break;
+      case 'resumeImport':
+        await createOrUpdateResumeImportSettings(data as any);
+        break;
+      case 'emailSending':
+        await createOrUpdateEmailConfig(data as any);
+        break;
+      default:
+        console.warn(`Section ${section} update not implemented`);
+    }
 
-export const getSettings = () => settings;
+    // 清除缓存
+    cachedSettings = null;
+    lastFetchTime = 0;
 
-export const updateSettings = (updates: Partial<SettingsState>) => {
-  settings = {
-    ...settings,
-    ...updates,
-  };
-  
-  saveSettings();
-  
-  return settings;
-};
-
-export const updateSection = <K extends keyof SettingsState>(section: K, data: Partial<SettingsState[K]>) => {
-  if (section === 'ai') {
-     // Special deep merge for AI
-     const currentAi = settings.ai;
-     const newAi = data as Partial<SettingsState['ai']>;
-     settings.ai = {
-         ...currentAi,
-         ...newAi,
-         vision: { ...currentAi.vision, ...(newAi.vision || {}) },
-         llm: { ...currentAi.llm, ...(newAi.llm || {}) }
-     };
-  } else if (Array.isArray(settings[section])) {
-      // For arrays like apiKeys, platform.departments (though platform is obj)
-      // If it's the section itself (e.g. apiKeys), replace it
-      settings[section] = data as any;
-  } else if (typeof settings[section] === 'object' && settings[section] !== null) {
-      settings[section] = {
-          ...settings[section],
-          ...data
-      } as any;
-  } else {
-      settings[section] = data as any;
+    const settings = await getSettings();
+    return settings[section];
+  } catch (error) {
+    console.error(`Failed to update section ${section}:`, error);
+    throw error;
   }
-  
-  saveSettings();
-  
-  return settings[section];
 };

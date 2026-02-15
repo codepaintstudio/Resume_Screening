@@ -47,39 +47,6 @@ interface MemberResumeProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Mock data for demonstration when URL is 'mock-resume'
-const MOCK_RESUME: ResumeData = {
-  id: '1',
-  name: '张思锐',
-  role: '高级前端工程师',
-  email: 'zhang.sirui@example.com',
-  phone: '138-0000-0000',
-  location: '深圳, 中国',
-  summary: '拥有5年前端开发经验，精通React生态系统，对性能优化和用户体验有深入理解。善于解决复杂问题，具备良好的团队协作能力。',
-  skills: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS', 'Node.js', 'GraphQL'],
-  experience: [
-    {
-      company: '科技创新有限公司',
-      position: '前端技术主管',
-      duration: '2021.06 - 至今',
-      description: '负责公司核心产品的前端架构设计与开发，带领5人团队完成多个重大项目交付。'
-    },
-    {
-      company: '互联网科技有限公司',
-      position: '前端工程师',
-      duration: '2019.03 - 2021.05',
-      description: '参与电商平台的重构工作，使用React hooks重写旧有代码，提升页面加载速度30%。'
-    }
-  ],
-  education: [
-    {
-      school: '深圳大学',
-      degree: '计算机科学与技术 学士',
-      year: '2015 - 2019'
-    }
-  ]
-};
-
 export function MemberResume({ url, open, onOpenChange }: MemberResumeProps) {
   const [data, setData] = useState<ResumeData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -94,13 +61,6 @@ export function MemberResume({ url, open, onOpenChange }: MemberResumeProps) {
       // Simulate network request
       const fetchData = async () => {
         try {
-          // If URL is 'mock-resume', return mock data
-          if (url === 'mock-resume') {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            setData(MOCK_RESUME);
-            return;
-          }
-
           const res = await fetch(url);
           if (!res.ok) {
             throw new Error(`请求失败: ${res.statusText}`);

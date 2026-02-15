@@ -101,7 +101,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
     imapServer: '',
     port: '',
     account: '',
-    password: '',
+    authCode: '',
     ssl: true
   });
 
@@ -162,8 +162,9 @@ export function SettingsPage({ role }: SettingsPageProps) {
         fetch('/api/settings/notifications').then(res => res.json()),
         fetch('/api/settings/resume-import').then(res => res.json()),
         fetch('/api/settings/keys').then(res => res.json()),
+      
+        fetch('/api/settings/email-sending').then(res => res.json()),
         fetch('/api/settings/github').then(res => res.json()),
-        fetch('/api/settings/email-sending').then(res => res.json())
       ]);
       
       setPlatform(pl || { departments: [] });
@@ -177,13 +178,21 @@ export function SettingsPage({ role }: SettingsPageProps) {
           host: r.imapServer || 'imap.qq.com',
           port: r.port || '993',
           user: r.account || '',
-          pass: '' // 不加载密码
+          pass: '' // 不加载授权码
         });
       }
       
       setApiKeys(k || []);
       setGithub(g || { clientId: '', clientSecret: '', organization: '', personalAccessToken: '' });
-      setEmailSending(e || { host: '', port: '', user: '', pass: '' });
+      // 调试日志
+      console.log('Email-sending API 返回:', e);
+      // SMTP 配置：加载所有保存的配置
+      setEmailSending({
+        host: g?.host || '',
+        port: g?.port || '',
+        user: g?.user || '',
+        pass: g?.pass || '' 
+      });
       
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -194,30 +203,51 @@ export function SettingsPage({ role }: SettingsPageProps) {
   };
 
   const handleSave = async () => {
-    // 将 imapConfig 的值同步到 resumeImport
+    // 直接使用前端输入的简历导入配置
     const updatedResumeImport = {
       ...resumeImport,
-      imapServer: imapConfig.host,
-      port: imapConfig.port,
-      account: imapConfig.user,
-      password: imapConfig.pass || resumeImport.password
+      imapServer: resumeImport.imapServer,
+      port: resumeImport.port,
+      account: resumeImport.account,
+      authCode: resumeImport.authCode
     };
-    
-    const promises = [
-        fetch('/api/settings/platform', { method: 'PUT', body: JSON.stringify(platform) }),
-        fetch('/api/settings/ai', { method: 'PUT', body: JSON.stringify(ai) }),
-        fetch('/api/settings/notifications', { method: 'PUT', body: JSON.stringify(notifications) }),
-        fetch('/api/settings/resume-import', { method: 'PUT', body: JSON.stringify(updatedResumeImport) }),
-        fetch('/api/settings/keys', { method: 'PUT', body: JSON.stringify(apiKeys) }),
-        fetch('/api/settings/github', { method: 'PUT', body: JSON.stringify(github) }),
-        fetch('/api/settings/email-sending', { method: 'PUT', body: JSON.stringify(emailSending) })
-    ];
 
-    toast.promise(Promise.all(promises), {
-      loading: '正在保存配置...',
-      success: '系统配置已更新',
-      error: '保存失败'
-    });
+    // 创建一个检查响应状态的函数
+    const checkResponse = async (response: Response, endpoint: string) => {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `保存 ${endpoint} 失败`);
+      }
+      return response.json();
+    };
+
+    // 依次保存各项配置
+    try {
+      toast.promise(async () => {
+        await checkResponse(await fetch('/api/settings/platform', { method: 'PUT', body: JSON.stringify(platform) }), '平台设置');
+        await checkResponse(await fetch('/api/settings/ai', { method: 'PUT', body: JSON.stringify(ai) }), 'AI设置');
+        await checkResponse(await fetch('/api/settings/notifications', { method: 'PUT', body: JSON.stringify(notifications) }), '通知设置');
+        await checkResponse(await fetch('/api/settings/resume-import', { method: 'PUT', body: JSON.stringify(updatedResumeImport) }), '简历导入设置');
+        await checkResponse(await fetch('/api/settings/keys', { method: 'PUT', body: JSON.stringify(apiKeys) }), 'API密钥');
+
+        await checkResponse(await fetch('/api/settings/email-sending', { 
+          method: 'PUT', 
+          body: JSON.stringify({
+            host: emailSending.host,
+            port: emailSending.port,
+            user: emailSending.user,
+            pass: emailSending.pass
+          }) 
+        }), '邮件发送设置');
+        await checkResponse(await fetch('/api/settings/github', { method: 'PUT', body: JSON.stringify(github) }), 'GitHub设置');
+      }, {
+        loading: '正在保存配置...',
+        success: '系统配置已更新',
+        error: '保存失败'
+      });
+    } catch (error) {
+      console.error('保存配置失败:', error);
+    }
   };
 
   // 获取收件箱
@@ -227,8 +257,8 @@ export function SettingsPage({ role }: SettingsPageProps) {
       return;
     }
 
-    // 从 resumeImport 获取密码（如果 imapConfig.pass 为空）
-    const pass = imapConfig.pass || resumeImport.password;
+    // 从 resumeImport 获取授权码（如果 imapConfig.pass 为空）
+    const pass = imapConfig.pass || resumeImport.authCode;
     if (!pass) {
       setInboxError('请先在"邮箱自动导入"中配置授权码');
       return;
@@ -747,29 +777,29 @@ export function SettingsPage({ role }: SettingsPageProps) {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Account</label>
-                <div className="relative">
-                  <input 
-                    type="password" 
-                    value={resumeImport.account || ''}
-                    onChange={(e) => setResumeImport({...resumeImport, account: e.target.value})}
-                    placeholder="••••••••" 
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
-                  />
-                  <Lock className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
-                </div>
+                <input 
+                  type="text" 
+                  value={resumeImport.account || ''}
+                  onChange={(e) => setResumeImport({...resumeImport, account: e.target.value})}
+                  placeholder="your-email@example.com" 
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Authorization Code</label>
                 <div className="relative">
                   <input 
                     type="password" 
-                    value={resumeImport.password || ''}
-                    onChange={(e) => setResumeImport({...resumeImport, password: e.target.value})}
-                    placeholder="••••••••" 
+                    value={resumeImport.authCode || ''}
+                    onChange={(e) => setResumeImport({...resumeImport, authCode: e.target.value})}
+                    placeholder="请输入授权码" 
                     className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
                   />
                   <Lock className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
                 </div>
+                <p className="text-xs text-slate-500">
+                  提示：QQ邮箱需要使用授权码登录，而非QQ密码。获取方式：邮箱设置 → 账户 → 开启 IMAP/SMTP服务 → 生成授权码
+                </p>
               </div>
               <div className="flex items-center space-x-2 md:col-span-2">
                 <Switch 
@@ -867,11 +897,11 @@ export function SettingsPage({ role }: SettingsPageProps) {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">邮件配置</h3>
-                <p className="text-sm text-slate-500">配置邮件发送和接收服务器</p>
+                <p className="text-sm text-slate-500">配置邮件发送服务器，用于发送通知和面试邀请</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="max-w-2xl">
               {/* SMTP 发信配置 */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
@@ -910,7 +940,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                     <input 
                       type="text" 
                       value={emailSending.port}
-                      onChange={(e) => setEmailSending({...emailSending, port: e.target.value})}
+                      onChange={(e) => { console.log('port 输入:', e.target.value); setEmailSending({...emailSending, port: e.target.value})}}
                       placeholder="465" 
                       className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
                     />
@@ -921,149 +951,14 @@ export function SettingsPage({ role }: SettingsPageProps) {
                       type="password" 
                       value={emailSending.pass}
                       onChange={(e) => setEmailSending({...emailSending, pass: e.target.value})}
-                      placeholder="••••••••" 
+                      placeholder="请输入授权码" 
                       className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
                     />
+                    <p className="text-xs text-slate-500">
+                      提示：QQ邮箱需要使用授权码登录，而非QQ密码。获取方式：邮箱设置 → 账户 → 开启 POP3/SMTP服务 → 生成授权码
+                    </p>
                   </div>
                 </div>
-              </div>
-
-              {/* IMAP 收件箱配置 */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-                  <div className="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center text-blue-600">
-                    <Inbox className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">IMAP 收件箱配置</h4>
-                    <p className="text-xs text-slate-500">用于接收邮件（简历投递）</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">IMAP 服务器</label>
-                    <input 
-                      type="text" 
-                      value={imapConfig.host}
-                      onChange={(e) => setImapConfig({...imapConfig, host: e.target.value})}
-                      placeholder="imap.qq.com" 
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">账号</label>
-                    <input 
-                      type="text" 
-                      value={imapConfig.user}
-                      onChange={(e) => setImapConfig({...imapConfig, user: e.target.value})}
-                      placeholder="2408224899@qq.com" 
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">端口</label>
-                    <input 
-                      type="text" 
-                      value={imapConfig.port}
-                      onChange={(e) => setImapConfig({...imapConfig, port: e.target.value})}
-                      placeholder="993" 
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
-                    />
-                  </div>
-                </div>
-
-                {/* 获取收件箱按钮 */}
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      onClick={fetchInbox}
-                      disabled={inboxLoading}
-                      className="gap-2"
-                    >
-                      {inboxLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4" />
-                      )}
-                      {inboxLoading ? '同步中...' : '同步新邮件'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={loadSavedMails}
-                      disabled={inboxLoading}
-                      className="gap-2"
-                    >
-                      {inboxLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Inbox className="w-4 h-4" />
-                      )}
-                      查看已保存
-                    </Button>
-                  </div>
-                  <span className="text-xs text-slate-500">同步会保存到数据库</span>
-                </div>
-
-                {/* 错误提示 */}
-                {inboxError && (
-                  <div className="flex items-center gap-2 p-4 text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl">
-                    <AlertCircle className="w-5 h-5 shrink-0" />
-                    <span className="text-sm">{inboxError}</span>
-                  </div>
-                )}
-
-                {/* 邮件列表 */}
-                {inboxMails.length > 0 && (
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {inboxMails.map((mail) => (
-                      <div
-                        key={mail.uid}
-                        className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden"
-                      >
-                        <div 
-                          className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                          onClick={() => setExpandedMailUid(expandedMailUid === mail.uid ? null : mail.uid)}
-                        >
-                          <div className="w-7 h-7 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-500 text-xs font-bold shrink-0">
-                            {(mail.fromName || mail.from || '?').charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                              {mail.subject}
-                            </p>
-                            <p className="text-xs text-slate-500 truncate">
-                              {mail.fromName || mail.from}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {mail.hasBody && (
-                              <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded">
-                                有正文
-                              </span>
-                            )}
-                            <div className="text-xs text-slate-400 whitespace-nowrap">
-                              {mail.date ? new Date(mail.date).toLocaleDateString('zh-CN', {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              }) : ''}
-                            </div>
-                            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedMailUid === mail.uid ? 'rotate-180' : ''}`} />
-                          </div>
-                        </div>
-                        {expandedMailUid === mail.uid && mail.body && (
-                          <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
-                            <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
-                              {mail.body}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           </TabsContent>

@@ -61,19 +61,13 @@ interface Template {
   category: string;
 }
 
-const mockTemplates: Template[] = [
-  { id: '1', name: '面试邀请', subject: '【码绘工作室】{{姓名}}同学，诚邀您参加面试', content: '亲爱的{{姓名}}同学，你的简历已通过初筛，我们诚邀你参加面试...', category: '面试' },
-  { id: '2', name: '通过通知', subject: '【码绘工作室】恭喜！{{姓名}}同学，你已通过面试', content: '亲爱的{{姓名}}同学，很高兴地通知你已经通过了面试，后续安排为...', category: '通过' },
-  { id: '3', name: '不合适通知', subject: '关于码绘工作室招新进度的通知', content: '亲爱的{{姓名}}同学，感谢你投递我们的岗位，经过慎重考虑...', category: '拒信' },
-];
-
 export function EmailSystem() {
   const { currentUser } = useAppStore();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'batch';
   
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const [templates, setTemplates] = useState<Template[]>(mockTemplates);
+  const [templates, setTemplates] = useState<Template[]>([]);
   
   // Template Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -209,8 +203,6 @@ export function EmailSystem() {
       setTemplates(templatesWithStringId);
     } catch (error) {
       console.error('Failed to fetch templates', error);
-      // 如果 API 失败，使用 mock 数据
-      setTemplates(mockTemplates);
     }
   };
 

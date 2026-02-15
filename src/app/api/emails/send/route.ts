@@ -1,9 +1,8 @@
 
 import { NextResponse } from 'next/server';
 import { getSettings } from '@/lib/settings-store';
-import { createEmailHistory, getEmailTemplates, createActivityLog } from '@/lib/db/queries';
-import { schema } from '@/lib/db';
-import { format } from 'date-fns';
+import { createEmailHistory, getEmailTemplates, createActivityLog, getUserById } from '@/lib/db/queries';
+import { getCurrentUser } from '@/lib/auth';
 import nodemailer from 'nodemailer';
 
 /**
@@ -55,7 +54,20 @@ import nodemailer from 'nodemailer';
  */
 export async function POST(request: Request) {
   try {
-    const { host, port, user: smtpUser, pass } = getSettings().emailSending;
+    // 获取当前登录用户（用于发件人显示名称）
+    const currentUser = await getCurrentUser();
+    let userDisplayName = '前端工作室';
+    
+    if (currentUser) {
+      const users = await getUserById(currentUser.id);
+      if (users && users.length > 0) {
+        userDisplayName = users[0].name || '前端工作室';
+      }
+    }
+
+    const settings = await getSettings();
+    const { host, port, user: smtpUser, pass } = settings.emailSending;
+    
     if (!host || !smtpUser || !pass || !port) {
       return NextResponse.json({ success: false, message: 'SMTP configuration incomplete' }, { status: 500 });
     }
@@ -63,9 +75,31 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { templateId, recipients, customSubject, customContent, user } = body;
 
+    // Validate required fields
+    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+      return NextResponse.json({ success: false, message: 'Recipients are required and must be a non-empty array' }, { status: 400 });
+    }
+
+    // Validate each recipient has email
+    for (const recipient of recipients) {
+      if (!recipient.email || typeof recipient.email !== 'string') {
+        return NextResponse.json({ success: false, message: 'Each recipient must have a valid email address' }, { status: 400 });
+      }
+    }
+
     // Get templates from database
     const templates = await getEmailTemplates();
-    const template = templates.find(t => t.id === Number(templateId));
+    const template = templateId ? templates.find(t => t.id === Number(templateId)) : null;
+    
+    // If templateId is provided but template not found, return error
+    if (templateId && !template) {
+      return NextResponse.json({ success: false, message: 'Email template not found' }, { status: 404 });
+    }
+    
+    // If neither template nor custom content provided, return error
+    if (!template && !customSubject && !customContent) {
+      return NextResponse.json({ success: false, message: 'Please provide either a template or custom subject/content' }, { status: 400 });
+    }
     
     // Prepare email content
     const subject = customSubject || (template ? template.subject : 'No Subject');
@@ -74,6 +108,9 @@ export async function POST(request: Request) {
 
     // Create nodemailer transporter
     const portNumber = parseInt(port, 10);
+    if (isNaN(portNumber) || portNumber < 1 || portNumber > 65535) {
+      return NextResponse.json({ success: false, message: 'Invalid SMTP port number' }, { status: 500 });
+    }
     const isSecure = portNumber === 465;
     
     const transporter = nodemailer.createTransport({
@@ -107,7 +144,7 @@ export async function POST(request: Request) {
     for (const recipient of recipientList) {
       try {
         // 确保发件人地址格式正确
-        const fromName = getSettings().personal.displayName || 'Resume Screening';
+        const fromName = userDisplayName;
         const fromEmail = smtpUser.includes('@') ? smtpUser : `${smtpUser}@${host.replace(/^smtp\./, '')}`;
         
         await transporter.sendMail({
@@ -128,29 +165,37 @@ export async function POST(request: Request) {
     const totalCount = recipientList.length;
     const status = failedRecipients.length === 0 ? 'success' : (successCount > 0 ? 'partial' : 'failed');
 
-    // Store email history in database
-    await createEmailHistory({
-      templateName,
-      subject,
-      content,
-      recipients: recipientList.map((r: any) => ({ 
-        name: r.name, 
-        email: r.email, 
-        status: failedRecipients.includes(r.email) ? 'failed' : 'sent' 
-      })),
-      recipientCount: successCount,
-      status,
-      sentAt: new Date()
-    });
+    // Store email history in database (non-blocking)
+    try {
+      await createEmailHistory({
+        templateName,
+        subject,
+        content,
+        recipients: recipientList.map((r: any) => ({ 
+          name: r.name, 
+          email: r.email, 
+          status: failedRecipients.includes(r.email) ? 'failed' : 'sent' 
+        })),
+        recipientCount: successCount,
+        status,
+        sentAt: new Date()
+      });
+    } catch (historyError) {
+      console.error('Failed to save email history:', historyError);
+    }
 
-    // Log activity to database
-    await createActivityLog({
-      user: user?.name || 'Admin',
-      action: `发送了 ${successCount}/${totalCount} 封邮件`,
-      role: user?.role || '管理员',
-      avatar: user?.avatar || '',
-      timestamp: new Date()
-    });
+    // Log activity to database (non-blocking)
+    try {
+      await createActivityLog({
+        user: user?.name || 'Admin',
+        action: `发送了 ${successCount}/${totalCount} 封邮件`,
+        role: user?.role || '管理员',
+        avatar: user?.avatar || '',
+        timestamp: new Date()
+      });
+    } catch (logError) {
+      console.error('Failed to create activity log:', logError);
+    }
 
     if (failedRecipients.length > 0) {
       return NextResponse.json({ 

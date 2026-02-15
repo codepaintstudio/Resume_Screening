@@ -41,8 +41,6 @@ export function ResumeBank() {
     const candidateId = searchParams.get('candidateId');
     if (candidateId && students.length > 0) {
       // Find student by ID (handling both string and number IDs if necessary)
-      // Since MOCK_CANDIDATES use '1', '2' etc, and real students might have different IDs.
-      // We'll try to match loosely.
       const targetStudent = students.find(s => String(s.id) === candidateId);
       if (targetStudent) {
         setSelectedStudent(targetStudent);

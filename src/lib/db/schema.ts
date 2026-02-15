@@ -165,7 +165,7 @@ export const resumeImportSettings = mysqlTable('resume_import_settings', {
   imapServer: varchar('imap_server', { length: 255 }),
   port: varchar('port', { length: 10 }),
   account: varchar('account', { length: 255 }),
-  password: varchar('password', { length: 255 }), // 建议加密存储
+  authCode: varchar('auth_code', { length: 255 }), // 授权码
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 

@@ -22,7 +22,7 @@ import { getResumeImportSettings, createOrUpdateResumeImportSettings } from '@/l
  *                   type: string
  *                 account:
  *                   type: string
- *                 password:
+ *                 authCode:
  *                   type: string
  *       500:
  *         description: 服务器内部错误
@@ -46,7 +46,7 @@ import { getResumeImportSettings, createOrUpdateResumeImportSettings } from '@/l
  *                 type: string
  *               account:
  *                 type: string
- *               password:
+ *               authCode:
  *                 type: string
  *     responses:
  *       200:

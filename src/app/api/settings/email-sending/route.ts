@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getEmailConfig, createOrUpdateEmailConfig } from '@/lib/db/queries';
-import { getCurrentUser } from '@/lib/auth';
 
 /**
  * @swagger
@@ -10,20 +9,16 @@ import { getCurrentUser } from '@/lib/auth';
  *       - Settings
  *     summary: Get email sending settings
  *     description: Retrieves the current email sending configuration
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Email sending settings
- *       401:
- *         description: 未登录
+ *       500:
+ *         description: Server error
  *   put:
  *     tags:
  *       - Settings
  *     summary: Update email sending settings
  *     description: Updates the email sending configuration
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -42,23 +37,13 @@ import { getCurrentUser } from '@/lib/auth';
  *     responses:
  *       200:
  *         description: Updated email sending settings
- *       401:
- *         description: 未登录
+ *       500:
+ *         description: Server error
  */
 export async function GET() {
   try {
-    // 验证用户登录状态
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json(
-        { success: false, message: '请先登录' },
-        { status: 401 }
-      );
-    }
-
     const config = await getEmailConfig();
     if (!config) {
-      // 如果没有配置，返回空值
       return NextResponse.json({
         host: '',
         port: '',
@@ -74,23 +59,13 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error fetching email config:', error);
-    return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Failed to fetch email config' }, { status: 500 });
   }
 }
 
 export async function PUT(request: Request) {
   try {
-    // 验证用户登录状态
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json(
-        { success: false, message: '请先登录' },
-        { status: 401 }
-      );
-    }
-
     const data = await request.json();
-    
     await createOrUpdateEmailConfig({
       host: data.host || '',
       port: data.port || '',
@@ -100,6 +75,6 @@ export async function PUT(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating email config:', error);
-    return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Failed to update email config' }, { status: 500 });
   }
 }

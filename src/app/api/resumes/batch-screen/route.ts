@@ -1,6 +1,80 @@
 import { NextResponse } from 'next/server';
-import { getStudents, updateStudent, getUserById, createActivityLog } from '@/lib/db/queries';
+import { getStudents, updateStudent, getUserById, createActivityLog, getAiSettings } from '@/lib/db/queries';
 import { getCurrentUser } from '@/lib/auth';
+
+/**
+ * 调用 AI 服务进行简历筛选
+ */
+async function callAIScreening(student: any, prompt: string, aiSettings: any): Promise<{ score: number; tags: string[]; reason: string }> {
+  const { baseUrl, apiKey, model } = aiSettings.llm;
+  
+  if (!baseUrl || !apiKey || !model) {
+    throw new Error('AI settings not configured');
+  }
+
+  const systemPrompt = `你是一个专业的HR助手，负责筛选简历。请根据以下要求对简历进行评分：
+1. 评分范围 60-100 分
+2. 根据简历内容生成合适的标签（如：优秀、潜力、有经验、匹配度高、待考察）
+3. 给出简要的筛选理由
+
+请以JSON格式返回结果：
+{
+  "score": 85,
+  "tags": ["优秀", "有经验"],
+  "reason": "候选人具备5年以上前端开发经验..."
+}`;
+
+  const userPrompt = `请筛选以下简历：
+姓名: ${student.name}
+投递岗位: ${student.department}
+个人总结: ${student.summary || '无'}
+技能: ${student.skills || '无'}
+经历: ${student.experience || '无'}
+学历: ${student.education || '无'}
+
+筛选要求: ${prompt || '根据简历质量进行综合评估'}`;
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 1000
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`AI API error: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || '';
+
+  // 解析 AI 返回的 JSON
+  try {
+    const result = JSON.parse(content);
+    return {
+      score: typeof result.score === 'number' ? result.score : 75,
+      tags: Array.isArray(result.tags) ? result.tags : ['待考察'],
+      reason: result.reason || ''
+    };
+  } catch {
+    // 如果解析失败，返回默认分数
+    return {
+      score: 75,
+      tags: ['待考察'],
+      reason: 'AI 返回格式解析失败，请人工审核'
+    };
+  }
+}
 
 /**
  * @swagger
@@ -81,33 +155,53 @@ export async function POST(request: Request) {
     const users = await getUserById(currentUser.id);
     const user = users[0];
 
-    // 模拟 AI 筛选过程
-    // 在实际应用中，这里会调用 AI 服务来筛选简历
-    // 这里随机给一些简历分配 AI 分数和标签
+    // 获取 AI 设置
+    const aiSettings = await getAiSettings();
+    const { llm } = aiSettings || {};
+
+    // 检查 AI 是否已配置
+    if (!llm?.baseUrl || !llm?.apiKey || !llm?.model) {
+      return NextResponse.json(
+        { success: false, message: '请先在设置中配置 AI 服务' },
+        { status: 400 }
+      );
+    }
+
+    // 使用 AI 筛选简历
     let screenedCount = 0;
-    const updatedStudents = [];
+    let failedCount = 0;
+    const results: { studentId: number; score: number; tags: string[]; error?: string }[] = [];
 
     for (const student of pendingStudents) {
-      // 模拟 AI 评分 (60-100分)
-      const aiScore = Math.floor(Math.random() * 41) + 60;
-      
-      // 根据分数确定是否通过初筛
-      const newStatus = aiScore >= 75 ? 'pending_interview' : 'pending';
-      
-      // 生成一些标签
-      const possibleTags = ['优秀', '潜力', '有经验', '匹配度高', '待考察'];
-      const numTags = Math.floor(Math.random() * 3) + 1;
-      const shuffled = possibleTags.sort(() => 0.5 - Math.random());
-      const selectedTags = shuffled.slice(0, numTags);
+      try {
+        // 调用 AI 服务进行筛选
+        const aiResult = await callAIScreening(student, prompt, { llm });
+        
+        // 根据分数确定是否通过初筛
+        const newStatus = aiResult.score >= 75 ? 'pending_interview' : 'pending';
 
-      await updateStudent(student.id!, {
-        aiScore: aiScore.toString(),
-        status: newStatus as any,
-        tags: selectedTags,
-      });
+        await updateStudent(student.id!, {
+          aiScore: aiResult.score.toString(),
+          status: newStatus as any,
+          tags: aiResult.tags,
+        });
 
-      updatedStudents.push(student.id);
-      screenedCount++;
+        results.push({
+          studentId: student.id!,
+          score: aiResult.score,
+          tags: aiResult.tags
+        });
+        screenedCount++;
+      } catch (error) {
+        console.error(`AI screening failed for student ${student.id}:`, error);
+        failedCount++;
+        results.push({
+          studentId: student.id!,
+          score: 0,
+          tags: [],
+          error: 'AI 筛选失败'
+        });
+      }
     }
 
     // 记录活动日志
@@ -122,11 +216,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `成功筛选 ${screenedCount} 份简历`,
+      message: `成功筛选 ${screenedCount} 份简历${failedCount > 0 ? `，${failedCount} 份失败` : ''}`,
       data: {
         screenedCount,
+        failedCount,
         department: department || 'all',
         timestamp: new Date().toISOString(),
+        results
       },
     });
   } catch (error) {

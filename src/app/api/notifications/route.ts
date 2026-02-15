@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addActivity } from '@/data/activity-log';
-import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/db/queries';
+import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, createActivityLog } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -99,11 +98,12 @@ export async function PUT(request: Request) {
       
       // Log Activity for Mark All Read
       if (user) {
-        addActivity({
+        await createActivityLog({
           user: user.name || 'User',
           action: '标记所有通知为已读',
           role: user.role || '成员',
-          avatar: user.avatar || ''
+          avatar: user.avatar || '',
+          userId: user.id ? parseInt(user.id, 10) : undefined
         });
       }
     } else if (id) {

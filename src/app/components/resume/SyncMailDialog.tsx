@@ -57,7 +57,7 @@ export function SyncMailDialog({ open, onOpenChange, onSuccess }: SyncMailDialog
               host: data.imapServer || prev.host,
               port: data.port || prev.port,
               user: data.account || prev.user,
-              pass: '' // 不加载密码
+              pass: '' // 不加载授权码
             }));
           }
         })
@@ -96,6 +96,22 @@ export function SyncMailDialog({ open, onOpenChange, onSuccess }: SyncMailDialog
         setSelectedMails(new Set());
         setStep('preview');
         toast.success(`成功获取 ${data.mails?.length || 0} 封邮件`);
+
+        // 自动保存配置到数据库
+        try {
+          await fetch('/api/settings/resume-import', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imapServer: imapConfig.host,
+              port: imapConfig.port,
+              account: imapConfig.user,
+              authCode: imapConfig.pass
+            })
+          });
+        } catch (saveErr) {
+          console.error('自动保存配置失败:', saveErr);
+        }
       } else {
         setError(data.message || '获取邮件失败');
       }

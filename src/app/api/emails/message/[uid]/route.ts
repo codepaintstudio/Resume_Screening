@@ -9,7 +9,7 @@ export async function POST(request: Request, { params }: { params: { uid: string
     const host = body.host ?? settings.resumeImport.imapServer;
     const port = Number(body.port ?? settings.resumeImport.port ?? 993);
     const user = body.user ?? settings.resumeImport.account;
-    const pass = body.pass ?? settings.resumeImport.password;
+    const pass = body.pass ?? settings.resumeImport.authCode;
 
     if (!host || !user || !pass || !params.uid) {
       return NextResponse.json({ success: false, message: '请配置 IMAP（服务器/账号/授权码）' }, { status: 400 });

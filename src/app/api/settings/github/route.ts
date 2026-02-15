@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getGithubSettings, createOrUpdateGithubSettings } from '@/lib/db/queries';
-import { authenticateUser } from '@/data/user-mock';
+import { getCurrentUser } from '@/lib/auth';
 
 /**
  * @swagger
@@ -42,17 +42,20 @@ import { authenticateUser } from '@/data/user-mock';
  *         description: 未授权
  */
 
-// Mock authentication middleware
-const checkAdmin = (request: Request) => {
-  // In a real app, verify session/token here
-  // For now, we assume if you can access this route, you are authorized
-  // But let's add a basic check for demonstration
-  return true; 
+// Authentication middleware using real database
+const checkAdmin = async (request: Request) => {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return false;
+  }
+  // Check if user has admin role
+  return currentUser.role === 'admin';
 };
 
 export async function GET(request: Request) {
-  if (!checkAdmin(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const isAdmin = await checkAdmin(request);
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
   }
 
   try {
@@ -65,8 +68,9 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  if (!checkAdmin(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const isAdmin = await checkAdmin(request);
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
   }
 
   try {
