@@ -336,17 +336,42 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
 
   const handleViewPDF = () => {
     if (!student) return;
+    if (!student.resumePdf) {
+      toast.error('该候选人没有上传简历');
+      return;
+    }
     window.open(`/api/resumes/${student.id}/pdf`, '_blank');
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!student) return;
-    const link = document.createElement('a');
-    link.href = `/api/resumes/${student.id}/download`;
-    link.download = `${student.name}_resume.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    
+    if (!student.resumePdf) {
+      toast.error('该候选人没有上传简历');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/resumes/${student.id}/download`);
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(error.message || '下载失败');
+        return;
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${student.name}_resume.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('下载失败');
+    }
   };
 
   const handleStatusUpdate = (id: string | number, newStatus: any) => {

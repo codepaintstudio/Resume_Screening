@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getDepartments } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -25,12 +26,16 @@ import { NextResponse } from 'next/server';
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
+
 export async function GET() {
-  // In a real app, this would be fetched from a database or configuration service
-  const departments = ['前端部', 'UI部', '运维', '办公室'];
-  
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  return NextResponse.json(departments);
+  try {
+    const departments = await getDepartments();
+    return NextResponse.json(departments);
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    return NextResponse.json(
+      { error: '获取部门列表失败' },
+      { status: 500 }
+    );
+  }
 }

@@ -82,12 +82,20 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
         } else {
           toast.error(data.message || '注册失败');
         }
-      } else {
-        // Mock forgot password
-        setTimeout(() => {
-            toast.success('重置连接已发送');
-            handleModeChange('login');
-        }, 800);
+      } else if (mode === 'forgot') {
+        const res = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          toast.success(data.message || '重置链接已发送到您的邮箱');
+          handleModeChange('login');
+        } else {
+          toast.error(data.message || '发送失败');
+        }
       }
     } catch (error) {
       toast.error('请求出错');

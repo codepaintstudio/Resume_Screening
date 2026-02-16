@@ -30,7 +30,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { clientId, clientSecret } = getSettings().github;
+    const settings = await getSettings();
+    const { clientId, clientSecret } = settings.github;
 
     if (!clientId || !clientSecret) {
       console.error('GitHub credentials not configured');

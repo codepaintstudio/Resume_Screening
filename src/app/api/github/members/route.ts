@@ -9,7 +9,7 @@ import { getMembers } from '@/lib/github-store';
  *     tags:
  *       - GitHub
  *     summary: List organization members
- *     description: Retrieves a list of members in the GitHub organization (Mock Data)
+ *     description: Retrieves a list of members in the GitHub organization from local cache
  *     responses:
  *       200:
  *         description: List of members
@@ -18,7 +18,8 @@ import { getMembers } from '@/lib/github-store';
  */
 export async function GET() {
   try {
-    const { personalAccessToken, organization } = getSettings().github;
+    const settings = await getSettings();
+    const { personalAccessToken, organization } = settings.github;
 
     // Check configuration only if we want to simulate the "Not Configured" state
     if (!personalAccessToken || !organization) {

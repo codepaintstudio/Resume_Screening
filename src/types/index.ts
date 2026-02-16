@@ -21,6 +21,7 @@ export interface Student {
   submissionDate: string;
   createdAt?: string | Date;
   experiences?: Experience[];
+  resumePdf?: string; // 简历 PDF 文件路径
 }
 
 export type Stage = 'pending' | 'to_be_scheduled' | 'pending_interview' | 'interviewing' | 'passed' | 'rejected';

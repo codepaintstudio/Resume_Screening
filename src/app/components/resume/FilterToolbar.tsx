@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Filter, ArrowUpDown, BrainCircuit, Upload, RefreshCw } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, BrainCircuit, Upload, RefreshCw, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Select,
@@ -21,6 +21,7 @@ interface FilterToolbarProps {
   setFilterDept: (value: string) => void;
   onOpenScreening: () => void;
   onOpenUpload: () => void;
+  onOpenSyncMail?: () => void;
   departments?: string[];
   onRefresh?: () => void;
 }
@@ -36,6 +37,7 @@ export function FilterToolbar({
   setFilterDept,
   onOpenScreening,
   onOpenUpload,
+  onOpenSyncMail,
   departments = [...DEPARTMENTS],
   onRefresh
 }: FilterToolbarProps) {
@@ -129,6 +131,17 @@ export function FilterToolbar({
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div className="flex items-center gap-3 w-full sm:w-auto">
+        {onOpenSyncMail && (
+          <button 
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all"
+            onClick={onOpenSyncMail}
+          >
+            <Mail className="w-4 h-4" />
+            同步邮箱
+          </button>
+        )}
       </div>
     </div>
   );

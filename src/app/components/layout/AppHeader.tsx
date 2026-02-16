@@ -37,6 +37,9 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { useAppStore } from '@/store';
 
+// 默认头像
+const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100";
+
 export function AppHeader() {
   const { theme, setTheme } = useTheme();
   const { currentUser, userRole, setIsLoggedIn } = useAppStore();
@@ -69,7 +72,7 @@ export function AppHeader() {
   // Safe user display
   const displayName = currentUser?.name || '主理人';
   const displayRole = currentUser?.role || userRole || 'Admin';
-  const displayAvatar = currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100";
+  const displayAvatar = currentUser?.avatar || DEFAULT_AVATAR;
 
   useEffect(() => {
     setMounted(true);
@@ -177,9 +180,21 @@ export function AppHeader() {
   const currentPath = safePathname.split('/')[1] || 'dashboard';
   const currentLabel = navItems.find(item => item.id === currentPath)?.label || '工作台';
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      // 调用退出登录 API 清除服务端 Cookie
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error('Logout API error:', error);
+    } finally {
+      // 清除本地状态
+      setIsLoggedIn(false);
+      // 清除 localStorage 中的 token
+      localStorage.removeItem('auth_token');
+      router.push('/login');
+    }
   };
 
   return (
@@ -322,12 +337,10 @@ export function AppHeader() {
               <User className="mr-2 h-4 w-4" />
               <span>个人中心</span>
             </DropdownMenuItem>
-            {(currentUser?.role === 'admin' || userRole === 'admin') && (
-              <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/settings')}>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>系统设置</span>
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/settings')}>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>系统设置</span>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/10" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />

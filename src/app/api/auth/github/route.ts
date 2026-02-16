@@ -14,7 +14,8 @@ import { getSettings } from '@/lib/settings-store';
  *         description: Redirect to GitHub
  */
 export async function GET() {
-  const { clientId } = getSettings().github;
+  const settings = await getSettings();
+  const { clientId } = settings.github;
   const REDIRECT_URI = process.env.NEXT_PUBLIC_APP_URL 
     ? `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/github/callback`
     : 'http://localhost:3000/api/auth/github/callback';

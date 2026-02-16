@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getTrendData } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -8,6 +9,13 @@ import { NextResponse } from 'next/server';
  *       - System
  *     summary: 获取趋势图表数据
  *     description: 获取最近7天的投递量趋势数据
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           default: 7
+ *         description: 获取天数（默认7天）
  *     responses:
  *       200:
  *         description: 成功获取趋势数据
@@ -31,18 +39,27 @@ import { NextResponse } from 'next/server';
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-export async function GET() {
-  await new Promise(resolve => setTimeout(resolve, 600));
 
-  const data = [
-    { name: '01-26', value: Math.floor(Math.random() * 50) + 10 },
-    { name: '01-27', value: Math.floor(Math.random() * 50) + 10 },
-    { name: '01-28', value: Math.floor(Math.random() * 50) + 10 },
-    { name: '01-29', value: Math.floor(Math.random() * 50) + 10 },
-    { name: '01-30', value: Math.floor(Math.random() * 50) + 10 },
-    { name: '01-31', value: Math.floor(Math.random() * 50) + 10 },
-    { name: '02-01', value: Math.floor(Math.random() * 50) + 10 },
-  ];
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const days = parseInt(searchParams.get('days') || '7');
 
-  return NextResponse.json(data);
+  // 验证参数
+  if (days < 1 || days > 30) {
+    return NextResponse.json(
+      { error: '天数必须在1-30之间' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const data = await getTrendData(days);
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error fetching trend data:', error);
+    return NextResponse.json(
+      { error: '获取趋势数据失败' },
+      { status: 500 }
+    );
+  }
 }

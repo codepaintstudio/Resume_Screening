@@ -10,6 +10,7 @@ import { StudentTable } from './resume/StudentTable';
 import { CandidateDrawer } from './resume/CandidateDrawer';
 import { AIScreeningDialog } from './resume/AIScreeningDialog';
 import { UploadResumeDialog } from './resume/UploadResumeDialog';
+import { SyncMailDialog } from './resume/SyncMailDialog';
 
 export function ResumeBank() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -29,6 +30,9 @@ export function ResumeBank() {
     to: undefined,
   });
 
+  // 同步邮箱相关状态
+  const [isSyncMailOpen, setIsSyncMailOpen] = useState(false);
+
   const searchParams = useSearchParams();
   const { currentUser } = useAppStore();
 
@@ -37,8 +41,6 @@ export function ResumeBank() {
     const candidateId = searchParams?.get('candidateId');
     if (candidateId && students.length > 0) {
       // Find student by ID (handling both string and number IDs if necessary)
-      // Since MOCK_CANDIDATES use '1', '2' etc, and real students might have different IDs.
-      // We'll try to match loosely.
       const targetStudent = students.find(s => String(s.id) === candidateId);
       if (targetStudent) {
         setSelectedStudent(targetStudent);
@@ -109,8 +111,10 @@ export function ResumeBank() {
       ]);
 
       if (resumesRes.ok) {
-        const data = await resumesRes.json();
-        setStudents(data);
+        const result = await resumesRes.json();
+        // 处理分页格式的响应
+        const resumesData = Array.isArray(result) ? result : (result.data || []);
+        setStudents(resumesData);
       } else {
         throw new Error('Failed to fetch resumes');
       }
@@ -208,9 +212,6 @@ export function ResumeBank() {
       department: DEPARTMENTS[Math.floor(Math.random() * (DEPARTMENTS.length - 1)) + 1],
       submissionDate: new Date().toISOString().split('T')[0],
       gpa: (Math.random() * 1.5 + 2.5).toFixed(1),
-      major: '计算机科学与技术',
-      class: '2201',
-      graduationYear: '2026',
       aiScore: Math.floor(Math.random() * 20) + 80,
       status: 'pending' as const,
       tags: ['新上传'],
@@ -231,13 +232,18 @@ export function ResumeBank() {
       });
       
       if (res.ok) {
-        setStudents(prev => [...newStudents, ...prev]);
+        const result = await res.json();
+        // 将新创建的学生添加到列表
+        if (result.data && Array.isArray(result.data)) {
+          setStudents(prev => [...result.data, ...prev]);
+        }
         toast.success(`成功上传 ${files.length} 份简历`);
         setIsUploadOpen(false);
       } else {
         throw new Error('Upload failed');
       }
     } catch (error) {
+      console.error('Upload error:', error);
       toast.error('上传失败，请重试');
     }
   };
@@ -255,6 +261,7 @@ export function ResumeBank() {
         setFilterDept={setFilterDept}
         onOpenScreening={() => setIsScreeningOpen(true)}
         onOpenUpload={() => setIsUploadOpen(true)}
+        onOpenSyncMail={() => setIsSyncMailOpen(true)}
         departments={departments}
         onRefresh={fetchData}
       />
@@ -287,6 +294,14 @@ export function ResumeBank() {
         open={isUploadOpen}
         onOpenChange={setIsUploadOpen}
         onUpload={handleUpload}
+      />
+
+      <SyncMailDialog
+        open={isSyncMailOpen}
+        onOpenChange={setIsSyncMailOpen}
+        onSuccess={() => {
+          fetchData(); // 同步成功后刷新列表
+        }}
       />
     </div>
   );

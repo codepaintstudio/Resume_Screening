@@ -54,18 +54,12 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 interface Template {
-  id: string;
+  id: number | string;
   name: string;
   subject: string;
   content: string;
   category: string;
 }
-
-const mockTemplates: Template[] = [
-  { id: '1', name: '面试邀请', subject: '【码绘工作室】{{姓名}}同学，诚邀您参加面试', content: '亲爱的{{姓名}}同学，你的简历已通过初筛，我们诚邀你参加面试...', category: '面试' },
-  { id: '2', name: '通过通知', subject: '【码绘工作室】恭喜！{{姓名}}同学，你已通过面试', content: '亲爱的{{姓名}}同学，很高兴地通知你已经通过了面试，后续安排为...', category: '通过' },
-  { id: '3', name: '不合适通知', subject: '关于码绘工作室招新进度的通知', content: '亲爱的{{姓名}}同学，感谢你投递我们的岗位，经过慎重考虑...', category: '拒信' },
-];
 
 export function EmailSystem() {
   const { currentUser } = useAppStore();
@@ -73,7 +67,7 @@ export function EmailSystem() {
   const activeTab = searchParams?.get('tab') || 'batch';
   
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const [templates, setTemplates] = useState<Template[]>(mockTemplates);
+  const [templates, setTemplates] = useState<Template[]>([]);
   
   // Template Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -94,6 +88,7 @@ export function EmailSystem() {
   
   // Candidate Filter State
   const [candidates, setCandidates] = useState<any[]>([]);
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<number | string>>(new Set());
   const [filters, setFilters] = useState({
     status: 'all',
     department: 'all',
@@ -124,8 +119,10 @@ export function EmailSystem() {
   const fetchCandidates = async () => {
     try {
       const res = await fetch('/api/resumes');
-      const data = await res.json();
-      setCandidates(data);
+      const result = await res.json();
+      // 处理分页格式的响应
+      const candidatesData = Array.isArray(result) ? result : (result.data || []);
+      setCandidates(candidatesData);
     } catch (error) {
       console.error('Failed to fetch candidates', error);
     }
@@ -168,11 +165,42 @@ export function EmailSystem() {
     return matchDept && matchStatus && matchTime;
   });
 
+  // Toggle candidate selection
+  const toggleCandidate = (id: number | string) => {
+    setSelectedCandidateIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all filtered candidates
+  const selectAllCandidates = () => {
+    setSelectedCandidateIds(new Set(filteredCandidates.map(c => c.id)));
+  };
+
+  // Clear all selections
+  const clearSelections = () => {
+    setSelectedCandidateIds(new Set());
+  };
+
+  // Get selected candidates data
+  const selectedCandidates = candidates.filter(c => selectedCandidateIds.has(c.id));
+
   const fetchTemplates = async () => {
     try {
       const res = await fetch('/api/emails/templates');
       const data = await res.json();
-      setTemplates(data);
+      // 确保 ID 转换为字符串以保持兼容性
+      const templatesWithStringId = (Array.isArray(data) ? data : []).map((t: any) => ({
+        ...t,
+        id: String(t.id)
+      }));
+      setTemplates(templatesWithStringId);
     } catch (error) {
       console.error('Failed to fetch templates', error);
     }
@@ -189,25 +217,42 @@ export function EmailSystem() {
   };
 
   const handleSend = async () => {
+    if (selectedCandidates.length === 0) {
+      toast.error('请先选择收件人');
+      return;
+    }
+
+    if (!selectedTemplate) {
+      toast.error('请先选择邮件模板');
+      return;
+    }
+
     setIsLoading(true);
     try {
+      // 构建收件人列表
+      const recipients = selectedCandidates.map(c => ({
+        name: c.name,
+        email: c.email
+      }));
+
       const res = await fetch('/api/emails/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           templateId: selectedTemplate?.id,
-          recipientCount: 12, // Mock count
-          customSubject: selectedTemplate ? undefined : 'Custom Subject', // Simplify for now
+          recipients: recipients,
+          customSubject: selectedTemplate ? undefined : 'Custom Subject',
           customContent: selectedTemplate ? undefined : 'Custom Content',
           user: currentUser
         })
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('群发任务已启动，飞书机器人将同步通知');
+        toast.success(`成功发送 ${data.message || selectedCandidates.length + ' 封邮件'}`);
         fetchHistory(); // Refresh history
+        clearSelections(); // 发送成功后清除选择
       } else {
-        toast.error('发送失败');
+        toast.error(data.message || '发送失败');
       }
     } catch (error) {
       toast.error('发送出错');
@@ -503,14 +548,45 @@ export function EmailSystem() {
                   </div>
                   <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-400">当前已选</span>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-400">{filteredCandidates.length} 人</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-400">
+                        选择收件人 ({selectedCandidateIds.size} / {filteredCandidates.length})
+                      </span>
+                      <div className="flex gap-1">
+                        <button 
+                          onClick={selectAllCandidates}
+                          className="text-[9px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-700"
+                        >
+                          全选
+                        </button>
+                        <button 
+                          onClick={clearSelections}
+                          className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded hover:bg-slate-200 dark:hover:bg-slate-600"
+                        >
+                          清空
+                        </button>
+                      </div>
                     </div>
-                    <div className="max-h-40 overflow-y-auto space-y-1 pr-2 custom-scrollbar">
+                    <div className="max-h-48 overflow-y-auto space-y-1 pr-2 custom-scrollbar">
                         {filteredCandidates.map(c => (
-                            <div key={c.id} className="flex justify-between text-[10px] text-blue-600/70 dark:text-blue-400/70 border-b border-blue-100 dark:border-blue-900/20 last:border-0 py-1">
-                                <span>{c.name}</span>
-                                <span>{c.submissionDate}</span>
+                            <div 
+                              key={c.id} 
+                              onClick={() => toggleCandidate(c.id)}
+                              className={`flex items-center justify-between text-[10px] cursor-pointer border-b border-blue-100 dark:border-blue-900/20 last:border-0 py-1.5 px-1 rounded transition-colors ${
+                                selectedCandidateIds.has(c.id) 
+                                  ? 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300' 
+                                  : 'text-blue-600/70 dark:text-blue-400/70 hover:bg-blue-50 dark:hover:bg-blue-900/10'
+                              }`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                      type="checkbox" 
+                                      checked={selectedCandidateIds.has(c.id)}
+                                      onChange={() => {}}
+                                      className="w-3 h-3 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="font-medium">{c.name}</span>
+                                </div>
+                                <span>{c.email || '无邮箱'}</span>
                             </div>
                         ))}
                     </div>
