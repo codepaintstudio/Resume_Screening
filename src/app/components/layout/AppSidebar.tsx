@@ -22,11 +22,13 @@ export function AppSidebar() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const safePathname = pathname ?? '';
+  const safeParams = searchParams ?? new URLSearchParams();
 
   useEffect(() => {
     navItems.forEach(item => {
       if ('subItems' in item && item.subItems) {
-        if (pathname.startsWith(`/${item.id}`) && !expandedItems.includes(item.id)) {
+        if (safePathname.startsWith(`/${item.id}`) && !expandedItems.includes(item.id)) {
           setExpandedItems(prev => [...prev, item.id]);
         }
       }
@@ -75,7 +77,7 @@ export function AppSidebar() {
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname.startsWith(`/${item.id}`);
+            const isActive = safePathname.startsWith(`/${item.id}`);
             const hasSubItems = 'subItems' in item && (item as any).subItems;
             const isExpanded = expandedItems.includes(item.id);
 
@@ -126,7 +128,7 @@ export function AppSidebar() {
                       >
                         <div className="pl-11 pr-2 space-y-1 pb-1">
                           {(item as any).subItems.map((sub: any) => {
-                             const isSubActive = pathname === '/emails' && searchParams.get('tab') === sub.id;
+                             const isSubActive = safePathname === '/emails' && safeParams.get('tab') === sub.id;
                              return (
                               <Link
                                 key={sub.id}

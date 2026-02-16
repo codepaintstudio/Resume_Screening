@@ -70,7 +70,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
   const [activeTab, setActiveTab] = useState('platform');
 
   useEffect(() => {
-    const tab = searchParams.get('tab');
+    const tab = searchParams?.get('tab');
     if (tab) {
       setActiveTab(tab);
     }

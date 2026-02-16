@@ -86,8 +86,8 @@ export function GlobalSearch() {
         action: (r) => r.push(`/${item.id}`),
       });
 
-      if (item.subItems) {
-        item.subItems.forEach(sub => {
+      if (item.subItems && item.subItems.length > 0) {
+        item.subItems.forEach((sub) => {
           items.push({
             id: `nav-${item.id}-${sub.id}`,
             type: 'page',

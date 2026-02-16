@@ -152,7 +152,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
       fetch(`/api/resumes/${student.id}`)
         .then(res => res.json())
         .then(data => {
-          setFormData(prev => ({
+          setFormData((prev: any) => ({
             ...prev,
             ...data,
             // Preserve status from props if it differs (though usually it should be in sync)

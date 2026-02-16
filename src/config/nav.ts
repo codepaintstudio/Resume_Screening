@@ -7,7 +7,20 @@ import {
   Github
 } from 'lucide-react';
 
-export const navItems = [
+export interface NavSubItem {
+  id: string;
+  label: string;
+  href: string;
+}
+
+export interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<any>;
+  subItems?: NavSubItem[];
+}
+
+export const navItems: readonly NavItem[] = [
   { id: 'dashboard', label: '工作台', icon: LayoutDashboard },
   { id: 'resumes', label: '招新简历库', icon: GraduationCap },
   { id: 'interviews', label: '面试安排', icon: Briefcase },
@@ -22,4 +35,4 @@ export const navItems = [
     ]
   },
   { id: 'github', label: 'GitHub 管理', icon: Github },
-] as const;
+];
