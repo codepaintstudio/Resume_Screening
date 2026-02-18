@@ -4,15 +4,22 @@ import Cookies from 'js-cookie';
 
 type Role = 'admin' | 'teacher' | 'hr';
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: Role;
+}
+
 interface AppState {
   isLoggedIn: boolean;
   isSidebarOpen: boolean;
   userRole: Role;
-  currentUser: any; // Add current user info
+  currentUser: User | null; // Add current user info
   setIsLoggedIn: (status: boolean) => void;
   toggleSidebar: () => void;
   setUserRole: (role: Role) => void;
-  setCurrentUser: (user: any) => void;
+  setCurrentUser: (user: User | null) => void;
   logout: () => void;
 }
 
