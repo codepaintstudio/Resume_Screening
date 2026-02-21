@@ -36,18 +36,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const student = students[0];
 
-    // 检查是否有简历 PDF
     if (!student.resumePdf) {
       return NextResponse.json(
         { success: false, message: '该候选人没有上传简历' },
         { status: 404 }
       );
     }
-
-    // 拼接成服务器上的绝对路径
-    const absolutePath = path.join(process.cwd(), 'public', student.resumePdf);
-
-    // 读取文件为 Buffer
+    const relativePath = student.resumePdf.startsWith('/')
+      ? student.resumePdf.slice(1)
+      : student.resumePdf;
+    const absolutePath = path.join(process.cwd(), 'public', relativePath);
     const fileBuffer = await fs.readFile(absolutePath);
 
     // 返回正确的响应

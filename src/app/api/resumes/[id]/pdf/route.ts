@@ -66,18 +66,17 @@ export async function GET(
 
     const student = students[0];
 
-    // 检查是否有简历 PDF
     if (!student.resumePdf) {
       return NextResponse.json(
         { success: false, message: '该候选人没有上传简历' },
         { status: 404 }
       );
     }
+    const relativePath = student.resumePdf.startsWith('/')
+      ? student.resumePdf.slice(1)
+      : student.resumePdf;
+    const absolutePath = path.join(process.cwd(), 'public', relativePath);
 
-    // 拼接成服务器上的绝对路径
-    const absolutePath = path.join(process.cwd(), 'public', student.resumePdf);
-
-    // 检查文件是否存在
     try {
       await fs.access(absolutePath);
     } catch {
@@ -87,14 +86,21 @@ export async function GET(
       );
     }
 
-    // 读取文件为 Buffer
     const fileBuffer = await fs.readFile(absolutePath);
 
-    // 返回 PDF 文件流，使用 inline 模式预览
+    const ext = path.extname(student.resumePdf || '').toLowerCase();
+    let contentType = 'application/octet-stream';
+
+    if (ext === '.pdf') {
+      contentType = 'application/pdf';
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      contentType = 'image/jpeg';
+    }
+
     return new NextResponse(fileBuffer, {
       headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="resume_${studentId}.pdf"`,
+        'Content-Type': contentType,
+        'Content-Disposition': `inline; filename="resume_${studentId}${ext || ''}"`,
       },
     });
   } catch (error) {

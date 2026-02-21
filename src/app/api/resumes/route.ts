@@ -5,9 +5,39 @@ import { eq, like, and, or, desc } from 'drizzle-orm';
 import { schema } from '@/lib/db';
 import { writeFile, mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
+import { ImapFlow } from 'imapflow';
+import { getSettings } from '@/lib/settings-store';
 
-// 简历 PDF 上传目录
+// 简历文件上传目录
 const RESUME_DIR = 'public/uploads/resumes';
+
+function findAttachments(node: any, path: number[] = []) {
+  const attachments: { part: string; type: string; size: number; filename: string }[] = [];
+
+  const disposition = typeof node.disposition === 'string' ? node.disposition.toLowerCase() : '';
+  const isBinaryPart = node.type && node.type !== 'text' && node.type !== 'multipart';
+  const isAttachmentDisposition = disposition === 'attachment' || disposition === 'inline';
+
+  if (isBinaryPart && (isAttachmentDisposition || !node.disposition)) {
+    attachments.push({
+      part: path.length ? path.join('.') : '1',
+      type: `${node.type}/${node.subtype || 'octet-stream'}`,
+      size: node.size || 0,
+      filename:
+        node.dispositionParameters?.filename ||
+        node.parameters?.name ||
+        'attachment',
+    });
+  }
+
+  if (node.childNodes) {
+    node.childNodes.forEach((child: any, i: number) => {
+      attachments.push(...findAttachments(child, [...path, i + 1]));
+    });
+  }
+
+  return attachments;
+}
 
 /**
  * @swagger
@@ -245,8 +275,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let imapClient: ImapFlow | null = null;
+
   try {
-    // 验证用户登录状态
     const currentUser = await getCurrentUser();
     if (!currentUser) {
       return NextResponse.json(
@@ -255,32 +286,22 @@ export async function POST(request: Request) {
       );
     }
 
-    // 检查 Content-Type 判断是 JSON 还是 FormData
     const contentType = request.headers.get('content-type') || '';
-    console.log('Content-Type:', contentType);
-    
+
     let students: any[] = [];
     let resumeFile: File | null = null;
 
     if (contentType.includes('multipart/form-data')) {
-      // 处理 FormData 上传（包含文件和 JSON 数据）
       const formData = await request.formData();
-      
-      console.log('FormData keys:', Array.from(formData.keys()));
-      
-      // 获取 JSON 数据
+
       const jsonData = formData.get('data');
-      console.log('jsonData:', jsonData);
       if (jsonData) {
         const parsed = JSON.parse(jsonData.toString());
         students = parsed.students || [];
       }
-      
-      // 获取 PDF 文件
+
       resumeFile = formData.get('resume') as File | null;
-      console.log('resumeFile:', resumeFile);
     } else {
-      // 处理纯 JSON 上传
       const body = await request.json();
       students = body.students || [];
     }
@@ -292,17 +313,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // 获取用户信息
     const users = await getUserById(currentUser.id);
     const user = users[0];
 
-    // 批量创建简历
     const createdStudents = [];
 
-    // 处理 PDF 文件（如果有）
     let resumePdfPath = '';
     if (resumeFile) {
-      // 验证文件类型
       if (resumeFile.type !== 'application/pdf') {
         return NextResponse.json(
           { success: false, message: '仅支持 PDF 格式的简历文件' },
@@ -310,7 +327,6 @@ export async function POST(request: Request) {
         );
       }
 
-      // 验证文件大小（最大 10MB）
       const maxSize = 10 * 1024 * 1024;
       if (resumeFile.size > maxSize) {
         return NextResponse.json(
@@ -319,24 +335,132 @@ export async function POST(request: Request) {
         );
       }
 
-      // 确保目录存在
       const uploadDir = join(process.cwd(), RESUME_DIR);
       try {
         await mkdir(uploadDir, { recursive: true });
-      } catch (error) {
-        // 目录可能已存在
-      }
+      } catch {}
 
-      // 生成唯一文件名
       const fileName = `resume_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`;
       const fileBuffer = await resumeFile.arrayBuffer();
       const filePath = join(uploadDir, fileName);
       await writeFile(filePath, Buffer.from(fileBuffer));
-      
+
       resumePdfPath = `/uploads/resumes/${fileName}`;
     }
 
+    const mailStudents = students.filter(
+      (s: any) => typeof s.studentId === 'string' && s.studentId.startsWith('MAIL')
+    );
+
+    if (mailStudents.length > 0) {
+      try {
+        const settings = await getSettings();
+        const resumeImport = settings.resumeImport;
+        const host = resumeImport.imapServer;
+        const port = Number(resumeImport.port || 993);
+        const userName = resumeImport.account;
+        const pass = resumeImport.authCode;
+
+        if (host && userName && pass) {
+          imapClient = new ImapFlow({
+            host,
+            port,
+            secure: true,
+            auth: { user: userName, pass },
+          });
+
+          await imapClient.connect();
+          await imapClient.mailboxOpen('INBOX');
+        }
+      } catch (error) {
+        console.error('Init IMAP client error:', error);
+      }
+    }
+
+    const uploadDir = join(process.cwd(), RESUME_DIR);
+    try {
+      await mkdir(uploadDir, { recursive: true });
+    } catch {}
+
     for (const student of students) {
+      let finalResumePath = resumePdfPath || student.resumePdf || '';
+
+      if (
+        !finalResumePath &&
+        imapClient &&
+        typeof student.studentId === 'string' &&
+        student.studentId.startsWith('MAIL')
+      ) {
+        const uidStr = student.studentId.replace(/^MAIL/, '');
+        const uidNum = Number(uidStr);
+
+        if (!Number.isNaN(uidNum)) {
+          try {
+            const message: any = await (imapClient as any).fetchOne(
+              String(uidNum),
+              {
+                bodyStructure: true,
+              },
+              { uid: true }
+            );
+
+            if (message?.bodyStructure) {
+              const attachments = findAttachments(message.bodyStructure);
+              const resumeAttachment = attachments.find((att) => {
+                const name = att.filename.toLowerCase();
+                const isPdf = att.type === 'application/pdf' || name.endsWith('.pdf');
+                return isPdf;
+              }) || attachments.find((att) => {
+                const name = att.filename.toLowerCase();
+                const isImageType = att.type.startsWith('image/');
+                const isImageExt = name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png');
+                return isImageType || isImageExt;
+              });
+
+              if (resumeAttachment) {
+                const { content } = await (imapClient as any).download(
+                  message.uid,
+                  resumeAttachment.part,
+                  { uid: true }
+                );
+
+                const chunks: Buffer[] = [];
+                for await (const chunk of content as AsyncIterable<Uint8Array>) {
+                  chunks.push(Buffer.from(chunk));
+                }
+                const buffer = Buffer.concat(chunks);
+
+                let ext = '';
+                const lowerName = resumeAttachment.filename.toLowerCase();
+                const isPdf = resumeAttachment.type === 'application/pdf' || lowerName.endsWith('.pdf');
+                const isJpg = resumeAttachment.type === 'image/jpeg' || resumeAttachment.type === 'image/jpg' || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg');
+                const isPng = resumeAttachment.type === 'image/png' || lowerName.endsWith('.png');
+
+                if (lowerName.includes('.')) {
+                  ext = '.' + lowerName.split('.').pop();
+                } else if (isPdf) {
+                  ext = '.pdf';
+                } else if (isJpg) {
+                  ext = '.jpg';
+                } else if (isPng) {
+                  ext = '.png';
+                }
+
+                const fileName = `resume_mail_${uidNum}_${Date.now()}_${Math.random()
+                  .toString(36)
+                  .substring(7)}${ext || ''}`;
+                const filePath = join(uploadDir, fileName);
+                await writeFile(filePath, buffer);
+
+                finalResumePath = `/uploads/resumes/${fileName}`;
+              }
+            }
+          } catch (error) {
+            console.error('Fetch mail attachment for resume error:', error);
+          }
+        }
+      }
+
       const newStudent = await createStudent({
         name: student.name || '',
         studentId: student.studentId || '',
@@ -352,20 +476,20 @@ export async function POST(request: Request) {
         email: student.email || '',
         phone: student.phone || '',
         experiences: student.experiences || [],
-        // 保存 PDF 路径
-        resumePdf: resumePdfPath || student.resumePdf || '',
+        resumePdf: finalResumePath,
       });
-      
+
       if (newStudent.length > 0) {
         createdStudents.push(newStudent[0]);
       }
     }
 
-    // 记录活动日志
     if (createdStudents.length > 0) {
       await createActivityLog({
         user: user?.name || currentUser.name,
-        action: `上传了 ${createdStudents.length} 份新简历${resumePdfPath ? '（含PDF）' : ''}`,
+        action: `上传了 ${createdStudents.length} 份新简历${
+          resumePdfPath ? '（含PDF）' : ''
+        }`,
         role: user?.role || currentUser.role,
         avatar: user?.avatar || '',
         timestamp: new Date(),
@@ -384,5 +508,13 @@ export async function POST(request: Request) {
       { success: false, message: '上传简历失败' },
       { status: 500 }
     );
+  } finally {
+    if (imapClient) {
+      try {
+        await imapClient.logout();
+      } catch (e) {
+        console.error('Logout IMAP client error:', e);
+      }
+    }
   }
 }
