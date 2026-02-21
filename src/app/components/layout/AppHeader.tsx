@@ -49,12 +49,14 @@ export function AppHeader() {
   const [showPersonalCenter, setShowPersonalCenter] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const pathname = usePathname();
+  const safePathname = pathname ?? '';
+  const safeParams = searchParams ?? new URLSearchParams();
 
   // Handle auto-expansion of active items with sub-items
   useEffect(() => {
     navItems.forEach(item => {
       if ('subItems' in item && item.subItems) {
-        if (pathname.startsWith(`/${item.id}`) && !expandedItems.includes(item.id)) {
+        if (pathname?.startsWith(`/${item.id}`) && !expandedItems.includes(item.id)) {
           setExpandedItems(prev => [...prev, item.id]);
         }
       }
@@ -175,7 +177,7 @@ export function AppHeader() {
   };
 
   // Remove leading slash for matching
-  const currentPath = pathname?.split('/')[1] || 'dashboard';
+  const currentPath = safePathname.split('/')[1] || 'dashboard';
   const currentLabel = navItems.find(item => item.id === currentPath)?.label || '工作台';
 
   const handleLogout = async () => {
@@ -219,7 +221,7 @@ export function AppHeader() {
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname.startsWith(`/${item.id}`);
+                const isActive = safePathname.startsWith(`/${item.id}`);
                 const hasSubItems = 'subItems' in item && (item as any).subItems;
                 const isExpanded = expandedItems.includes(item.id);
 
@@ -249,7 +251,7 @@ export function AppHeader() {
                           >
                             <div className="pl-11 pr-2 space-y-1 pb-1">
                               {(item as any).subItems.map((sub: any) => {
-                                 const isSubActive = pathname === '/emails' && searchParams.get('tab') === sub.id;
+                                 const isSubActive = safePathname === '/emails' && safeParams.get('tab') === sub.id;
                                  return (
                                   <Link
                                     key={sub.id}

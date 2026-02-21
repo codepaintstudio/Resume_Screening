@@ -7,12 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "postinstall": "next-ws patch",
-    "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "next-ws patch"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
@@ -91,14 +88,14 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.55.0",
+    "@typescript-eslint/parser": "^8.55.0",
     "autoprefixer": "latest",
-    "drizzle-kit": "^0.31.9",
     "postcss": "latest",
     "tailwindcss": "latest",
     "tailwindcss-animate": "latest",

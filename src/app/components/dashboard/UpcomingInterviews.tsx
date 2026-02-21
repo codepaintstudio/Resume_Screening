@@ -42,8 +42,8 @@ export function UpcomingInterviews() {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
           <h3 className="text-lg font-black tracking-tight">即将进行的面试</h3>
           <Skeleton className="h-4 w-16" />
         </div>
@@ -67,15 +67,15 @@ export function UpcomingInterviews() {
 
   if (interviews.length === 0) {
     return (
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm h-[200px] flex items-center justify-center">
+      <div className="bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm h-[200px] flex items-center justify-center">
         <span className="text-slate-400 text-sm">Loading...</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
         <h3 className="text-lg font-black tracking-tight">即将进行的面试</h3>
         <Link 
           href="/interviews" 

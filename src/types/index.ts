@@ -38,6 +38,7 @@ export interface InterviewTask {
   location: string;
   priority: 'low' | 'medium' | 'high';
   stage: Stage;
+  role?: string;
   studentId: string;
   gpa: string;
   aiScore: number;

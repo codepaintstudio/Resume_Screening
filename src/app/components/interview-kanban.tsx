@@ -153,7 +153,7 @@ export function InterviewKanban() {
   }, []);
 
   useEffect(() => {
-    const candidateId = searchParams.get('candidateId');
+    const candidateId = searchParams?.get('candidateId');
     if (candidateId && tasks.length > 0) {
       const targetTask = tasks.find(t => String(t.id) === candidateId);
       if (targetTask) {
@@ -703,13 +703,13 @@ export function InterviewKanban() {
                             // 使用 custom 参数获取当前组件的旧索引
                             // 由于在 exit 中无法直接访问 prevIndexRef，通过 custom 传递
                             // 但这里我们直接用函数接收 custom 参数，framer-motion 支持
-                            return (custom: number) => {
+                            return ((custom: number) => {
                               const oldIndex = custom;
                               const newIndex = mobileTabIndex;
                               if (oldIndex < newIndex) return '-30%';  // 旧页向左出
                               if (oldIndex > newIndex) return '30%';   // 旧页向右出
                               return 0;
-                            };
+                            }) as any;
                           })(),
                           opacity: 0,
                           transition: {
@@ -795,8 +795,9 @@ export function InterviewKanban() {
               handleUpdateTaskStage(selectedTask!, newStatus);
           }}
           onUpdate={(updatedData) => {
-              setSelectedTask(prev => prev ? { ...prev, ...updatedData } : null);
-              setTasks(prev => prev.map(t => t.id === updatedData.id ? { ...t, ...updatedData } : t));
+              const safeUpdatedData = { ...updatedData, id: String(updatedData.id) };
+              setSelectedTask(prev => prev ? { ...prev, ...safeUpdatedData } as InterviewTask : null);
+              setTasks(prev => prev.map(t => t.id === safeUpdatedData.id ? { ...t, ...safeUpdatedData } as InterviewTask : t));
           }}
           type="interview"
         />

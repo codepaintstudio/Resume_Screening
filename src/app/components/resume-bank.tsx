@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useSearchParams } from 'next/navigation';
-import { Student } from '@/types';
+import { Student, Stage } from '@/types';
 import { DEPARTMENTS, STATUS_MAP, SortOptionId } from '@/config/constants';
 
 import { useAppStore } from '@/store';
@@ -17,7 +17,7 @@ export function ResumeBank() {
   const [loading, setLoading] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [filterDept, setFilterDept] = useState(DEPARTMENTS[0]);
+  const [filterDept, setFilterDept] = useState<string>(DEPARTMENTS[0]);
   const [sortBy, setSortBy] = useState<SortOptionId>('ai');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,7 +38,7 @@ export function ResumeBank() {
 
   // Handle URL candidateId parameter
   useEffect(() => {
-    const candidateId = searchParams.get('candidateId');
+    const candidateId = searchParams?.get('candidateId');
     if (candidateId && students.length > 0) {
       // Find student by ID (handling both string and number IDs if necessary)
       const targetStudent = students.find(s => String(s.id) === candidateId);
@@ -82,8 +82,14 @@ export function ResumeBank() {
             diff = dateA - dateB;
             break;
           case 'status':
-            // Custom order for status: pending > interviewing > passed > rejected
-            const statusOrder = { pending: 3, interviewing: 2, passed: 1, rejected: 0 };
+            const statusOrder: Record<Stage, number> = { 
+              pending: 5, 
+              to_be_scheduled: 4, 
+              pending_interview: 3, 
+              interviewing: 2, 
+              passed: 1, 
+              rejected: 0 
+            };
             const statusA = statusOrder[a.status] || 0;
             const statusB = statusOrder[b.status] || 0;
             diff = statusA - statusB;
@@ -199,44 +205,31 @@ export function ResumeBank() {
   };
 
   const handleUpload = async (files: File[]) => {
+    const newStudents: Student[] = files.map((file, index) => ({
+      id: `new-${Date.now()}-${index}`,
+      name: file.name.replace(/\.[^/.]+$/, ""),
+      studentId: `2024${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+      department: DEPARTMENTS[Math.floor(Math.random() * (DEPARTMENTS.length - 1)) + 1],
+      submissionDate: new Date().toISOString().split('T')[0],
+      gpa: (Math.random() * 1.5 + 2.5).toFixed(1),
+      aiScore: Math.floor(Math.random() * 20) + 80,
+      status: 'pending' as const,
+      tags: ['新上传'],
+      email: 'candidate@example.com',
+      phone: '13800000000',
+      skills: [],
+      experience: []
+    }));
+    
     try {
-      // 只处理第一个 PDF 文件（目前的 API 设计是批量创建但只支持一个 PDF）
-      const pdfFile = files.find(f => f.type === 'application/pdf');
-      
-      // 准备学生数据
-      const newStudents = files.map((file, index) => ({
-        name: file.name.replace(/\.[^/.]+$/, ""),
-        studentId: `2024${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-        department: DEPARTMENTS[Math.floor(Math.random() * (DEPARTMENTS.length - 1)) + 1],
-        gpa: (Math.random() * 1.5 + 2.5).toFixed(1),
-        status: 'pending' as const,
-        tags: ['新上传'],
-        email: 'candidate@example.com',
-        phone: '13800000000',
-      }));
-
-      let res: Response;
-      
-      if (pdfFile) {
-        // 使用 FormData 上传 PDF 文件
-        const formData = new FormData();
-        formData.append('data', JSON.stringify({ students: newStudents }));
-        formData.append('resume', pdfFile);
-
-        res = await fetch('/api/resumes', {
-          method: 'POST',
-          body: formData
-        });
-      } else {
-        // 如果没有 PDF，使用 JSON 上传
-        res = await fetch('/api/resumes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            students: newStudents
-          })
-        });
-      }
+      const res = await fetch('/api/resumes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          students: newStudents,
+          user: currentUser
+        })
+      });
       
       if (res.ok) {
         const result = await res.json();

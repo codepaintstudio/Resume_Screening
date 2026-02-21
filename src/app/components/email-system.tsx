@@ -64,8 +64,8 @@ interface Template {
 export function EmailSystem() {
   const { currentUser } = useAppStore();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'batch';
-
+  const activeTab = searchParams?.get('tab') || 'batch';
+  
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
 
