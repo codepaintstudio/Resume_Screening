@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Shield, 
-  Bot, 
-  Key, 
+import {
+  Shield,
+  Bot,
+  Key,
   Layout,
   Trash2,
   Plus,
@@ -81,7 +81,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
       setActiveTab(tab);
     }
   }, [searchParams]);
-  
+
   // State for settings
   const [platform, setPlatform] = useState({
     departments: [] as string[]
@@ -144,12 +144,12 @@ export function SettingsPage({ role }: SettingsPageProps) {
   const [apiKeys, setApiKeys] = useState<{id: string, name: string, key: string, created: string, expiresAt?: string}[]>([]);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [openModelSelect, setOpenModelSelect] = useState(false);
-  
+
   // UI State
   const [newDeptName, setNewDeptName] = useState('');
   const [isAddDeptDialogOpen, setIsAddDeptDialogOpen] = useState(false);
   const [apiKeyExpiration, setApiKeyExpiration] = useState('never');
-  
+
   useEffect(() => {
     fetchSettings();
   }, [role]);
@@ -162,16 +162,16 @@ export function SettingsPage({ role }: SettingsPageProps) {
         fetch('/api/settings/notifications').then(res => res.json()),
         fetch('/api/settings/resume-import').then(res => res.json()),
         fetch('/api/settings/keys').then(res => res.json()),
-      
+
         fetch('/api/settings/email-sending').then(res => res.json()),
         fetch('/api/settings/github').then(res => res.json()),
       ]);
-      
+
       setPlatform(pl || { departments: [] });
       setAi(a || { vision: {}, llm: {} });
       setNotifications(n || { triggers: {} });
       setResumeImport(r || {});
-      
+
       // 同时加载到 imapConfig（收信箱使用）
       if (r) {
         setImapConfig({
@@ -181,19 +181,19 @@ export function SettingsPage({ role }: SettingsPageProps) {
           pass: '' // 不加载授权码
         });
       }
-      
+
       setApiKeys(k || []);
       setGithub(g || { clientId: '', clientSecret: '', organization: '', personalAccessToken: '' });
       // 调试日志
       console.log('Email-sending API 返回:', e);
       // SMTP 配置：加载所有保存的配置
       setEmailSending({
-        host: g?.host || '',
-        port: g?.port || '',
-        user: g?.user || '',
-        pass: g?.pass || '' 
+        host: e?.host || '',
+        port: e?.port || '',
+        user: e?.user || '',
+        pass: e?.pass || '' 
       });
-      
+
     } catch (error) {
       console.error('Failed to load settings:', error);
       toast.error('加载配置失败');
@@ -203,7 +203,6 @@ export function SettingsPage({ role }: SettingsPageProps) {
   };
 
   const handleSave = async () => {
-    // 直接使用前端输入的简历导入配置
     const updatedResumeImport = {
       ...resumeImport,
       imapServer: resumeImport.imapServer,
@@ -212,7 +211,6 @@ export function SettingsPage({ role }: SettingsPageProps) {
       authCode: resumeImport.authCode
     };
 
-    // 创建一个检查响应状态的函数
     const checkResponse = async (response: Response, endpoint: string) => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -221,25 +219,52 @@ export function SettingsPage({ role }: SettingsPageProps) {
       return response.json();
     };
 
-    // 依次保存各项配置
     try {
-      toast.promise(async () => {
+      if (activeTab === 'email-sending') {
+        await toast.promise(async () => {
+          await checkResponse(
+            await fetch('/api/settings/email-sending', {
+              method: 'PUT',
+              body: JSON.stringify({
+                host: emailSending.host,
+                port: emailSending.port,
+                user: emailSending.user,
+                pass: emailSending.pass
+              })
+            }),
+            '邮件发送设置'
+          );
+        }, {
+          loading: '正在保存发信配置...',
+          success: '发信配置已更新',
+          error: '发信配置保存失败'
+        });
+        return;
+      }
+
+      if (activeTab === 'github') {
+        await toast.promise(async () => {
+          await checkResponse(
+            await fetch('/api/settings/github', {
+              method: 'PUT',
+              body: JSON.stringify(github)
+            }),
+            'GitHub设置'
+          );
+        }, {
+          loading: '正在保存 GitHub 配置...',
+          success: 'GitHub 配置已更新',
+          error: 'GitHub 配置保存失败'
+        });
+        return;
+      }
+
+      await toast.promise(async () => {
         await checkResponse(await fetch('/api/settings/platform', { method: 'PUT', body: JSON.stringify(platform) }), '平台设置');
         await checkResponse(await fetch('/api/settings/ai', { method: 'PUT', body: JSON.stringify(ai) }), 'AI设置');
         await checkResponse(await fetch('/api/settings/notifications', { method: 'PUT', body: JSON.stringify(notifications) }), '通知设置');
         await checkResponse(await fetch('/api/settings/resume-import', { method: 'PUT', body: JSON.stringify(updatedResumeImport) }), '简历导入设置');
         await checkResponse(await fetch('/api/settings/keys', { method: 'PUT', body: JSON.stringify(apiKeys) }), 'API密钥');
-
-        await checkResponse(await fetch('/api/settings/email-sending', { 
-          method: 'PUT', 
-          body: JSON.stringify({
-            host: emailSending.host,
-            port: emailSending.port,
-            user: emailSending.user,
-            pass: emailSending.pass
-          }) 
-        }), '邮件发送设置');
-        await checkResponse(await fetch('/api/settings/github', { method: 'PUT', body: JSON.stringify(github) }), 'GitHub设置');
       }, {
         loading: '正在保存配置...',
         success: '系统配置已更新',
@@ -332,9 +357,9 @@ export function SettingsPage({ role }: SettingsPageProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ expiration: apiKeyExpiration })
       });
-      
+
       if (!res.ok) throw new Error('Failed to generate key');
-      
+
       const newKey = await res.json();
       setApiKeys([...apiKeys, newKey]);
       toast.success('新的 API 密钥已生成');
@@ -384,7 +409,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
       `${base}/models`;
     const headers: Record<string, string> = {};
     if (ai.llm.apiKey) headers['Authorization'] = `Bearer ${ai.llm.apiKey}`;
-    
+
     if (availableModels.length === 0) {
       toast.loading('正在获取模型列表...');
     }
@@ -445,7 +470,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">系统设置</h1>
           <p className="text-slate-500 text-sm mt-1">管理工作室平台参数、AI 模型与集成服务</p>
         </div>
-        <Button 
+        <Button
           onClick={handleSave}
           className="bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 shadow-lg shadow-slate-900/10 dark:shadow-none font-bold"
         >
@@ -497,7 +522,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                 <p className="text-sm text-slate-500">管理工作室的部门分类，用于简历筛选和人员分配</p>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">当前部门列表</h4>
@@ -539,7 +564,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                 {platform.departments.map(dept => (
                   <div key={dept} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl group transition-all hover:border-blue-200 dark:hover:border-blue-900">
                     <span className="font-bold text-slate-700 dark:text-slate-200">{dept}</span>
-                    <button 
+                    <button
                       onClick={() => handleRemoveDepartment(dept)}
                       className="p-1.5 hover:bg-rose-100 dark:hover:bg-rose-900/30 rounded-lg text-rose-500 transition-colors"
                       aria-label={`删除部门 ${dept}`}
@@ -569,37 +594,37 @@ export function SettingsPage({ role }: SettingsPageProps) {
                   <p className="text-xs text-slate-500 font-medium mt-0.5">用于从附件图片/PDF中提取视觉结构信息</p>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-14">
                 <div className="col-span-full space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">API Endpoint</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={ai.vision.endpoint}
                     onChange={(e) => setAi({...ai, vision: {...ai.vision, endpoint: e.target.value}})}
-                    placeholder="https://api.provider.com/v1" 
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    placeholder="https://api.provider.com/v1"
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Model Name</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={ai.vision.model}
                     onChange={(e) => setAi({...ai, vision: {...ai.vision, model: e.target.value}})}
                     placeholder="e.g. gpt-4-vision-preview"
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">API Key</label>
                   <div className="relative">
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       value={ai.vision.apiKey}
                       onChange={(e) => setAi({...ai, vision: {...ai.vision, apiKey: e.target.value}})}
-                      placeholder="sk-..." 
-                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                      placeholder="sk-..."
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                     />
                   </div>
                 </div>
@@ -707,12 +732,12 @@ export function SettingsPage({ role }: SettingsPageProps) {
             <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Webhook URL</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={notifications.webhookUrl}
                   onChange={(e) => setNotifications({...notifications, webhookUrl: e.target.value})}
-                  placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..." 
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                  placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..."
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                 />
               </div>
 
@@ -726,10 +751,10 @@ export function SettingsPage({ role }: SettingsPageProps) {
                   ].map(trigger => (
                     <div key={trigger.key} className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg shadow-sm">
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{trigger.label}</span>
-                      <Switch 
+                      <Switch
                         checked={notifications.triggers?.[trigger.key] || false}
                         onCheckedChange={(checked) => setNotifications({
-                          ...notifications, 
+                          ...notifications,
                           triggers: {
                             ...notifications.triggers,
                             [trigger.key]: checked
@@ -757,43 +782,43 @@ export function SettingsPage({ role }: SettingsPageProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">IMAP Server</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={resumeImport.imapServer || ''}
                   onChange={(e) => setResumeImport({...resumeImport, imapServer: e.target.value})}
-                  placeholder="imap.exmail.qq.com" 
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                  placeholder="imap.exmail.qq.com"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Port</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={resumeImport.port || ''}
                   onChange={(e) => setResumeImport({...resumeImport, port: e.target.value})}
-                  placeholder="993" 
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                  placeholder="993"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Account</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={resumeImport.account || ''}
                   onChange={(e) => setResumeImport({...resumeImport, account: e.target.value})}
-                  placeholder="your-email@example.com" 
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                  placeholder="your-email@example.com"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Authorization Code</label>
                 <div className="relative">
-                  <input 
-                    type="password" 
+                  <input
+                    type="password"
                     value={resumeImport.authCode || ''}
                     onChange={(e) => setResumeImport({...resumeImport, authCode: e.target.value})}
-                    placeholder="请输入授权码" 
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                    placeholder="请输入授权码"
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                   />
                   <Lock className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
                 </div>
@@ -802,8 +827,8 @@ export function SettingsPage({ role }: SettingsPageProps) {
                 </p>
               </div>
               <div className="flex items-center space-x-2 md:col-span-2">
-                <Switch 
-                  id="ssl-mode" 
+                <Switch
+                  id="ssl-mode"
                   checked={resumeImport.ssl !== false}
                   onCheckedChange={(checked) => setResumeImport({...resumeImport, ssl: checked})}
                 />
@@ -834,23 +859,23 @@ export function SettingsPage({ role }: SettingsPageProps) {
                 <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Client ID</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={github.clientId || ''}
                       onChange={(e) => setGithub({...github, clientId: e.target.value})}
-                      placeholder="Iv1..." 
-                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                      placeholder="Iv1..."
+                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Client Secret</label>
                     <div className="relative">
-                      <input 
-                        type="password" 
+                      <input
+                        type="password"
                         value={github.clientSecret || ''}
                         onChange={(e) => setGithub({...github, clientSecret: e.target.value})}
-                        placeholder="••••••••" 
-                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                        placeholder="••••••••"
+                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                       />
                     </div>
                   </div>
@@ -865,23 +890,23 @@ export function SettingsPage({ role }: SettingsPageProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Organization Name</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={github.organization || ''}
                       onChange={(e) => setGithub({...github, organization: e.target.value})}
-                      placeholder="mahui-studio" 
-                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                      placeholder="mahui-studio"
+                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Personal Access Token</label>
                     <div className="relative">
-                      <input 
-                        type="password" 
+                      <input
+                        type="password"
                         value={github.personalAccessToken || ''}
                         onChange={(e) => setGithub({...github, personalAccessToken: e.target.value})}
-                        placeholder="ghp_..." 
-                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                        placeholder="ghp_..."
+                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                       />
                     </div>
                   </div>
@@ -917,42 +942,42 @@ export function SettingsPage({ role }: SettingsPageProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">SMTP 服务器</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={emailSending.host}
                       onChange={(e) => setEmailSending({...emailSending, host: e.target.value})}
-                      placeholder="smtp.example.com" 
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                      placeholder="smtp.example.com"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">发信账号</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={emailSending.user}
                       onChange={(e) => setEmailSending({...emailSending, user: e.target.value})}
-                      placeholder="hr@example.com" 
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                      placeholder="hr@example.com"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">SMTP 端口</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={emailSending.port}
                       onChange={(e) => { console.log('port 输入:', e.target.value); setEmailSending({...emailSending, port: e.target.value})}}
-                      placeholder="465" 
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                      placeholder="465"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">授权码</label>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       value={emailSending.pass}
                       onChange={(e) => setEmailSending({...emailSending, pass: e.target.value})}
-                      placeholder="请输入授权码" 
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm" 
+                      placeholder="请输入授权码"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                     />
                     <p className="text-xs text-slate-500">
                       提示：QQ邮箱需要使用授权码登录，而非QQ密码。获取方式：邮箱设置 → 账户 → 开启 POP3/SMTP服务 → 生成授权码
@@ -988,7 +1013,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button 
+                <Button
                   onClick={generateApiKey}
                   className="bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-600/20 font-bold"
                 >
@@ -1002,11 +1027,11 @@ export function SettingsPage({ role }: SettingsPageProps) {
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Public Upload Endpoint</label>
                 <div className="flex items-center gap-2">
-                  <input 
-                    type="text" 
-                    readOnly 
-                    value="https://api.mahui.com/v1/resume/upload" 
-                    className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none font-mono text-sm text-slate-500" 
+                  <input
+                    type="text"
+                    readOnly
+                    value="https://api.mahui.com/v1/resume/upload"
+                    className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none font-mono text-sm text-slate-500"
                   />
                   <Button
                     variant="outline"
@@ -1036,7 +1061,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                         <code className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-500 border border-slate-200 dark:border-slate-700">
                           {key.key}
                         </code>
-                        <button 
+                        <button
                           className="text-slate-400 hover:text-blue-500 transition-colors p-1"
                           aria-label="复制 API 密钥"
                           onClick={() => {
@@ -1051,7 +1076,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                     <div className="w-24 text-sm text-slate-500">{key.created}</div>
                     <div className="w-24 text-sm text-slate-500">{key.expiresAt || 'Never'}</div>
                     <div className="w-20 text-right">
-                      <button 
+                      <button
                         onClick={() => revokeApiKey(key.id)}
                         className="p-2 hover:bg-rose-100 dark:hover:bg-rose-900/30 rounded-lg text-rose-500 transition-colors"
                         title="Revoke Key"

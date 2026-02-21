@@ -1,8 +1,8 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Droppable } from '@hello-pangea/dnd';
-import { ChevronUp, ChevronDown } from 'lucide-react';
-import { Stage, InterviewTask } from '@/types';
-import { KanbanCard } from './KanbanCard';
+import React, { useRef, useState, useEffect, useCallback } from "react";
+import { Droppable } from "@hello-pangea/dnd";
+import { ChevronUp, ChevronDown } from "lucide-react";
+import { Stage, InterviewTask } from "@/types";
+import { KanbanCard } from "./KanbanCard";
 
 interface KanbanColumnProps {
   stage: { id: Stage; label: string; color: string };
@@ -24,7 +24,13 @@ const DRAG_SCROLL_CONFIG = {
   SCROLL_INTERVAL: 50,
 } as const;
 
-export function KanbanColumn({ stage, tasks, onTaskClick, onMoveTask, className }: KanbanColumnProps) {
+export function KanbanColumn({
+  stage,
+  tasks,
+  onTaskClick,
+  onMoveTask,
+  className,
+}: KanbanColumnProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -40,9 +46,10 @@ export function KanbanColumn({ stage, tasks, onTaskClick, onMoveTask, className 
       setCanScrollUp(scrollTop > 0);
       setCanScrollDown(scrollTop + clientHeight < scrollHeight - 1);
 
-      const progress = scrollHeight > clientHeight
-        ? scrollTop / (scrollHeight - clientHeight)
-        : 0;
+      const progress =
+        scrollHeight > clientHeight
+          ? scrollTop / (scrollHeight - clientHeight)
+          : 0;
       setScrollProgress(progress);
     }
   }, []);
@@ -64,15 +71,16 @@ export function KanbanColumn({ stage, tasks, onTaskClick, onMoveTask, className 
     checkScroll();
   };
 
-  const scroll = useCallback((direction: 'up' | 'down') => {
+  const scroll = useCallback((direction: "up" | "down") => {
     if (listRef.current) {
       const { clientHeight } = listRef.current;
       const scrollDistance = clientHeight * 0.6;
-      const scrollAmount = direction === 'up' ? -scrollDistance : scrollDistance;
+      const scrollAmount =
+        direction === "up" ? -scrollDistance : scrollDistance;
 
       listRef.current.scrollBy({
         top: scrollAmount,
-        behavior: 'smooth',
+        behavior: "smooth",
       });
     }
   }, []);
@@ -90,66 +98,78 @@ export function KanbanColumn({ stage, tasks, onTaskClick, onMoveTask, className 
   /**
    * 启动自动滚动
    */
-  const startAutoScroll = useCallback((direction: 'up' | 'down') => {
-    // 如果已经在滚动，直接返回
-    if (scrollIntervalRef.current) {
-      return;
-    }
-
-    if (!listRef.current) return;
-
-    scrollIntervalRef.current = setInterval(() => {
-      if (!listRef.current) {
-        stopAutoScroll();
+  const startAutoScroll = useCallback(
+    (direction: "up" | "down") => {
+      // 如果已经在滚动，直接返回
+      if (scrollIntervalRef.current) {
         return;
       }
 
-      const { scrollTop, scrollHeight, clientHeight } = listRef.current;
+      if (!listRef.current) return;
 
-      // 防止越界
-      if (direction === 'up' && scrollTop <= 0) {
-        stopAutoScroll();
-        return;
-      }
-      if (direction === 'down' && scrollTop + clientHeight >= scrollHeight) {
-        stopAutoScroll();
-        return;
-      }
+      scrollIntervalRef.current = setInterval(() => {
+        if (!listRef.current) {
+          stopAutoScroll();
+          return;
+        }
 
-      const scrollAmount =
-        direction === 'up'
-          ? -DRAG_SCROLL_CONFIG.SCROLL_AMOUNT
-          : DRAG_SCROLL_CONFIG.SCROLL_AMOUNT;
+        const { scrollTop, scrollHeight, clientHeight } = listRef.current;
 
-      listRef.current.scrollBy({ top: scrollAmount });
-    }, DRAG_SCROLL_CONFIG.SCROLL_INTERVAL);
-  }, [stopAutoScroll]);
+        // 防止越界
+        if (direction === "up" && scrollTop <= 0) {
+          stopAutoScroll();
+          return;
+        }
+        if (direction === "down" && scrollTop + clientHeight >= scrollHeight) {
+          stopAutoScroll();
+          return;
+        }
+
+        const scrollAmount =
+          direction === "up"
+            ? -DRAG_SCROLL_CONFIG.SCROLL_AMOUNT
+            : DRAG_SCROLL_CONFIG.SCROLL_AMOUNT;
+
+        listRef.current.scrollBy({ top: scrollAmount });
+      }, DRAG_SCROLL_CONFIG.SCROLL_INTERVAL);
+    },
+    [stopAutoScroll],
+  );
 
   /**
    * 检查是否在检测区域内
    */
-  const checkDetectionZone = useCallback((clientY: number) => {
-    if (!containerRef.current) return;
+  const checkDetectionZone = useCallback(
+    (clientY: number) => {
+      if (!containerRef.current) return;
 
-    const rect = containerRef.current.getBoundingClientRect();
-    const distanceFromTop = clientY - rect.top;
-    const distanceFromBottom = rect.bottom - clientY;
+      const rect = containerRef.current.getBoundingClientRect();
+      const distanceFromTop = clientY - rect.top;
+      const distanceFromBottom = rect.bottom - clientY;
 
-    // 在顶部检测区域
-    if (distanceFromTop < DRAG_SCROLL_CONFIG.DETECTION_ZONE_HEIGHT && distanceFromTop >= 0) {
-      startAutoScroll('up');
-      return;
-    }
+      // 在顶部检测区域
+      if (
+        distanceFromTop < DRAG_SCROLL_CONFIG.DETECTION_ZONE_HEIGHT &&
+        distanceFromTop >= 0
+      ) {
+        startAutoScroll("up");
+        return;
+      }
 
-    // 在底部检测区域
-    if (distanceFromBottom < DRAG_SCROLL_CONFIG.DETECTION_ZONE_HEIGHT && distanceFromBottom >= 0) {
-      startAutoScroll('down');
-      return;
-    }
+      // 在底部检测区域
+      if (
+        distanceFromBottom < DRAG_SCROLL_CONFIG.DETECTION_ZONE_HEIGHT &&
+        distanceFromBottom >= 0
+      ) {
+        startAutoScroll("down");
+        return;
+      }
 
-    // 不在检测区域，停止滚动
-    stopAutoScroll();
-  }, [startAutoScroll, stopAutoScroll]);
+      // 不在检测区域，停止滚动
+      stopAutoScroll();
+    },
+    [startAutoScroll, stopAutoScroll],
+  );
 
   /**
    * 处理拖拽进入
@@ -216,9 +236,9 @@ export function KanbanColumn({ stage, tasks, onTaskClick, onMoveTask, className 
         <div
           className={`h-full flex flex-col rounded-2xl p-4 border flex-shrink-0 lg:flex-shrink transition-colors duration-200 relative group snap-center ${
             snapshot.isDraggingOver
-              ? 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-              : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800/50'
-          } ${className || 'w-[85vw] sm:w-96 lg:w-auto lg:flex-1 lg:min-w-[250px]'}`}
+              ? "bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+              : "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800/50"
+          } ${className || "w-[85vw] sm:w-96 lg:w-auto lg:flex-1 lg:min-w-[250px]"}`}
         >
           {/* 头部：标题 + 滚动按钮 */}
           <div className="hidden md:flex items-center justify-between mb-4 px-2">
@@ -236,25 +256,25 @@ export function KanbanColumn({ stage, tasks, onTaskClick, onMoveTask, className 
             {(canScrollUp || canScrollDown) && (
               <div className="flex gap-1">
                 <button
-                  onClick={() => scroll('up')}
+                  onClick={() => scroll("up")}
                   disabled={!canScrollUp}
                   aria-label={`向上滚动 ${stage.label} 列`}
                   className={`p-1 rounded-lg transition-all duration-200 ${
                     canScrollUp
-                      ? 'bg-white dark:bg-slate-800 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 shadow-sm cursor-pointer'
-                      : 'opacity-0 cursor-default pointer-events-none'
+                      ? "bg-white dark:bg-slate-800 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 shadow-sm cursor-pointer"
+                      : "opacity-0 cursor-default pointer-events-none"
                   }`}
                 >
                   <ChevronUp className="w-3 h-3" />
                 </button>
                 <button
-                  onClick={() => scroll('down')}
+                  onClick={() => scroll("down")}
                   disabled={!canScrollDown}
                   aria-label={`向下滚动 ${stage.label} 列`}
                   className={`p-1 rounded-lg transition-all duration-200 ${
                     canScrollDown
-                      ? 'bg-white dark:bg-slate-800 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 shadow-sm cursor-pointer'
-                      : 'opacity-0 cursor-default pointer-events-none'
+                      ? "bg-white dark:bg-slate-800 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 shadow-sm cursor-pointer"
+                      : "opacity-0 cursor-default pointer-events-none"
                   }`}
                 >
                   <ChevronDown className="w-3 h-3" />
@@ -282,7 +302,7 @@ export function KanbanColumn({ stage, tasks, onTaskClick, onMoveTask, className 
               {...provided.droppableProps}
               onScroll={handleScroll}
               className="w-full h-full overflow-y-auto pr-1 pb-2 no-scrollbar scroll-smooth"
-              style={{ overscrollBehavior: 'contain' }}
+              style={{ overscrollBehavior: "contain" }}
             >
               {tasks.map((task, index) => (
                 <KanbanCard
@@ -302,12 +322,12 @@ export function KanbanColumn({ stage, tasks, onTaskClick, onMoveTask, className 
               style={{
                 height: `${DRAG_SCROLL_CONFIG.DETECTION_ZONE_HEIGHT}px`,
                 backgroundColor: snapshot.isDraggingOver
-                  ? 'rgba(59, 130, 246, 0.08)'
-                  : 'transparent',
+                  ? "rgba(59, 130, 246, 0.08)"
+                  : "transparent",
                 borderBottom: snapshot.isDraggingOver
-                  ? '1px dashed rgb(59, 130, 246)'
-                  : 'transparent',
-                transition: 'all 0.2s ease',
+                  ? "1px dashed rgb(59, 130, 246)"
+                  : "transparent",
+                transition: "all 0.2s ease",
               }}
             >
               {snapshot.isDraggingOver && (
@@ -323,12 +343,12 @@ export function KanbanColumn({ stage, tasks, onTaskClick, onMoveTask, className 
               style={{
                 height: `${DRAG_SCROLL_CONFIG.DETECTION_ZONE_HEIGHT}px`,
                 backgroundColor: snapshot.isDraggingOver
-                  ? 'rgba(59, 130, 246, 0.08)'
-                  : 'transparent',
+                  ? "rgba(59, 130, 246, 0.08)"
+                  : "transparent",
                 borderTop: snapshot.isDraggingOver
-                  ? '1px dashed rgb(59, 130, 246)'
-                  : 'transparent',
-                transition: 'all 0.2s ease',
+                  ? "1px dashed rgb(59, 130, 246)"
+                  : "transparent",
+                transition: "all 0.2s ease",
               }}
             >
               {snapshot.isDraggingOver && (

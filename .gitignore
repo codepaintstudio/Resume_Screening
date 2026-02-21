@@ -98,6 +98,13 @@ dist
 # Sveltekit cache directory
 .svelte-kit/
 
+# Trae Agent
+.agent
+.agents
+
+# Package Lock
+package-lock.json
+
 # AI Agents & Skills
 .agents/
 .qoder/
