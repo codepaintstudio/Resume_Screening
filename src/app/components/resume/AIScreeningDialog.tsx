@@ -143,7 +143,7 @@ export function AIScreeningDialog({
             </Label>
             <Textarea
               id="prompt-config"
-              placeholder="例如：重点关注有 React 开发经验的候选人..."
+              placeholder="例如：重点关注有 React 开发经验的候选人；请对岗位要求中的“具备技能”和简历里的“专业技能”“技能专长”等字段做模糊匹配，忽略措辞差异。"
               className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 h-24 resize-none rounded-xl text-xs md:text-sm"
               value={promptConfig}
               onChange={(e) => setPromptConfig(e.target.value)}
