@@ -27,8 +27,8 @@ import { zhCN } from "date-fns/locale";
 import { cn } from "@/app/components/ui/utils";
 import { Student, InterviewTask, Experience } from '@/types';
 import { STATUS_MAP } from '@/config/constants';
-import { 
-  XCircle, Download, FileSearch, 
+import {
+  XCircle, Download, FileSearch,
   Briefcase, MessageSquare, Send, AtSign,
   Phone, Mail, Edit2, Save, HelpCircle,
   BrainCircuit, Plus, X, Trash2, Calendar as CalendarIcon, Clock, ChevronDown, Check,
@@ -123,19 +123,20 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
   }, []);
 
   const toggleInterviewer = (name: string) => {
-    setSelectedInterviewers(prev => 
+    setSelectedInterviewers(prev =>
       prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
     );
   };
 
   const currentStatus = formData.status || (student as any)?.stage || (student as any)?.status || 'pending';
+  const candidateTags = Array.isArray(formData.tags) ? formData.tags : [formData.tags].filter(Boolean);
 
   React.useEffect(() => {
     if (student) {
-      // First set basic data to show something immediately if desired, 
+      // First set basic data to show something immediately if desired,
       // but if we want a full "loading screen" effect, we might skip this or just use it for the header.
       // The user requested a "separate loading screen", so we will show skeleton for the content.
-      
+
       setFormData({
         ...student,
         // Reset these to empty/loading state to ensure we don't show stale data or partial data
@@ -145,7 +146,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
         skills: [],
         experiences: []
       });
-      
+
       setIsLoadingDetails(true);
       setIsLoadingComments(true);
 
@@ -155,8 +156,8 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
           setFormData((prev: any) => ({
             ...prev,
             ...data,
-            // Preserve status from props if it differs (though usually it should be in sync)
-            status: prev.status 
+            class: data.class ?? data.className ?? prev.class,
+            status: prev.status
           }));
           setIsLoadingDetails(false);
         })
@@ -181,16 +182,16 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
 
       // Initial fetch
       fetchComments();
-      
+
       // WebSocket Connection for Real-time Updates
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
       const wsUrl = `${protocol}//${host}/api/ws`;
-      
+
       try {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
-        
+
         ws.onopen = () => {
           // Join the room for this candidate
           ws.send(JSON.stringify({
@@ -215,7 +216,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
       } catch (err) {
         console.error("WebSocket connection failed", err);
       }
-      
+
       return () => {
         if (wsRef.current) {
           wsRef.current.close();
@@ -233,7 +234,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
       title: '',
       description: ''
     };
-    
+
     // Prepend without sorting
     const newExps = [newExp, ...(formData.experiences || [])];
     setFormData({ ...formData, experiences: newExps });
@@ -248,13 +249,13 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
   const updateExperience = (index: number, field: keyof Experience, value: string) => {
     const newExps = [...(formData.experiences || [])];
     newExps[index] = { ...newExps[index], [field]: value };
-    
+
     setFormData({ ...formData, experiences: newExps });
   };
 
   const handlePostComment = async () => {
     if (!newComment.trim() || !student) return;
-    
+
     setIsPostingComment(true);
     try {
       // Map technical role to display role
@@ -286,13 +287,13 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
         const res = await fetch(`/api/resumes/${student.id}/comments`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             content: newComment,
-            user: userPayload 
+            user: userPayload
           })
         });
         const data = await res.json();
-        
+
         if (data.success) {
           setComments(prev => [...prev, data.data]);
           setNewComment('');
@@ -345,7 +346,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
 
   const handleDownload = async () => {
     if (!student) return;
-    
+
     if (!student.resumePdf) {
       toast.error('该候选人没有上传简历');
       return;
@@ -358,7 +359,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
         toast.error(error.message || '下载失败');
         return;
       }
-      
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -390,15 +391,15 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
      const formattedDateDisplay = format(interviewDate, "M月d日", { locale: zhCN });
      // Combine date and time
      const dateTime = `${interviewTime} ${formattedDateDisplay}`;
-     
+
      // Update local form data to reflect the change immediately
      // Note: we are NOT changing status to 'interviewing' as per user request
      // It remains 'pending_interview' but with a scheduled time
-     
+
      if (onUpdate && student) {
-         onUpdate({ 
-           ...student, 
-           time: dateTime, 
+         onUpdate({
+           ...student,
+           time: dateTime,
            date: formattedDate,
            interviewers: selectedInterviewers,
            stage: type === 'interview' ? 'pending' : 'pending_interview'
@@ -409,7 +410,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
      if (student) {
         handleStatusUpdate(student.id, 'pending_interview');
      }
-     
+
      toast.success("面试安排已更新");
      // Close popover logic is handled by UI interactions or state reset if needed
      // Here we just notify
@@ -449,14 +450,14 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
     <AnimatePresence>
       {student && (
         <>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
             className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[999]"
           />
-          <motion.div 
+          <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -474,13 +475,13 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                 <div className="flex flex-wrap items-center gap-2">
                   {currentStatus === 'pending' && type !== 'interview' && (
                     <>
-                      <button 
+                      <button
                         onClick={() => handleStatusUpdate(student.id, 'to_be_scheduled')}
                         className="px-3 md:px-4 py-2 bg-purple-600 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl hover:bg-purple-700 transition-all flex-1 md:flex-none"
                       >
                         简历通过
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleStatusUpdate(student.id, 'rejected')}
                         className="px-3 md:px-4 py-2 bg-rose-600 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all flex-1 md:flex-none"
                       >
@@ -488,13 +489,13 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       </button>
                     </>
                   )}
-                  
+
                   {/* To Be Scheduled State - Show Schedule Button */}
                   {currentStatus === 'to_be_scheduled' && (
                      <>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <button 
+                          <button
                             className="px-3 md:px-4 py-2 bg-amber-500 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl hover:bg-amber-600 transition-all flex-1 md:flex-none"
                           >
                             安排面试
@@ -513,8 +514,8 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
                               <Clock className="w-4 h-4 text-slate-400" />
                               <div className="relative flex-1">
-                                  <input 
-                                    type="time" 
+                                  <input
+                                    type="time"
                                     value={interviewTime}
                                     onChange={(e) => setInterviewTime(e.target.value)}
                                     className="w-full bg-transparent text-sm font-bold border-none focus:ring-0 p-0 text-slate-700 dark:text-slate-300"
@@ -522,12 +523,12 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                               </div>
                               <ChevronDown className="w-3 h-3 text-slate-400 pointer-events-none" />
                             </div>
-                            
+
                             <div className="space-y-2">
                               <h4 className="font-bold text-xs text-slate-500 uppercase">选择面试官</h4>
                               <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
                                   {availableInterviewers.map(interviewer => (
-                                      <div 
+                                      <div
                                           key={interviewer}
                                           onClick={() => toggleInterviewer(interviewer)}
                                           className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all text-xs ${
@@ -550,7 +551,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                               </div>
                             </div>
 
-                            <button 
+                            <button
                               onClick={handleScheduleInterview}
                               disabled={!interviewDate}
                               className="w-full py-2 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -560,7 +561,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                           </div>
                         </PopoverContent>
                       </Popover>
-                      <button 
+                      <button
                         onClick={() => handleStatusUpdate(student.id, 'rejected')}
                         className="px-4 py-2 bg-rose-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all"
                       >
@@ -573,7 +574,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   {(currentStatus === 'pending_interview' || (currentStatus === 'pending' && type === 'interview')) && (
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button 
+                        <button
                           className="px-4 py-2 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-blue-700 transition-all"
                         >
                           修改安排
@@ -592,8 +593,8 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                           <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
                             <Clock className="w-4 h-4 text-slate-400" />
                             <div className="relative flex-1">
-                                <input 
-                                  type="time" 
+                                <input
+                                  type="time"
                                   value={interviewTime}
                                   onChange={(e) => setInterviewTime(e.target.value)}
                                   className="w-full bg-transparent text-sm font-bold border-none focus:ring-0 p-0 text-slate-700 dark:text-slate-300"
@@ -601,12 +602,12 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                             </div>
                             <ChevronDown className="w-3 h-3 text-slate-400 pointer-events-none" />
                           </div>
-                          
+
                           <div className="space-y-2">
                             <h4 className="font-bold text-xs text-slate-500 uppercase">选择面试官</h4>
                             <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
                                 {availableInterviewers.map(interviewer => (
-                                    <div 
+                                    <div
                                         key={interviewer}
                                         onClick={() => toggleInterviewer(interviewer)}
                                         className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all text-xs ${
@@ -629,7 +630,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                             </div>
                           </div>
 
-                          <button 
+                          <button
                             onClick={handleScheduleInterview}
                             disabled={!interviewDate}
                             className="w-full py-2 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -641,7 +642,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                     </Popover>
                   )}
                   {currentStatus === 'pending' && type === 'interview' && (
-                    <button 
+                    <button
                       onClick={() => handleStatusUpdate(student.id, 'rejected')}
                       className="px-3 md:px-4 py-2 bg-rose-600 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all flex-1 md:flex-none"
                     >
@@ -650,13 +651,13 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   )}
                   {currentStatus === 'interviewing' && (
                     <>
-                      <button 
+                      <button
                         onClick={() => handleStatusUpdate(student.id, 'passed')}
                         className="px-3 md:px-4 py-2 bg-emerald-600 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl hover:bg-emerald-700 transition-all flex-1 md:flex-none"
                       >
                         通过面试
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleStatusUpdate(student.id, 'rejected')}
                         className="px-3 md:px-4 py-2 bg-rose-600 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl hover:bg-rose-700 transition-all flex-1 md:flex-none"
                       >
@@ -664,10 +665,10 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       </button>
                     </>
                   )}
-                  
+
                   {/* Status Override / Correction */}
                   <div className="relative flex-1 md:flex-none">
-                      <Select 
+                      <Select
                         value={currentStatus}
                         onValueChange={(val: keyof typeof STATUS_MAP) => handleStatusUpdate(student.id, val)}
                       >
@@ -685,7 +686,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       </Select>
                   </div>
 
-                  <button 
+                  <button
                     onClick={handleDownload}
                     className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all flex-shrink-0"
                   >
@@ -749,29 +750,41 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                 <div className="flex flex-col sm:flex-row justify-between items-start mb-8 md:mb-10 gap-6">
                   <div className="flex-1 w-full sm:mr-8">
                     <h2 className="text-2xl md:text-4xl font-black tracking-tight mb-3">{student.name}</h2>
+                    {candidateTags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {candidateTags.map((tag: string, index: number) => (
+                          <span
+                            key={`${tag}-${index}`}
+                            className="text-[9px] font-black px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded uppercase"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {isEditing ? (
                       <div className="grid grid-cols-2 gap-2 md:gap-3 max-w-md">
-                         <Input 
-                           value={formData.department || ''} 
-                           onChange={(e) => setFormData({...formData, department: e.target.value})} 
+                         <Input
+                           value={formData.department || ''}
+                           onChange={(e) => setFormData({...formData, department: e.target.value})}
                            placeholder="部门/角色"
                            className="h-8 text-[10px] md:text-xs font-bold bg-white dark:bg-slate-900"
                          />
-                         <Input 
-                           value={formData.major || ''} 
-                           onChange={(e) => setFormData({...formData, major: e.target.value})} 
+                         <Input
+                           value={formData.major || ''}
+                           onChange={(e) => setFormData({...formData, major: e.target.value})}
                            placeholder="专业"
                            className="h-8 text-[10px] md:text-xs font-bold bg-white dark:bg-slate-900"
                          />
-                         <Input 
-                           value={formData.class || ''} 
-                           onChange={(e) => setFormData({...formData, class: e.target.value})} 
+                         <Input
+                           value={formData.class || ''}
+                           onChange={(e) => setFormData({...formData, class: e.target.value})}
                            placeholder="班级"
                            className="h-8 text-[10px] md:text-xs font-bold bg-white dark:bg-slate-900"
                          />
-                         <Input 
-                           value={formData.studentId || ''} 
-                           onChange={(e) => setFormData({...formData, studentId: e.target.value})} 
+                         <Input
+                           value={formData.studentId || ''}
+                           onChange={(e) => setFormData({...formData, studentId: e.target.value})}
                            placeholder="学号"
                            className="h-8 text-[10px] md:text-xs font-bold bg-white dark:bg-slate-900"
                          />
@@ -800,10 +813,10 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       <div className="flex items-center gap-2 font-black text-xs md:text-sm text-blue-900 dark:text-blue-300">
                         <Mail className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
                         {isEditing ? (
-                          <Input 
-                            value={formData.email || ''} 
-                            onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                            className="h-6 md:h-7 text-[10px] md:text-xs bg-white/50 border-blue-200" 
+                          <Input
+                            value={formData.email || ''}
+                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                            className="h-6 md:h-7 text-[10px] md:text-xs bg-white/50 border-blue-200"
                           />
                         ) : (
                           <span className="truncate">{formData.email}</span>
@@ -815,10 +828,10 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       <div className="flex items-center gap-2 font-black text-xs md:text-sm">
                         <Phone className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-600 flex-shrink-0" />
                         {isEditing ? (
-                          <Input 
-                            value={formData.phone || ''} 
-                            onChange={(e) => setFormData({...formData, phone: e.target.value})} 
-                            className="h-6 md:h-7 text-[10px] md:text-xs bg-white border-slate-200" 
+                          <Input
+                            value={formData.phone || ''}
+                            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                            className="h-6 md:h-7 text-[10px] md:text-xs bg-white border-slate-200"
                           />
                         ) : (
                           <span>{formData.phone}</span>
@@ -829,14 +842,14 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
 
                 {/* Actions for original file & Edit Profile */}
                 <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-8 md:mb-10">
-                  <button 
+                  <button
                     onClick={handleViewPDF}
                     className="flex-1 flex items-center justify-center gap-2 py-3 md:py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest hover:opacity-90 shadow-xl shadow-black/10"
                   >
                     <FileSearch className="w-4 h-4" />
                     查看原简历 PDF
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       if (isEditing) {
                         handleSaveProfile();
@@ -846,8 +859,8 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                     }}
                     disabled={isSaving}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 md:py-4 border-2 rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest transition-all ${
-                      isEditing 
-                        ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed' 
+                      isEditing
+                        ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed'
                         : 'border-slate-100 dark:border-slate-800 hover:bg-slate-50'
                     }`}
                   >
@@ -890,9 +903,9 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    
+
                     {isEditing && (
-                      <button 
+                      <button
                         onClick={addSkill}
                         className="ml-auto flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors"
                       >
@@ -902,17 +915,18 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {formData.skills?.map((skill: any, index: number) => (
-                      isEditing ? (
-                        <div key={index} className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1">
-                          <Input 
-                            value={skill.name} 
+                    {formData.skills?.map((skill: any, index: number) => {
+                      const key = `${skill.name || 'skill'}-${index}`;
+                      return isEditing ? (
+                        <div key={key} className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1">
+                          <Input
+                            value={skill.name}
                             onChange={(e) => updateSkill(index, 'name', e.target.value)}
                             className="h-6 w-24 text-xs border-transparent bg-transparent focus-visible:ring-0 px-1"
                             placeholder="技能名称"
                           />
-                          <Select 
-                            value={skill.level} 
+                          <Select
+                            value={skill.level}
                             onValueChange={(val) => updateSkill(index, 'level', val)}
                           >
                             <SelectTrigger className="h-6 w-[80px] text-[10px] border-none bg-transparent focus:ring-0 px-1">
@@ -926,7 +940,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                               <SelectItem value="master">精通</SelectItem>
                             </SelectContent>
                           </Select>
-                          <button 
+                          <button
                             onClick={() => removeSkill(index)}
                             className="p-1 hover:bg-rose-100 text-slate-400 hover:text-rose-600 rounded"
                           >
@@ -934,15 +948,15 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                           </button>
                         </div>
                       ) : (
-                        <Badge 
-                          key={index} 
-                          variant="outline" 
+                        <Badge
+                          key={key}
+                          variant="outline"
                           className={`px-3 py-1.5 border ${getSkillColor(skill.level)} font-bold text-xs`}
                         >
                           {skill.name}
                         </Badge>
-                      )
-                    ))}
+                      );
+                    })}
                     {!formData.skills?.length && !isEditing && (
                       <p className="text-sm text-slate-400 italic">暂无技能记录</p>
                     )}
@@ -956,7 +970,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       经历概述
                     </h4>
                     {isEditing && (
-                      <button 
+                      <button
                         onClick={addExperience}
                         className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors"
                       >
@@ -965,13 +979,13 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                       </button>
                     )}
                   </div>
-                  
+
                   <div className="space-y-6 pl-4 border-l-2 border-slate-100 dark:border-slate-800">
                     {formData.experiences?.length > 0 ? (
                       formData.experiences.map((exp: Experience, index: number) => (
                         isEditing ? (
                           <div key={exp.id} className="relative bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 mb-4">
-                            <button 
+                            <button
                               onClick={() => removeExperience(index)}
                               className="absolute top-2 right-2 p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
                             >
@@ -980,27 +994,27 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                             <div className="grid grid-cols-2 gap-3 mb-3">
                               <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase">开始时间</label>
-                                <YearMonthPicker 
+                                <YearMonthPicker
                                   value={exp.startDate}
                                   onChange={(val) => updateExperience(index, 'startDate', val)}
                                 />
                               </div>
                               <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase">结束时间</label>
-                                <YearMonthPicker 
+                                <YearMonthPicker
                                   value={exp.endDate}
                                   onChange={(val) => updateExperience(index, 'endDate', val)}
                                 />
                               </div>
                             </div>
                             <div className="space-y-3">
-                              <Input 
+                              <Input
                                 value={exp.title}
                                 onChange={(e) => updateExperience(index, 'title', e.target.value)}
                                 placeholder="项目/经历名称"
                                 className="h-8 text-sm font-bold bg-white dark:bg-slate-900"
                               />
-                              <textarea 
+                              <textarea
                                 value={exp.description}
                                 onChange={(e) => updateExperience(index, 'description', e.target.value)}
                                 className="w-full min-h-[80px] text-xs font-medium p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500/20 resize-none"
@@ -1037,7 +1051,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   <MessageSquare className="w-4 h-4 text-blue-600" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Team Discussion</span>
                 </div>
-                <button 
+                <button
                   onClick={(e) => { e.stopPropagation(); setIsCommentsExpanded(!isCommentsExpanded); }}
                   className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors"
                 >
@@ -1048,7 +1062,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   )}
                 </button>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
                 {isLoadingComments ? (
                   <div className="space-y-4 animate-pulse">
@@ -1071,7 +1085,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                     // We compare names because that's what's stored in the comment
                     const isMe = currentUser && (comment.user === currentUser.name || comment.user === 'Me');
                     const isSystem = comment.user === 'System' || comment.role === '系统';
-                    
+
                     return (
                     <div key={comment.id} className={cn("flex gap-2 md:gap-3", isMe && "flex-row-reverse")}>
                       <div className={`w-7 h-7 md:w-8 md:h-8 rounded-xl flex items-center justify-center text-white font-black text-[10px] md:text-xs overflow-hidden shrink-0 ${
@@ -1113,16 +1127,16 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
               <div className="p-3 md:p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl px-3 md:px-4 py-2 md:py-3 border border-slate-100 dark:border-slate-700">
                   <AtSign className="w-3.5 h-3.5 md:w-4 md:h-4 text-slate-400" />
-                  <input 
-                    type="text" 
-                    placeholder="回复评论..." 
+                  <input
+                    type="text"
+                    placeholder="回复评论..."
                     className="flex-1 bg-transparent border-none text-[11px] md:text-xs outline-none focus:ring-0 font-medium p-0"
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePostComment()}
                     disabled={isPostingComment}
                   />
-                  <button 
+                  <button
                     onClick={handlePostComment}
                     disabled={isPostingComment || !newComment.trim()}
                     className="p-1 md:p-1.5 bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"

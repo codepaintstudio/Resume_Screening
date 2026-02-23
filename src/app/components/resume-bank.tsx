@@ -204,10 +204,11 @@ export function ResumeBank() {
     );
   };
 
-  const handleUpload = async (files: File[]) => {
+  const handleUpload = async (files: File[], onProgress?: (current: number, total: number) => void) => {
     const createdStudents: Student[] = [];
 
     try {
+      const total = files.length;
       for (let index = 0; index < files.length; index++) {
         const file = files[index];
 
@@ -247,13 +248,16 @@ export function ResumeBank() {
         if (result.data && Array.isArray(result.data)) {
           createdStudents.push(...result.data);
         }
+
+        if (onProgress) {
+          onProgress(index + 1, total);
+        }
       }
 
       if (createdStudents.length > 0) {
         setStudents(prev => [...createdStudents, ...prev]);
       }
       toast.success(`成功上传 ${files.length} 份简历`);
-      setIsUploadOpen(false);
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('上传失败，请重试');

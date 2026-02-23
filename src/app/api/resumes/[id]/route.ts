@@ -143,6 +143,7 @@ export async function GET(
       submissionDate: student.submissionDate,
       email: student.email,
       phone: student.phone,
+      skills: (student as any).skills,
       experiences: student.experiences,
       resumePdf: student.resumePdf,
       avatar: user?.avatar || '',

@@ -10,6 +10,19 @@ interface StudentTableProps {
   loading?: boolean;
 }
 
+function formatSubmissionTime(student: Student): string {
+  const source = (student.createdAt as string | Date | undefined) || student.submissionDate;
+  if (!source) return '-';
+  const date = new Date(source);
+  if (isNaN(date.getTime())) return typeof source === 'string' ? source : '-';
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  return `${hh}:${mm}于${yyyy}/${m}/${d}`;
+}
+
 export function StudentTable({ students, onSelectStudent, loading = false }: StudentTableProps) {
   if (loading) {
     return (
@@ -140,7 +153,7 @@ export function StudentTable({ students, onSelectStudent, loading = false }: Stu
                       <div className="text-slate-400 text-[10px] font-bold uppercase mt-0.5">{student.department}</div>
                     </td>
                     <td className="px-4 md:px-6 py-4 text-sm font-bold text-slate-600 dark:text-slate-400">
-                      {student.submissionDate || '-'}
+                      {formatSubmissionTime(student)}
                     </td>
                     <td className="px-4 md:px-6 py-4 text-center font-black text-slate-600 dark:text-slate-400">
                       {student.gpa}
@@ -216,7 +229,9 @@ export function StudentTable({ students, onSelectStudent, loading = false }: Stu
                 </div>
                 <div className="space-y-0.5">
                   <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">申请日期</div>
-                  <div className="text-xs font-bold text-slate-900 dark:text-white">{student.submissionDate || '-'}</div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-white">
+                    {formatSubmissionTime(student)}
+                  </div>
                 </div>
                 <div className="flex items-center justify-end gap-2 pt-1">
                   <button className="p-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg text-slate-400">

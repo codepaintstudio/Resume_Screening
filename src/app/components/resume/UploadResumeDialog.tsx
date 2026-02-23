@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 interface UploadResumeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpload: (files: File[]) => void;
+  onUpload: (files: File[], onProgress?: (current: number, total: number) => void) => Promise<void>;
 }
 
 export function UploadResumeDialog({
@@ -25,6 +25,9 @@ export function UploadResumeDialog({
 }: UploadResumeDialogProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadedCount, setUploadedCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -75,11 +78,21 @@ export function UploadResumeDialog({
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpload = () => {
-    if (files.length === 0) return;
-    onUpload(files);
-    setFiles([]);
-    onOpenChange(false);
+  const handleUpload = async () => {
+    if (files.length === 0 || isUploading) return;
+    setIsUploading(true);
+    setUploadProgress(0);
+    setUploadedCount(0);
+    try {
+      await onUpload(files, (current, total) => {
+        setUploadedCount(current);
+        setUploadProgress(Math.round((current / total) * 100));
+      });
+      setFiles([]);
+      onOpenChange(false);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -136,53 +149,85 @@ export function UploadResumeDialog({
           </div>
 
           {files.length > 0 && (
-            <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-500 px-1">
-                <span>待上传文件 ({files.length})</span>
-                <span className="text-blue-600 cursor-pointer hover:underline" onClick={() => setFiles([])}>
-                  清空全部
-                </span>
-              </div>
-              {files.map((file, index) => (
-                <div 
-                  key={`${file.name}-${index}`}
-                  className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg group"
-                >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-700">
-                      <FileText className="w-4 h-4 text-blue-500" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">
-                        {file.name}
-                      </span>
-                      <span className="text-[10px] text-slate-400">
-                        {formatFileSize(file.size)}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-slate-400 hover:text-rose-500 transition-colors"
+            <div className="space-y-3">
+              <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-500 px-1">
+                  <span>待上传文件 ({files.length})</span>
+                  <span
+                    className="text-blue-600 cursor-pointer hover:underline"
+                    onClick={() => !isUploading && setFiles([])}
                   >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                    清空全部
+                  </span>
                 </div>
-              ))}
+                {files.map((file, index) => (
+                  <div 
+                    key={`${file.name}-${index}`}
+                    className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg group"
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-700">
+                        <FileText className="w-4 h-4 text-blue-500" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">
+                          {file.name}
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {formatFileSize(file.size)}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => !isUploading && removeFile(index)}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-slate-400 hover:text-rose-500 transition-colors disabled:opacity-50"
+                      disabled={isUploading}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {isUploading && (
+                <div className="space-y-1 px-1">
+                  <div className="flex items-center justify-between text-[10px] font-bold text-slate-500">
+                    <span>正在上传并解析简历...</span>
+                    <span>{uploadedCount}/{files.length}</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-600 rounded-full transition-all duration-200"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl font-bold">
+          <Button
+            variant="outline"
+            onClick={() => !isUploading && onOpenChange(false)}
+            disabled={isUploading}
+            className="rounded-xl font-bold"
+          >
             取消
           </Button>
           <Button 
             onClick={handleUpload} 
-            disabled={files.length === 0}
+            disabled={files.length === 0 || isUploading}
             className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold"
           >
-            确认上传 ({files.length})
+            {isUploading ? (
+              <>
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                上传中 ({uploadedCount}/{files.length})
+              </>
+            ) : (
+              <>确认上传 ({files.length})</>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

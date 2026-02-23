@@ -7,9 +7,56 @@ import { writeFile, mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
 import { ImapFlow } from 'imapflow';
 import { getSettings } from '@/lib/settings-store';
+import { analyzeResumeFromBuffer } from '@/lib/ai/dashscope';
 
 // 简历文件上传目录
 const RESUME_DIR = 'public/uploads/resumes';
+
+function applyAiResultToStudent(student: any, aiResult: any) {
+  if (!aiResult) return;
+  if (aiResult.name && !student.name) {
+    student.name = aiResult.name;
+  }
+  if (aiResult.email && !student.email) {
+    student.email = aiResult.email;
+  }
+  if (aiResult.phone && !student.phone) {
+    student.phone = aiResult.phone;
+  }
+  if (aiResult.department && !student.department) {
+    student.department = aiResult.department;
+  }
+  if (aiResult.major && !student.major) {
+    student.major = aiResult.major;
+  }
+  if (aiResult.className && !student.className) {
+    student.className = aiResult.className;
+  }
+  if (aiResult.gpa && !student.gpa) {
+    student.gpa = aiResult.gpa;
+  }
+  if (aiResult.graduationYear && !student.graduationYear) {
+    student.graduationYear = aiResult.graduationYear;
+  }
+  if (aiResult.tags && (!student.tags || student.tags.length === 0)) {
+    student.tags = aiResult.tags;
+  }
+  if (aiResult.aiScore && !student.aiScore) {
+    student.aiScore = aiResult.aiScore;
+  }
+  if (
+    aiResult.experiences &&
+    (!student.experiences || student.experiences.length === 0)
+  ) {
+    student.experiences = aiResult.experiences;
+  }
+  if (
+    aiResult.skills &&
+    (!student.skills || student.skills.length === 0)
+  ) {
+    student.skills = aiResult.skills;
+  }
+}
 
 function findAttachments(node: any, path: number[] = []) {
   const attachments: { part: string; type: string; size: number; filename: string }[] = [];
@@ -194,7 +241,7 @@ export async function GET(request: Request) {
 
     // 构建查询条件
     let allStudents = await getStudents();
-    
+
     // 应用筛选条件
     let filteredStudents = allStudents;
 
@@ -208,8 +255,8 @@ export async function GET(request: Request) {
 
     if (keyword) {
       const kw = keyword.toLowerCase();
-      filteredStudents = filteredStudents.filter(s => 
-        s.name?.toLowerCase().includes(kw) || 
+      filteredStudents = filteredStudents.filter(s =>
+        s.name?.toLowerCase().includes(kw) ||
         s.email?.toLowerCase().includes(kw)
       );
     }
@@ -235,7 +282,6 @@ export async function GET(request: Request) {
     const users = await getUserById(currentUser.id);
     const user = users[0];
 
-    // 返回数据
     const data = paginatedStudents.map(student => ({
       id: student.id,
       name: student.name,
@@ -249,6 +295,7 @@ export async function GET(request: Request) {
       tags: student.tags,
       aiScore: student.aiScore,
       submissionDate: student.submissionDate,
+      createdAt: student.createdAt,
       email: student.email,
       phone: student.phone,
       experiences: student.experiences,
@@ -319,6 +366,7 @@ export async function POST(request: Request) {
     const createdStudents = [];
 
     let resumePdfPath = '';
+    let uploadAiResult: any = null;
     if (resumeFile) {
       if (resumeFile.type !== 'application/pdf') {
         return NextResponse.json(
@@ -343,9 +391,19 @@ export async function POST(request: Request) {
       const fileName = `resume_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`;
       const fileBuffer = await resumeFile.arrayBuffer();
       const filePath = join(uploadDir, fileName);
-      await writeFile(filePath, Buffer.from(fileBuffer));
+      const nodeBuffer = Buffer.from(fileBuffer);
+      await writeFile(filePath, nodeBuffer);
 
       resumePdfPath = `/uploads/resumes/${fileName}`;
+
+      try {
+        uploadAiResult = await analyzeResumeFromBuffer(nodeBuffer, {
+          mimeType: resumeFile.type || 'application/pdf',
+          fileName,
+        });
+      } catch (e) {
+        console.error('Analyze uploaded resume with Dashscope error:', e);
+      }
     }
 
     const mailStudents = students.filter(
@@ -384,6 +442,10 @@ export async function POST(request: Request) {
 
     for (const student of students) {
       let finalResumePath = resumePdfPath || student.resumePdf || '';
+
+      if (uploadAiResult) {
+        applyAiResultToStudent(student, uploadAiResult);
+      }
 
       if (
         !finalResumePath &&
@@ -453,6 +515,26 @@ export async function POST(request: Request) {
                 await writeFile(filePath, buffer);
 
                 finalResumePath = `/uploads/resumes/${fileName}`;
+
+                const mimeType =
+                  isPdf || lowerName.endsWith('.pdf')
+                    ? 'application/pdf'
+                    : isJpg
+                    ? 'image/jpeg'
+                    : isPng
+                    ? 'image/png'
+                    : 'application/octet-stream';
+
+                try {
+                  const aiResult = await analyzeResumeFromBuffer(buffer, {
+                    mimeType,
+                    fileName,
+                  });
+
+                  applyAiResultToStudent(student, aiResult);
+                } catch (e) {
+                  console.error('Analyze resume with Dashscope error:', e);
+                }
               }
             }
           } catch (error) {
