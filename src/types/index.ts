@@ -20,6 +20,7 @@ export interface Student {
   aiScore: number;
   submissionDate: string;
   createdAt?: string | Date;
+  summary?: string;
   skills?: { name: string; level: 'understanding' | 'familiar' | 'proficient' | 'skilled' | 'master' }[];
   experiences?: Experience[];
   resumePdf?: string; // 简历 PDF 文件路径
@@ -47,6 +48,7 @@ export interface InterviewTask {
   email?: string;
   phone?: string;
   class?: string;
+  summary?: string;
   skills?: { name: string; level: 'understanding' | 'familiar' | 'proficient' | 'skilled' | 'master' }[];
   experiences?: Experience[];
 }

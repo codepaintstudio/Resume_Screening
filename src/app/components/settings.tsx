@@ -652,7 +652,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                     type="text"
                     value={ai.llm.baseUrl}
                     onChange={(e) => setAi({...ai, llm: {...ai.llm, baseUrl: e.target.value}})}
-                    placeholder="https://api.openai.com/v1"
+                    placeholder="默认使用系统配置 (Aliyun DashScope)"
                     className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                   />
                 </div>
@@ -662,7 +662,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                     type="password"
                     value={ai.llm.apiKey}
                     onChange={(e) => setAi({...ai, llm: {...ai.llm, apiKey: e.target.value}})}
-                    placeholder="sk-..."
+                    placeholder="默认使用系统配置 (已在 .env 中设置)"
                     className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm"
                   />
                 </div>
@@ -678,7 +678,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
                             type="text"
                             value={ai.llm.model}
                             onChange={(e) => setAi({...ai, llm: {...ai.llm, model: e.target.value}})}
-                            placeholder="Select or enter model"
+                            placeholder="默认使用 qwen-plus"
                             className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-slate-100 transition-all font-medium text-sm pr-10 cursor-pointer"
                          />
                          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">

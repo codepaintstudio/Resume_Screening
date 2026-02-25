@@ -24,6 +24,7 @@ export function ResumeBank() {
   const [isScreeningOpen, setIsScreeningOpen] = useState(false);
   const [screeningDept, setScreeningDept] = useState('all');
   const [promptConfig, setPromptConfig] = useState('');
+  const [matchKeywords, setMatchKeywords] = useState('');
   const [departments, setDepartments] = useState<string[]>([...DEPARTMENTS]);
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
@@ -32,6 +33,7 @@ export function ResumeBank() {
 
   // 同步邮箱相关状态
   const [isSyncMailOpen, setIsSyncMailOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
 
   const searchParams = useSearchParams();
   const { currentUser } = useAppStore();
@@ -184,6 +186,8 @@ export function ResumeBank() {
         body: JSON.stringify({
           department: screeningDept,
           prompt: promptConfig,
+          matchKeywords: matchKeywords,
+          dateRange: dateRange,
           user: currentUser
         })
       }).then(async (res) => {
@@ -195,11 +199,42 @@ export function ResumeBank() {
         loading: 'AI 正在批量筛选简历中...',
         success: (data) => {
           setIsScreeningOpen(false);
-          // In a real app, we would refresh the list or update statuses here
-          // For now, we just simulate a refresh
+          fetchData(); // 筛选完成后刷新列表以显示最新结果
           return `筛选完成，已处理 ${data.data.screenedCount} 份简历`;
         },
-        error: '筛选任务启动失败'
+        error: (err) => err.message || '筛选任务启动失败'
+      }
+    );
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.length === 0) return;
+
+    if (!confirm(`确定要删除选中的 ${selectedIds.length} 份简历吗？此操作不可撤销。`)) {
+      return;
+    }
+
+    toast.promise(
+      fetch('/api/resumes/batch-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ids: selectedIds,
+          user: currentUser
+        })
+      }).then(async (res) => {
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        return data;
+      }),
+      {
+        loading: '正在批量删除简历...',
+        success: () => {
+          setStudents(prev => prev.filter(s => !selectedIds.includes(s.id)));
+          setSelectedIds([]);
+          return '批量删除成功';
+        },
+        error: (err) => err.message || '批量删除失败'
       }
     );
   };
@@ -278,6 +313,8 @@ export function ResumeBank() {
         onOpenScreening={() => setIsScreeningOpen(true)}
         onOpenUpload={() => setIsUploadOpen(true)}
         onOpenSyncMail={() => setIsSyncMailOpen(true)}
+        onBatchDelete={handleBatchDelete}
+        selectedCount={selectedIds.length}
         departments={departments}
         onRefresh={fetchData}
       />
@@ -286,6 +323,15 @@ export function ResumeBank() {
         students={filteredStudents}
         onSelectStudent={setSelectedStudent}
         loading={loading}
+        selectedIds={selectedIds}
+        onToggleSelection={(id) => {
+          setSelectedIds(prev =>
+            prev.includes(id)
+              ? prev.filter(item => item !== id)
+              : [...prev, id]
+          );
+        }}
+        onSelectAll={(ids) => setSelectedIds(ids)}
       />
 
       <CandidateDrawer
@@ -303,6 +349,8 @@ export function ResumeBank() {
         setScreeningDept={setScreeningDept}
         promptConfig={promptConfig}
         setPromptConfig={setPromptConfig}
+        matchKeywords={matchKeywords}
+        setMatchKeywords={setMatchKeywords}
         onStartScreening={handleStartScreening}
       />
 
