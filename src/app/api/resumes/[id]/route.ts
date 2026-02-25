@@ -144,6 +144,7 @@ export async function GET(
       email: student.email,
       phone: student.phone,
       skills: (student as any).skills,
+      summary: (student as any).summary,
       experiences: student.experiences,
       resumePdf: student.resumePdf,
       avatar: user?.avatar || '',
@@ -191,30 +192,32 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, tags, aiScore, notes, resumePdf } = body;
+    const {
+      status, tags, aiScore, notes, resumePdf,
+      name, studentId: sId, department, major, className,
+      gpa, graduationYear, email, phone, experiences, skills, summary
+    } = body;
 
     // 构建更新数据
     const updateData: any = {};
 
-    if (status !== undefined) {
-      updateData.status = status;
-    }
-
-    if (tags !== undefined) {
-      updateData.tags = tags;
-    }
-
-    if (aiScore !== undefined) {
-      updateData.aiScore = aiScore.toString();
-    }
-
-    if (notes !== undefined) {
-      updateData.notes = notes;
-    }
-
-    if (resumePdf !== undefined) {
-      updateData.resumePdf = resumePdf;
-    }
+    if (status !== undefined) updateData.status = status;
+    if (tags !== undefined) updateData.tags = tags;
+    if (aiScore !== undefined) updateData.aiScore = aiScore.toString();
+    if (notes !== undefined) updateData.notes = notes;
+    if (resumePdf !== undefined) updateData.resumePdf = resumePdf;
+    if (name !== undefined) updateData.name = name;
+    if (sId !== undefined) updateData.studentId = sId;
+    if (department !== undefined) updateData.department = department;
+    if (major !== undefined) updateData.major = major;
+    if (className !== undefined) updateData.className = className;
+    if (gpa !== undefined) updateData.gpa = gpa;
+    if (graduationYear !== undefined) updateData.graduationYear = graduationYear;
+    if (email !== undefined) updateData.email = email;
+    if (phone !== undefined) updateData.phone = phone;
+    if (experiences !== undefined) updateData.experiences = experiences;
+    if (skills !== undefined) updateData.skills = skills;
+    if (summary !== undefined) updateData.summary = summary;
 
     // 执行更新
     const updatedStudents = await updateStudent(studentId, updateData);
@@ -272,6 +275,8 @@ export async function PATCH(
         email: updatedStudent.email,
         phone: updatedStudent.phone,
         experiences: updatedStudent.experiences,
+        skills: (updatedStudent as any).skills,
+        summary: (updatedStudent as any).summary,
         resumePdf: updatedStudent.resumePdf,
       },
     });

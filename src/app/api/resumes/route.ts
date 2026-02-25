@@ -298,6 +298,8 @@ export async function GET(request: Request) {
       createdAt: student.createdAt,
       email: student.email,
       phone: student.phone,
+      summary: student.summary,
+      skills: student.skills,
       experiences: student.experiences,
       resumePdf: student.resumePdf,
       avatar: user?.avatar || '',
@@ -557,6 +559,8 @@ export async function POST(request: Request) {
         submissionDate: new Date(),
         email: student.email || '',
         phone: student.phone || '',
+        summary: student.summary || '',
+        skills: student.skills || [],
         experiences: student.experiences || [],
         resumePdf: finalResumePath,
       });

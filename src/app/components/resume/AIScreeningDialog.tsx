@@ -7,6 +7,7 @@ import { Button } from "@/app/components/ui/button";
 import { Calendar } from "@/app/components/ui/calendar";
 import { Label } from "@/app/components/ui/label";
 import { Textarea } from "@/app/components/ui/textarea";
+import { Input } from "@/app/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -38,6 +39,8 @@ interface AIScreeningDialogProps {
   setScreeningDept: (value: string) => void;
   promptConfig: string;
   setPromptConfig: (value: string) => void;
+  matchKeywords: string;
+  setMatchKeywords: (value: string) => void;
   onStartScreening: () => void;
 }
 
@@ -50,6 +53,8 @@ export function AIScreeningDialog({
   setScreeningDept,
   promptConfig,
   setPromptConfig,
+  matchKeywords,
+  setMatchKeywords,
   onStartScreening
 }: AIScreeningDialogProps) {
   const [isMobile, setIsMobile] = React.useState(false);
@@ -138,8 +143,21 @@ export function AIScreeningDialog({
           </div>
 
           <div className="grid gap-2">
+            <Label htmlFor="match-keywords" className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500">
+              匹配关键词 (模糊匹配)
+            </Label>
+            <Input
+              id="match-keywords"
+              placeholder="例如：React, TypeScript, Node.js"
+              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl text-xs md:text-sm"
+              value={matchKeywords}
+              onChange={(e) => setMatchKeywords(e.target.value)}
+            />
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="prompt-config" className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-500">
-              提示词配置 (可选)
+              筛选要求 (AI)
             </Label>
             <Textarea
               id="prompt-config"

@@ -13,6 +13,7 @@ type ParsedResume = {
   graduationYear?: string;
   tags?: string[];
   aiScore?: string;
+  summary?: string;
   experiences?: any[];
   skills?: { name: string; level: 'understanding' | 'familiar' | 'proficient' | 'skilled' | 'master' }[];
 };
@@ -21,9 +22,9 @@ const dashscopeApiKey = process.env.DASHSCOPE_API_KEY;
 
 const dashscopeBaseUrl =
   process.env.DASHSCOPE_BASE_URL ||
-  'https://dashscope.aliyuncs.com/api/v2/apps/protocols/compatible-mode/v1';
+  'https://dashscope.aliyuncs.com/compatible-mode/v1';
 
-const dashscopeModel = process.env.DASHSCOPE_MODEL || 'qwen3.5-plus';
+const dashscopeModel = process.env.DASHSCOPE_MODEL || 'qwen-plus';
 
 let openaiClient: OpenAI | null = null;
 
@@ -75,7 +76,8 @@ async function callDashscopeWithText(text: string): Promise<ParsedResume | null>
   const prompt =
     '你是一个HR助手，请从以下简历内容中提取候选人信息，' +
     '并严格返回JSON格式，键包括：name, email, phone, department, major, className, gpa, graduationYear, ' +
-    'aiScore, tags, experiences, skills。tags 为字符串数组，experiences 为数组，可以为空；' +
+    'aiScore, tags, experiences, skills, summary。tags 为字符串数组，experiences 为数组，可以为空；' +
+    'summary 为个人总结/评价字符串；' +
     'skills 为数组，每个元素为 { "name": 技能名称, "level": "understanding"|"familiar"|"proficient"|"skilled"|"master" }。' +
     '在识别 skills 时，请对“专业技能”“技能专长”“掌握技能”“具备技能”等板块进行语义层面的模糊匹配，' +
     '即使标题或字段名不同也要归纳到 skills 中；如未明确标注熟练度，请根据表述合理推断 level。' +
@@ -120,7 +122,8 @@ async function callDashscopeWithImage(
   const prompt =
     '你是一个HR助手，请从这张简历照片中识别候选人信息，' +
     '并严格返回JSON格式，键包括：name, email, phone, department, major, className, gpa, graduationYear, ' +
-    'aiScore, tags, experiences, skills。tags 为字符串数组，experiences 为数组，可以为空；' +
+    'aiScore, tags, experiences, skills, summary。tags 为字符串数组，experiences 为数组，可以为空；' +
+    'summary 为个人总结/评价字符串；' +
     'skills 为数组，每个元素为 { "name": 技能名称, "level": "understanding"|"familiar"|"proficient"|"skilled"|"master" }。' +
     '在识别 skills 时，请对“专业技能”“技能专长”“掌握技能”“具备技能”等板块进行语义层面的模糊匹配，' +
     '即使标题或字段名不同也要归纳到 skills 中；如未明确标注熟练度，请根据表述合理推断 level。' +

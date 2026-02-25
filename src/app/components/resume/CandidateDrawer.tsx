@@ -527,9 +527,9 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                             <div className="space-y-2">
                               <h4 className="font-bold text-xs text-slate-500 uppercase">选择面试官</h4>
                               <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
-                                  {availableInterviewers.map(interviewer => (
+                                  {availableInterviewers.map((interviewer, idx) => (
                                       <div
-                                          key={interviewer}
+                                          key={`${interviewer}-${idx}`}
                                           onClick={() => toggleInterviewer(interviewer)}
                                           className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all text-xs ${
                                               selectedInterviewers.includes(interviewer)
@@ -606,9 +606,9 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                           <div className="space-y-2">
                             <h4 className="font-bold text-xs text-slate-500 uppercase">选择面试官</h4>
                             <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
-                                {availableInterviewers.map(interviewer => (
+                                {availableInterviewers.map((interviewer, idx) => (
                                     <div
-                                        key={interviewer}
+                                        key={`${interviewer}-${idx}`}
                                         onClick={() => toggleInterviewer(interviewer)}
                                         className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all text-xs ${
                                             selectedInterviewers.includes(interviewer)
@@ -882,6 +882,26 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                   </button>
                 </div>
 
+                {/* Summary Section */}
+                <div className="mb-10">
+                  <h4 className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+                    <FileSearch className="w-4 h-4 text-blue-600" />
+                    个人总结
+                  </h4>
+                  {isEditing ? (
+                    <textarea
+                      value={formData.summary || ''}
+                      onChange={(e) => setFormData({...formData, summary: e.target.value})}
+                      placeholder="个人总结/自我评价"
+                      className="w-full min-h-[100px] p-3 text-sm font-medium bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                    />
+                  ) : (
+                    <div className="bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed italic">
+                      {formData.summary || '暂无个人总结'}
+                    </div>
+                  )}
+                </div>
+
                 {/* Skills Section */}
                 <div className="mb-10">
                   <div className="flex items-center gap-2 mb-4">
@@ -984,7 +1004,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                     {formData.experiences?.length > 0 ? (
                       formData.experiences.map((exp: Experience, index: number) => (
                         isEditing ? (
-                          <div key={exp.id} className="relative bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 mb-4">
+                          <div key={exp.id || index} className="relative bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 mb-4">
                             <button
                               onClick={() => removeExperience(index)}
                               className="absolute top-2 right-2 p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
@@ -1023,7 +1043,7 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                             </div>
                           </div>
                         ) : (
-                          <div key={exp.id} className="relative">
+                          <div key={exp.id || index} className="relative">
                             <div className="absolute -left-[21px] top-1 w-2 h-2 rounded-full bg-blue-600 border-2 border-white dark:border-slate-900 shadow-sm"></div>
                             <p className="text-[9px] font-black text-slate-400 uppercase">{exp.startDate} - {exp.endDate}</p>
                             <p className="font-black text-sm mt-1">{exp.title}</p>
@@ -1080,14 +1100,14 @@ export function CandidateDrawer({ student, onClose, onStatusChange, onUpdate, ty
                      </div>
                   </div>
                 ) : comments.length > 0 ? (
-                  comments.map((comment: any) => {
+                  comments.map((comment: any, idx: number) => {
                     // Check if the comment belongs to the current user
                     // We compare names because that's what's stored in the comment
                     const isMe = currentUser && (comment.user === currentUser.name || comment.user === 'Me');
                     const isSystem = comment.user === 'System' || comment.role === '系统';
 
                     return (
-                    <div key={comment.id} className={cn("flex gap-2 md:gap-3", isMe && "flex-row-reverse")}>
+                    <div key={comment.id || idx} className={cn("flex gap-2 md:gap-3", isMe && "flex-row-reverse")}>
                       <div className={`w-7 h-7 md:w-8 md:h-8 rounded-xl flex items-center justify-center text-white font-black text-[10px] md:text-xs overflow-hidden shrink-0 ${
                         isSystem ? 'bg-white border border-slate-100 p-1' : 'bg-blue-600'
                       }`}>
