@@ -13,7 +13,6 @@ type ParsedResume = {
   graduationYear?: string;
   tags?: string[];
   aiScore?: string;
-  summary?: string;
   experiences?: any[];
   skills?: { name: string; level: 'understanding' | 'familiar' | 'proficient' | 'skilled' | 'master' }[];
 };
@@ -22,9 +21,9 @@ const dashscopeApiKey = process.env.DASHSCOPE_API_KEY;
 
 const dashscopeBaseUrl =
   process.env.DASHSCOPE_BASE_URL ||
-  'https://dashscope.aliyuncs.com/compatible-mode/v1';
+  'https://dashscope.aliyuncs.com/api/v2/apps/protocols/compatible-mode/v1';
 
-const dashscopeModel = process.env.DASHSCOPE_MODEL || 'qwen-plus';
+const dashscopeModel = process.env.DASHSCOPE_MODEL || 'qwen3.5-plus';
 
 let openaiClient: OpenAI | null = null;
 
@@ -76,28 +75,24 @@ async function callDashscopeWithText(text: string): Promise<ParsedResume | null>
   const prompt =
     '你是一个HR助手，请从以下简历内容中提取候选人信息，' +
     '并严格返回JSON格式，键包括：name, email, phone, department, major, className, gpa, graduationYear, ' +
-    'aiScore, tags, experiences, skills, summary。tags 为字符串数组，experiences 为数组，可以为空；' +
-    'summary 为个人总结/评价字符串；' +
+    'aiScore, tags, experiences, skills。tags 为字符串数组，experiences 为数组，可以为空；' +
     'skills 为数组，每个元素为 { "name": 技能名称, "level": "understanding"|"familiar"|"proficient"|"skilled"|"master" }。' +
     '在识别 skills 时，请对“专业技能”“技能专长”“掌握技能”“具备技能”等板块进行语义层面的模糊匹配，' +
     '即使标题或字段名不同也要归纳到 skills 中；如未明确标注熟练度，请根据表述合理推断 level。' +
     '不要输出任何解释文字，只返回JSON。简历内容：\n' +
     text;
 
-  const response = await client.responses.create({
+  const response = await client.chat.completions.create({
     model: dashscopeModel,
-    input: prompt,
-    enable_thinking: true,
-  } as any);
+    messages: [
+        { role: 'system', content: '你是一个专业的简历分析助手，只返回 JSON 格式数据。' },
+        { role: 'user', content: prompt }
+      ],
+      response_format: { type: 'json_object' }
+    });
 
-  const chunks: string[] = [];
-  for (const item of (response as any).output || []) {
-    if (item.type === 'message' && item.content && item.content[0]?.text) {
-      chunks.push(item.content[0].text);
-    }
-  }
-
-  const fullText = chunks.join('\n').trim();
+    const fullText = response.choices[0]?.message?.content?.trim() || '';
+    if (!fullText) return null;
 
   try {
     const match = fullText.match(/\{[\s\S]*\}/);
@@ -122,50 +117,41 @@ async function callDashscopeWithImage(
   const prompt =
     '你是一个HR助手，请从这张简历照片中识别候选人信息，' +
     '并严格返回JSON格式，键包括：name, email, phone, department, major, className, gpa, graduationYear, ' +
-    'aiScore, tags, experiences, skills, summary。tags 为字符串数组，experiences 为数组，可以为空；' +
-    'summary 为个人总结/评价字符串；' +
+    'aiScore, tags, experiences, skills。tags 为字符串数组，experiences 为数组，可以为空；' +
     'skills 为数组，每个元素为 { "name": 技能名称, "level": "understanding"|"familiar"|"proficient"|"skilled"|"master" }。' +
     '在识别 skills 时，请对“专业技能”“技能专长”“掌握技能”“具备技能”等板块进行语义层面的模糊匹配，' +
     '即使标题或字段名不同也要归纳到 skills 中；如未明确标注熟练度，请根据表述合理推断 level。' +
     '不要输出任何解释文字，只返回JSON。';
 
-  const response = await client.responses.create({
-    model: dashscopeModel,
-    input: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'input_text',
-            text: prompt,
-          },
-          {
-            type: 'input_image',
-            image_url: {
-              url: `data:${mimeType};base64,${base64}`,
-            },
-          },
-        ],
-      },
-    ],
-    enable_thinking: true,
-  } as any);
-
-  const chunks: string[] = [];
-  for (const item of (response as any).output || []) {
-    if (item.type === 'message' && item.content && item.content[0]?.text) {
-      chunks.push(item.content[0].text);
-    }
-  }
-
-  const fullText = chunks.join('\n').trim();
-
   try {
+    const response = await client.chat.completions.create({
+      model: dashscopeModel,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${mimeType};base64,${base64}`,
+              },
+            },
+          ],
+        },
+      ],
+      response_format: { type: 'json_object' }
+    });
+
+    const fullText = response.choices[0]?.message?.content?.trim() || '';
+    if (!fullText) return null;
+
     const match = fullText.match(/\{[\s\S]*\}/);
     const jsonText = match ? match[0] : fullText;
     const parsed = JSON.parse(jsonText);
     return parsed;
-  } catch {
+  } catch (error) {
+    console.error('Dashscope Image API error:', error);
     return null;
   }
 }
