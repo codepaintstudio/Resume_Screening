@@ -1,3 +1,5 @@
+export * from './local-queries';
+
 import { db, schema } from './index';
 import { eq, and, sql, count, gt, lt, gte, or, asc, like, isNotNull, desc, isNull } from 'drizzle-orm';
 import { MySql2Database } from 'drizzle-orm/mysql2';
@@ -16,38 +18,38 @@ function extractInsertId(result: any): number {
 }
 
 // ==================== 用户相关操作 ====================
-export async function getUsers() {
+async function getUsers() {
   return await db.select().from(schema.users);
 }
 
-export async function getUserById(id: number) {
+async function getUserById(id: number) {
   const users = await db.select().from(schema.users).where(eq(schema.users.id, id));
   return users[0] ? [users[0]] : [];
 }
 
-export async function getUserByEmail(email: string) {
+async function getUserByEmail(email: string) {
   const users = await db.select().from(schema.users).where(eq(schema.users.email, email));
   return users[0] ? [users[0]] : [];
 }
 
-export async function createUser(data: typeof schema.users.$inferInsert) {
+async function createUser(data: typeof schema.users.$inferInsert) {
   const result = await db.insert(schema.users).values(data);
   const insertId = extractInsertId(result);
   return await db.select().from(schema.users).where(eq(schema.users.id, insertId));
 }
 
-export async function updateUser(id: number, data: Partial<typeof schema.users.$inferInsert>) {
+async function updateUser(id: number, data: Partial<typeof schema.users.$inferInsert>) {
   await db.update(schema.users).set(data).where(eq(schema.users.id, id));
   return await db.select().from(schema.users).where(eq(schema.users.id, id));
 }
 
-export async function deleteUser(id: number) {
+async function deleteUser(id: number) {
   return await db.delete(schema.users).where(eq(schema.users.id, id));
 }
 
 // ==================== 面试官相关操作 ====================
 // 获取所有面试官（role 为 interviewer 或 member 的用户）
-export async function getInterviewers() {
+async function getInterviewers() {
   const result = await db.select({
     id: schema.users.id,
     name: schema.users.name,
@@ -65,55 +67,55 @@ export async function getInterviewers() {
 }
 
 // ==================== 邮件模板相关操作 ====================
-export async function getEmailTemplates() {
+async function getEmailTemplates() {
   return await db.select().from(schema.emailTemplates);
 }
 
-export async function getEmailTemplateById(id: number) {
+async function getEmailTemplateById(id: number) {
   return await db.select().from(schema.emailTemplates).where(eq(schema.emailTemplates.id, id));
 }
 
-export async function createEmailTemplate(data: typeof schema.emailTemplates.$inferInsert) {
+async function createEmailTemplate(data: typeof schema.emailTemplates.$inferInsert) {
   const result = await db.insert(schema.emailTemplates).values(data);
   const insertId = extractInsertId(result);
   return await db.select().from(schema.emailTemplates).where(eq(schema.emailTemplates.id, insertId));
 }
 
-export async function updateEmailTemplate(id: number, data: Partial<typeof schema.emailTemplates.$inferInsert>) {
+async function updateEmailTemplate(id: number, data: Partial<typeof schema.emailTemplates.$inferInsert>) {
   await db.update(schema.emailTemplates).set(data).where(eq(schema.emailTemplates.id, id));
   return await db.select().from(schema.emailTemplates).where(eq(schema.emailTemplates.id, id));
 }
 
-export async function deleteEmailTemplate(id: number) {
+async function deleteEmailTemplate(id: number) {
   return await db.delete(schema.emailTemplates).where(eq(schema.emailTemplates.id, id));
 }
 
 // ==================== 邮件历史相关操作 ====================
-export async function getEmailHistory() {
+async function getEmailHistory() {
   return await db.select().from(schema.emailHistory).orderBy(schema.emailHistory.sentAt);
 }
 
-export async function getEmailHistoryById(id: number) {
+async function getEmailHistoryById(id: number) {
   return await db.select().from(schema.emailHistory).where(eq(schema.emailHistory.id, id));
 }
 
-export async function createEmailHistory(data: typeof schema.emailHistory.$inferInsert) {
+async function createEmailHistory(data: typeof schema.emailHistory.$inferInsert) {
   const result = await db.insert(schema.emailHistory).values(data);
   const insertId = extractInsertId(result);
   return await db.select().from(schema.emailHistory).where(eq(schema.emailHistory.id, insertId));
 }
 
-export async function deleteEmailHistory(id: number) {
+async function deleteEmailHistory(id: number) {
   return await db.delete(schema.emailHistory).where(eq(schema.emailHistory.id, id));
 }
 
 // ==================== 邮件配置相关操作 ====================
-export async function getEmailConfig() {
+async function getEmailConfig() {
   const configs = await db.select().from(schema.emailConfig).limit(1);
   return configs[0] || null;
 }
 
-export async function createOrUpdateEmailConfig(data: typeof schema.emailConfig.$inferInsert) {
+async function createOrUpdateEmailConfig(data: typeof schema.emailConfig.$inferInsert) {
   // 先删除现有配置，再插入新配置（简化处理）
   await db.delete(schema.emailConfig);
   const result = await db.insert(schema.emailConfig).values(data);
@@ -122,7 +124,7 @@ export async function createOrUpdateEmailConfig(data: typeof schema.emailConfig.
 }
 
 // ==================== 活动日志相关操作 ====================
-export async function getActivityLogs(page: number = 1, limit: number = 10) {
+async function getActivityLogs(page: number = 1, limit: number = 10) {
   try {
     const offset = (page - 1) * limit;
     
@@ -163,21 +165,21 @@ export async function getActivityLogs(page: number = 1, limit: number = 10) {
   }
 }
 
-export async function createActivityLog(data: typeof schema.activityLogs.$inferInsert) {
+async function createActivityLog(data: typeof schema.activityLogs.$inferInsert) {
   const result = await db.insert(schema.activityLogs).values(data);
   const insertId = extractInsertId(result);
   return await db.select().from(schema.activityLogs).where(eq(schema.activityLogs.id, insertId));
 }
 
 // ==================== 评论相关操作 ====================
-export async function getCommentsByStudentId(studentId: number) {
+async function getCommentsByStudentId(studentId: number) {
   return await db.select()
     .from(schema.comments)
     .where(eq(schema.comments.studentId, studentId))
     .orderBy(sql`${schema.comments.timestamp} ASC`);
 }
 
-export async function createComment(data: typeof schema.comments.$inferInsert) {
+async function createComment(data: typeof schema.comments.$inferInsert) {
   // 保存 timestamp 用于后续查询
   const timestamp = data.timestamp || new Date();
   
@@ -235,50 +237,50 @@ export async function createComment(data: typeof schema.comments.$inferInsert) {
   return result;
 }
 
-export async function deleteComment(id: number) {
+async function deleteComment(id: number) {
   return await db.delete(schema.comments).where(eq(schema.comments.id, id));
 }
 
 // ==================== 学生/简历相关操作 ====================
-export async function getStudents() {
+async function getStudents() {
   return await db.select().from(schema.students);
 }
 
-export async function getStudentById(id: number) {
+async function getStudentById(id: number) {
   return await db.select().from(schema.students).where(eq(schema.students.id, id));
 }
 
-export async function getStudentsByStatus(status: string) {
+async function getStudentsByStatus(status: string) {
   return await db.select().from(schema.students).where(eq(schema.students.status, status as any));
 }
 
-export async function getStudentsByDepartment(department: string) {
+async function getStudentsByDepartment(department: string) {
   return await db.select().from(schema.students).where(eq(schema.students.department, department));
 }
 
-export async function createStudent(data: typeof schema.students.$inferInsert) {
+async function createStudent(data: typeof schema.students.$inferInsert) {
   const result = await db.insert(schema.students).values(data);
   const insertId = extractInsertId(result);
   return await db.select().from(schema.students).where(eq(schema.students.id, insertId));
 }
 
-export async function updateStudent(id: number, data: Partial<typeof schema.students.$inferInsert>) {
+async function updateStudent(id: number, data: Partial<typeof schema.students.$inferInsert>) {
   await db.update(schema.students).set(data).where(eq(schema.students.id, id));
   return await db.select().from(schema.students).where(eq(schema.students.id, id));
 }
 
-export async function deleteStudent(id: number) {
+async function deleteStudent(id: number) {
   return await db.delete(schema.students).where(eq(schema.students.id, id));
 }
 
 // ==================== 面试相关操作 ====================
 // 获取所有面试
-export async function getInterviews() {
+async function getInterviews() {
   return await db.select().from(schema.interviews);
 }
 
 // 获取近期面试（已安排但未开始的面试）
-export async function getUpcomingInterviews(limit: number = 10) {
+async function getUpcomingInterviews(limit: number = 10) {
   // 获取状态为 pending_interview 或 interviewing，且有日期的面试
   // 按日期升序排列
   const today = new Date();
@@ -302,7 +304,7 @@ export async function getUpcomingInterviews(limit: number = 10) {
 }
 
 // 获取今日面试
-export async function getTodayInterviews() {
+async function getTodayInterviews() {
   const today = new Date();
   const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   
@@ -322,35 +324,35 @@ export async function getTodayInterviews() {
   return result;
 }
 
-export async function getInterviewById(id: number) {
+async function getInterviewById(id: number) {
   return await db.select().from(schema.interviews).where(eq(schema.interviews.id, id));
 }
 
-export async function getInterviewsByStudentId(studentId: number) {
+async function getInterviewsByStudentId(studentId: number) {
   return await db.select().from(schema.interviews).where(eq(schema.interviews.studentId, studentId));
 }
 
-export async function getInterviewsByStage(stage: string) {
+async function getInterviewsByStage(stage: string) {
   return await db.select().from(schema.interviews).where(eq(schema.interviews.stage, stage as any));
 }
 
-export async function createInterview(data: typeof schema.interviews.$inferInsert) {
+async function createInterview(data: typeof schema.interviews.$inferInsert) {
   const result = await db.insert(schema.interviews).values(data);
   const insertId = extractInsertId(result);
   return await db.select().from(schema.interviews).where(eq(schema.interviews.id, insertId));
 }
 
-export async function updateInterview(id: number, data: Partial<typeof schema.interviews.$inferInsert>) {
+async function updateInterview(id: number, data: Partial<typeof schema.interviews.$inferInsert>) {
   await db.update(schema.interviews).set(data).where(eq(schema.interviews.id, id));
   return await db.select().from(schema.interviews).where(eq(schema.interviews.id, id));
 }
 
-export async function deleteInterview(id: number) {
+async function deleteInterview(id: number) {
   return await db.delete(schema.interviews).where(eq(schema.interviews.id, id));
 }
 
 // ==================== 统计相关操作 ====================
-export async function getStudentStats() {
+async function getStudentStats() {
   const allStudents = await db.select().from(schema.students);
   
   const stats = {
@@ -372,7 +374,7 @@ export async function getStudentStats() {
   return stats;
 }
 
-export async function getInterviewStats() {
+async function getInterviewStats() {
   const allInterviews = await db.select().from(schema.interviews);
   
   const stats = {
@@ -395,7 +397,7 @@ export async function getInterviewStats() {
 }
 
 // ==================== 批量操作 ====================
-export async function batchCreateStudents(data: typeof schema.students.$inferInsert[]) {
+async function batchCreateStudents(data: typeof schema.students.$inferInsert[]) {
   const result = await db.insert(schema.students).values(data);
   // 批量插入时，lastInsertId 是第一条记录的 ID
   const startId = extractInsertId(result);
@@ -403,7 +405,7 @@ export async function batchCreateStudents(data: typeof schema.students.$inferIns
   return await db.select().from(schema.students).where(sql`${schema.students.id} BETWEEN ${startId} AND ${endId}`);
 }
 
-export async function batchUpdateStudentStatus(ids: number[], status: string) {
+async function batchUpdateStudentStatus(ids: number[], status: string) {
   // 使用 in 条件批量更新
   return await db.update(schema.students)
     .set({ status: status as any })
@@ -411,7 +413,7 @@ export async function batchUpdateStudentStatus(ids: number[], status: string) {
 }
 
 // ==================== 部门分布统计 ====================
-export async function getDepartmentDistribution() {
+async function getDepartmentDistribution() {
   // 使用 Drizzle ORM 的查询构建器
   const result = await db
     .select({
@@ -458,7 +460,7 @@ export async function getDepartmentDistribution() {
 }
 
 // ==================== 仪表盘综合统计 ====================
-export async function getDashboardStats() {
+async function getDashboardStats() {
   // 获取收件箱简历数量 (新投递的简历，状态为 pending)
   const inboxResult = await db
     .select({ count: count() })
@@ -589,7 +591,7 @@ export async function getDashboardStats() {
 }
 
 // ==================== 趋势数据 ====================
-export async function getTrendData(days: number = 7) {
+async function getTrendData(days: number = 7) {
   // 生成最近 days 天的日期列表
   const dateList: string[] = [];
   const today = new Date();
@@ -630,7 +632,7 @@ export async function getTrendData(days: number = 7) {
 }
 
 // ==================== 部门列表 ====================
-export async function getDepartments() {
+async function getDepartments() {
   try {
     // 从 students 表中获取不同的部门
     let studentRows: { department: string | null }[] = [];
@@ -714,7 +716,7 @@ export async function getDepartments() {
 /**
  * 获取通知列表
  */
-export async function getNotifications(userId?: number, limit = 20) {
+async function getNotifications(userId?: number, limit = 20) {
   try {
     let query = db.select().from(schema.notifications);
     
@@ -739,7 +741,7 @@ export async function getNotifications(userId?: number, limit = 20) {
 /**
  * 获取未读通知数量
  */
-export async function getUnreadNotificationCount(userId?: number) {
+async function getUnreadNotificationCount(userId?: number) {
   try {
     if (userId !== undefined) {
       const result = await db.select({ count: count() })
@@ -766,7 +768,7 @@ export async function getUnreadNotificationCount(userId?: number) {
 /**
  * 标记通知为已读
  */
-export async function markNotificationAsRead(id: number) {
+async function markNotificationAsRead(id: number) {
   try {
     await db.update(schema.notifications)
       .set({ unread: '0' })
@@ -781,7 +783,7 @@ export async function markNotificationAsRead(id: number) {
 /**
  * 标记所有通知为已读
  */
-export async function markAllNotificationsAsRead(userId?: number) {
+async function markAllNotificationsAsRead(userId?: number) {
   try {
     if (userId !== undefined) {
       await db.update(schema.notifications)
@@ -807,7 +809,7 @@ export async function markAllNotificationsAsRead(userId?: number) {
 /**
  * 添加通知
  */
-export async function addNotification(notification: typeof schema.notifications.$inferInsert) {
+async function addNotification(notification: typeof schema.notifications.$inferInsert) {
   try {
     const result = await db.insert(schema.notifications).values(notification);
     return result;
@@ -822,7 +824,7 @@ export async function addNotification(notification: typeof schema.notifications.
 /**
  * 获取 AI 设置
  */
-export async function getAiSettings() {
+async function getAiSettings() {
   try {
     const settings = await db.select().from(schema.aiSettings).limit(1);
     if (settings.length === 0) {
@@ -873,7 +875,7 @@ export async function getAiSettings() {
 /**
  * 创建或更新 AI 设置
  */
-export async function createOrUpdateAiSettings(data: {
+async function createOrUpdateAiSettings(data: {
   vision?: {
     endpoint?: string;
     model?: string;
@@ -924,7 +926,7 @@ export async function createOrUpdateAiSettings(data: {
 /**
  * 获取 GitHub 设置
  */
-export async function getGithubSettings() {
+async function getGithubSettings() {
   try {
     const settings = await db.select().from(schema.githubSettings).limit(1);
     if (settings.length === 0) {
@@ -957,7 +959,7 @@ export async function getGithubSettings() {
 /**
  * 创建或更新 GitHub 设置
  */
-export async function createOrUpdateGithubSettings(data: {
+async function createOrUpdateGithubSettings(data: {
   clientId?: string;
   clientSecret?: string;
   organization?: string;
@@ -995,7 +997,7 @@ export async function createOrUpdateGithubSettings(data: {
 /**
  * 获取所有 API 密钥
  */
-export async function getApiKeys() {
+async function getApiKeys() {
   try {
     return await db.select().from(schema.apiKeys);
   } catch (error) {
@@ -1007,7 +1009,7 @@ export async function getApiKeys() {
 /**
  * 创建 API 密钥
  */
-export async function createApiKey(data: typeof schema.apiKeys.$inferInsert) {
+async function createApiKey(data: typeof schema.apiKeys.$inferInsert) {
   try {
     await db.insert(schema.apiKeys).values(data);
     const keys = await db.select().from(schema.apiKeys).where(eq(schema.apiKeys.id, data.id));
@@ -1021,7 +1023,7 @@ export async function createApiKey(data: typeof schema.apiKeys.$inferInsert) {
 /**
  * 删除 API 密钥
  */
-export async function deleteApiKey(id: string) {
+async function deleteApiKey(id: string) {
   try {
     await db.delete(schema.apiKeys).where(eq(schema.apiKeys.id, id));
     return true;
@@ -1034,7 +1036,7 @@ export async function deleteApiKey(id: string) {
 /**
  * 替换所有 API 密钥
  */
-export async function replaceApiKeys(keys: typeof schema.apiKeys.$inferInsert[]) {
+async function replaceApiKeys(keys: typeof schema.apiKeys.$inferInsert[]) {
   try {
     // 先删除所有现有密钥
     await db.delete(schema.apiKeys);
@@ -1056,7 +1058,7 @@ export async function replaceApiKeys(keys: typeof schema.apiKeys.$inferInsert[])
 /**
  * 获取通知设置
  */
-export async function getNotificationSettings() {
+async function getNotificationSettings() {
   try {
     const settings = await db.select().from(schema.notificationSettings).limit(1);
     if (settings.length === 0) {
@@ -1095,7 +1097,7 @@ export async function getNotificationSettings() {
 /**
  * 创建或更新通知设置
  */
-export async function createOrUpdateNotificationSettings(data: {
+async function createOrUpdateNotificationSettings(data: {
   webhookUrl?: string;
   triggers?: {
     new_resume?: boolean;
@@ -1143,7 +1145,7 @@ export async function createOrUpdateNotificationSettings(data: {
 /**
  * 获取平台设置
  */
-export async function getPlatformSettings() {
+async function getPlatformSettings() {
   try {
     const settings = await db.select().from(schema.platformSettings).limit(1);
     if (settings.length === 0) {
@@ -1167,7 +1169,7 @@ export async function getPlatformSettings() {
 /**
  * 创建或更新平台设置
  */
-export async function createOrUpdatePlatformSettings(data: {
+async function createOrUpdatePlatformSettings(data: {
   departments?: string[];
 }) {
   try {
@@ -1201,7 +1203,7 @@ export async function createOrUpdatePlatformSettings(data: {
 /**
  * 获取简历导入设置
  */
-export async function getResumeImportSettings() {
+async function getResumeImportSettings() {
   try {
     const settings = await db.select().from(schema.resumeImportSettings).limit(1);
     if (settings.length === 0) {
@@ -1234,7 +1236,7 @@ export async function getResumeImportSettings() {
 /**
  * 创建或更新简历导入设置
  */
-export async function createOrUpdateResumeImportSettings(data: {
+async function createOrUpdateResumeImportSettings(data: {
   imapServer?: string;
   port?: string;
   account?: string;

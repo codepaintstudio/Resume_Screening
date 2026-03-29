@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateInterview, getInterviewsByStudentId, updateStudent, getStudentById, createActivityLog } from '@/lib/db/queries';
-import { eq } from 'drizzle-orm';
-import { schema, db } from '@/lib/db';
+import { createInterview, updateInterview, getInterviewsByStudentId, updateStudent, getStudentById, createActivityLog } from '@/lib/db/queries';
 
 /**
  * @swagger
@@ -79,12 +77,12 @@ export async function POST(request: Request) {
         }
 
         // 构建更新数据
-        const updateData: Partial<typeof schema.interviews.$inferInsert> = {
+        const updateData = {
           time: time || '',
           date: date ? new Date(date) : undefined,
           interviewers: interviewers || [],
           location: location || '',
-          stage: 'pending_interview',
+          stage: 'pending_interview' as const,
           updatedAt: new Date(),
         };
 
@@ -107,7 +105,7 @@ export async function POST(request: Request) {
           }
           const student = studentInfo[0];
           
-          await db.insert(schema.interviews).values({
+          await createInterview({
             studentId,
             name: student.name || '',
             major: student.major || '',
@@ -118,7 +116,7 @@ export async function POST(request: Request) {
             email: student.email || '',
             phone: student.phone || '',
             className: student.className || '',
-            skills: student.skills || [],
+            skills: (student as any).skills || [],
             experiences: student.experiences || [],
             time: time || '',
             date: date ? new Date(date) : undefined,

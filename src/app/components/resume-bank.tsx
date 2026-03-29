@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Student } from '@/types';
 import { DEPARTMENTS, STATUS_MAP, SortOptionId } from '@/config/constants';
 
@@ -13,11 +13,12 @@ import { UploadResumeDialog } from './resume/UploadResumeDialog';
 import { SyncMailDialog } from './resume/SyncMailDialog';
 
 export function ResumeBank() {
+  const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [filterDept, setFilterDept] = useState(DEPARTMENTS[0]);
+  const [filterDept, setFilterDept] = useState<string>(DEPARTMENTS[0]);
   const [sortBy, setSortBy] = useState<SortOptionId>('ai');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,7 +35,13 @@ export function ResumeBank() {
   const [isSyncMailOpen, setIsSyncMailOpen] = useState(false);
 
   const searchParams = useSearchParams();
-  const { currentUser } = useAppStore();
+  const { currentUser, logout } = useAppStore();
+
+  const handleUnauthorized = (message: string = '登录已失效，请重新登录') => {
+    toast.error(message);
+    logout();
+    router.push('/login');
+  };
 
   // Handle URL candidateId parameter
   useEffect(() => {
@@ -83,7 +90,14 @@ export function ResumeBank() {
             break;
           case 'status':
             // Custom order for status: pending > interviewing > passed > rejected
-            const statusOrder = { pending: 3, interviewing: 2, passed: 1, rejected: 0 };
+            const statusOrder: Record<Student['status'], number> = {
+              pending: 5,
+              to_be_scheduled: 4,
+              pending_interview: 3,
+              interviewing: 2,
+              passed: 1,
+              rejected: 0,
+            };
             const statusA = statusOrder[a.status] || 0;
             const statusB = statusOrder[b.status] || 0;
             diff = statusA - statusB;
@@ -104,21 +118,27 @@ export function ResumeBank() {
         fetch('/api/departments')
       ]);
 
-      if (resumesRes.ok) {
-        const result = await resumesRes.json();
-        // 处理分页格式的响应
-        const resumesData = Array.isArray(result) ? result : (result.data || []);
-        setStudents(resumesData);
-      } else {
-        throw new Error('Failed to fetch resumes');
+      if (resumesRes.status === 401) {
+        const result = await resumesRes.json().catch(() => ({}));
+        handleUnauthorized(result.message || '请先登录');
+        return;
       }
+
+      if (!resumesRes.ok) {
+        const result = await resumesRes.json().catch(() => ({}));
+        throw new Error(result.message || '获取简历失败');
+      }
+
+      const result = await resumesRes.json();
+      const resumesData = Array.isArray(result) ? result : (result.data || []);
+      setStudents(resumesData);
 
       if (deptsRes.ok) {
         const deptsData = await deptsRes.json();
         setDepartments(['全部部门', ...deptsData]);
       }
     } catch (error) {
-      toast.error('获取数据失败');
+      toast.error(error instanceof Error ? error.message : '获取数据失败');
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
@@ -156,6 +176,10 @@ export function ResumeBank() {
       });
       
       const data = await res.json();
+      if (res.status === 401) {
+        handleUnauthorized(data.message || '登录已失效，请重新登录');
+        return;
+      }
       if (data.success) {
         toast.success(`状态已更新为：${STATUS_MAP[newStatus].label}`);
       } else {

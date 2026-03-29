@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getStudents, getStudentById, createStudent, createActivityLog, getUserById } from '@/lib/db/queries';
+import { getStudents, createStudent, createActivityLog, getUserById } from '@/lib/db/queries';
 import { getCurrentUser } from '@/lib/auth';
-import { eq, like, and, or, desc } from 'drizzle-orm';
-import { schema } from '@/lib/db';
-import { writeFile, mkdir, unlink } from 'fs/promises';
+import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 
 // 简历 PDF 上传目录

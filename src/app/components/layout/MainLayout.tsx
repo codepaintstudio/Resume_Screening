@@ -14,6 +14,14 @@ function SidebarWrapper() {
   );
 }
 
+function HeaderWrapper() {
+  return (
+    <Suspense fallback={<div className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800" />}>
+      <AppHeader />
+    </Suspense>
+  );
+}
+
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
@@ -32,7 +40,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         <SidebarWrapper />
       </div>
       <div className="flex-1 flex flex-col min-w-0 relative">
-        <AppHeader />
+        <HeaderWrapper />
         <main className="flex-1 overflow-auto p-4 md:p-6 scroll-smooth">
           <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
             {children}

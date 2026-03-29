@@ -156,7 +156,7 @@ export function SettingsPage({ role }: SettingsPageProps) {
 
   const fetchSettings = async () => {
     try {
-      const [pl, a, n, r, k, g, e] = await Promise.all([
+      const [pl, a, n, r, k, e, g] = await Promise.all([
         fetch('/api/settings/platform').then(res => res.json()),
         fetch('/api/settings/ai').then(res => res.json()),
         fetch('/api/settings/notifications').then(res => res.json()),
@@ -184,14 +184,11 @@ export function SettingsPage({ role }: SettingsPageProps) {
       
       setApiKeys(k || []);
       setGithub(g || { clientId: '', clientSecret: '', organization: '', personalAccessToken: '' });
-      // 调试日志
-      console.log('Email-sending API 返回:', e);
-      // SMTP 配置：加载所有保存的配置
       setEmailSending({
-        host: g?.host || '',
-        port: g?.port || '',
-        user: g?.user || '',
-        pass: g?.pass || '' 
+        host: e?.host || '',
+        port: e?.port || '',
+        user: e?.user || '',
+        pass: e?.pass || '' 
       });
       
     } catch (error) {
