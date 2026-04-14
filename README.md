@@ -165,10 +165,3 @@ AI_API_KEY="your-ai-api-key"
 ## 贡献
 
 欢迎贡献代码和提出问题！请先查看 [CONTRIBUTING.md](CONTRIBUTING.md) 文件（如果存在）。
-
-## 联系方式
-
-如有问题或建议，请通过以下方式联系：
-
-- 邮箱：your-email@example.com
-- GitHub Issues：https://github.com/your-username/resume-screening-system/issues
